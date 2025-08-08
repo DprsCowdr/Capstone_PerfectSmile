@@ -1,0 +1,251 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Services\AuthService;
+use App\Services\UserService;
+use App\Services\AppointmentService;
+
+abstract class BaseAdminController extends BaseController
+{
+    protected $userService;
+    protected $appointmentService;
+    protected $authService;
+    
+    public function __construct()
+    {
+        $this->userService = new UserService();
+        $this->appointmentService = new AppointmentService();
+        $this->authService = new AuthService();
+    }
+    
+    /**
+     * Get patients view - shared logic
+     */
+    protected function getPatientsView($viewPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        $userModel = new \App\Models\UserModel();
+        $patients = $userModel->where('user_type', 'patient')->findAll();
+        
+        // Filter by selected branch if admin has chosen one
+        $selectedBranchId = session('selected_branch_id');
+        if ($selectedBranchId && $user['user_type'] === 'admin') {
+            // Note: This assumes patients have a branch_id field
+            // If not, you might need to filter through appointments or other related data
+            $patients = array_filter($patients, function($patient) use ($selectedBranchId) {
+                return ($patient['branch_id'] ?? null) == $selectedBranchId;
+            });
+        }
+        
+        $data = [
+            'user' => $user,
+            'patients' => $patients,
+            'selectedBranchId' => $selectedBranchId
+        ];
+        
+        return view($viewPath, $data);
+    }
+    
+    /**
+     * Add patient form - shared between Admin and Staff
+     */
+    protected function getAddPatientView($viewPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        return view($viewPath, ['user' => $user]);
+    }
+    
+    /**
+     * Store patient - shared logic
+     */
+    protected function storePatientLogic($redirectPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $formData = $this->request->getPost();
+        
+        if (!$this->userService->validatePatientData($formData)) {
+            return redirect()->back()->withInput()->with('error', $this->userService->getValidationErrors());
+        }
+
+        if ($this->userService->createPatient($formData)) {
+            return redirect()->to($redirectPath)->with('success', 'Patient added successfully.');
+        }
+        
+        return redirect()->back()->withInput()->with('error', 'Failed to add patient.');
+    }
+    
+    /**
+     * Get patient for API - shared logic
+     */
+    protected function getPatientApi($id)
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
+            return $user;
+        }
+        
+        $patient = $this->userService->getPatient($id);
+        
+        if (!$patient) {
+            return $this->response->setJSON(['error' => 'Patient not found']);
+        }
+        
+        return $this->response->setJSON($patient);
+    }
+    
+    /**
+     * Update patient - shared logic
+     */
+    protected function updatePatientLogic($id, $redirectPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        $patient = $this->userService->getPatient($id);
+        if (!$patient) {
+            return redirect()->to($redirectPath)->with('error', 'Patient not found.');
+        }
+        
+        $formData = $this->request->getPost();
+        
+        if (!$this->userService->validatePatientData($formData, $id)) {
+            return redirect()->back()->withInput()->with('error', $this->userService->getValidationErrors());
+        }
+        
+        if ($this->userService->updatePatient($id, $formData)) {
+            return redirect()->to($redirectPath)->with('success', 'Patient updated successfully.');
+        }
+        
+        return redirect()->back()->withInput()->with('error', 'Failed to update patient.');
+    }
+    
+    /**
+     * Toggle patient status - shared logic
+     */
+    protected function togglePatientStatusLogic($id, $redirectPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        if (!$this->userService->getPatient($id)) {
+            return redirect()->to($redirectPath)->with('error', 'Patient not found.');
+        }
+        
+        if ($this->userService->togglePatientStatus($id)) {
+            return redirect()->to($redirectPath)->with('success', 'Patient status updated successfully.');
+        }
+        
+        return redirect()->to($redirectPath)->with('error', 'Failed to update patient status.');
+    }
+    
+    /**
+     * Get appointments view - shared logic
+     */
+    protected function getAppointmentsView($viewPath, $additionalData = [])
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        // Get form data for dropdowns
+        $userModel = new \App\Models\UserModel();
+        $branchModel = new \App\Models\BranchModel();
+        
+        $patients = $userModel->where('user_type', 'patient')->findAll();
+        $branches = $branchModel->findAll();
+        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+        
+        // Get appointments with branch filtering
+        $appointments = $this->appointmentService->getAllAppointments();
+        
+        // Filter by selected branch if admin has chosen one
+        $selectedBranchId = session('selected_branch_id');
+        if ($selectedBranchId && $user['user_type'] === 'admin') {
+            $appointments = array_filter($appointments, function($apt) use ($selectedBranchId) {
+                return ($apt['branch_id'] ?? null) == $selectedBranchId;
+            });
+        }
+        
+        $data = array_merge([
+            'user' => $user,
+            'appointments' => $appointments,
+            'patients' => $patients,
+            'branches' => $branches,
+            'dentists' => $dentists,
+            'selectedBranchId' => $selectedBranchId
+        ], $additionalData);
+        
+        return view($viewPath, $data);
+    }
+    
+    /**
+     * Create appointment - shared logic
+     */
+    protected function createAppointmentLogic($redirectPath, $userType = 'admin')
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $data = [
+            'branch_id' => $this->request->getPost('branch'),
+            'user_id' => $this->request->getPost('patient'),
+            'dentist_id' => $this->request->getPost('dentist') ?: null,
+            'appointment_date' => $this->request->getPost('date'),
+            'appointment_time' => $this->request->getPost('time'),
+            'appointment_type' => $this->request->getPost('appointment_type') ?? 'scheduled',
+            'remarks' => $this->request->getPost('remarks')
+        ];
+
+        // Set approval logic based on user type and appointment type
+        if ($data['appointment_type'] === 'walkin') {
+            $data['approval_status'] = 'auto_approved';
+            $data['status'] = 'confirmed';
+        } else {
+            // Scheduled appointments
+            if ($userType === 'admin') {
+                $data['approval_status'] = 'pending';
+                $data['status'] = 'pending_approval';
+            } else {
+                // Staff created appointments always go to pending
+                $data['approval_status'] = 'pending';
+                $data['status'] = 'pending';
+            }
+        }
+
+        $result = $this->appointmentService->createAppointment($data);
+        
+        session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
+        
+        return redirect()->to($redirectPath);
+    }
+    
+    /**
+     * Abstract method to get authenticated user - implement in child classes
+     */
+    abstract protected function getAuthenticatedUser();
+    
+    /**
+     * Abstract method to get authenticated user for API - implement in child classes
+     */
+    abstract protected function getAuthenticatedUserApi();
+}

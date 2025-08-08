@@ -1,0 +1,155 @@
+/* Admin Panel Custom Styles */
+
+/* Chart Cards */
+.chart-card {
+    transition: all 0.3s;
+}
+
+.chart-card:hover {
+    transform: translateY(-2px);
+}
+
+.chart-card.no-chart {
+    background-color: #f9fafb;
+}
+
+.chart-card.has-chart {
+    background-color: #f0fdf4;
+}
+
+/* Record Cards */
+.record-card {
+    transition: all 0.3s;
+}
+
+.record-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Checkup Cards */
+.checkup-card {
+    transition: all 0.3s;
+}
+
+.checkup-card:hover {
+    transform: translateY(-2px);
+}
+
+.treatment-needed {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+}
+
+.recent-checkup {
+    background-color: #f0fdf4;
+    border-color: #86efac;
+}
+
+.overdue-checkup {
+    background-color: #fffbeb;
+    border-color: #fcd34d;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-badge.success {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.status-badge.warning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge.danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge.info {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+/* Admin Layout */
+.admin-main-bg {
+    background-color: #ffffff;
+}
+
+.admin-body {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+}
+
+.admin-content-bg {
+    background-color: #f8fafc;
+}
+
+/* Hover effects for action buttons */
+.btn-hover-lift {
+    transition: transform 0.2s ease-in-out;
+}
+
+.btn-hover-lift:hover {
+    transform: translateY(-1px);
+}
+
+/* Loading states */
+.loading-spinner {
+    border: 2px solid #f3f4f6;
+    border-radius: 50%;
+    border-top: 2px solid #3b82f6;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Custom scrollbar for admin panels */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Responsive table styles */
+@media (max-width: 768px) {
+    .responsive-table-wrapper {
+        overflow-x: auto;
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-page-break {
+        page-break-after: always;
+    }
+}

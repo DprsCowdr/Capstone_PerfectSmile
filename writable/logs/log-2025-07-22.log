@@ -1,0 +1,1015 @@
+DEBUG - 2025-07-22 02:29:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:16 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:18 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:45 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:29:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:30:00 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:30:03 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:30:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 02:31:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:31:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:31:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:32:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:32:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:28 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:43 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:45 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:47 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 05:33:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:47:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:47:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:47:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:47:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:47:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:48:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:48:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:48:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:48:36 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:48:36 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'dentalv4', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/PatientCheckin.php(25): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\PatientCheckin->index()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\PatientCheckin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/PatientCheckin.php(25): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\PatientCheckin->index()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\PatientCheckin))
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#14 {main}
+CRITICAL - 2025-07-22 06:48:36 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: checkin]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Controllers/PatientCheckin.php(25): App\Controllers\Auth::getCurrentUser()
+ 7 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\PatientCheckin->index()
+ 8 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\PatientCheckin))
+ 9 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+10 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+13 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:48:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:48:40 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'dentalv4', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/TreatmentQueue.php(25): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\TreatmentQueue->index()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\TreatmentQueue))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/TreatmentQueue.php(25): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\TreatmentQueue->index()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\TreatmentQueue))
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#14 {main}
+CRITICAL - 2025-07-22 06:48:40 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: queue]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Controllers/TreatmentQueue.php(25): App\Controllers\Auth::getCurrentUser()
+ 7 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\TreatmentQueue->index()
+ 8 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\TreatmentQueue))
+ 9 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+10 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+13 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:48:48 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:53:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 06:53:45 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:53:45 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:53:45 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:05 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:05 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:05 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:06 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:06 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:07 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:07 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:07 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:07 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:07 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:07 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:08 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:08 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:08 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:08 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:09 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:09 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:09 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:09 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:09 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:09 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:10 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:10 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:34 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:34 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-22 06:54:34 --> Error connecting to the database: mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:201
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(201): mysqli->real_connect('127.0.0.1', 'root', Object(SensitiveParameterValue), 'perfectsmile_db', 3306, '', 0)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#15 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#16 {main}
+
+Next CodeIgniter\Database\Exceptions\DatabaseException: Access denied for user '****'@'localhost' (using password: NO) in /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:246
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(421): CodeIgniter\Database\MySQLi\Connection->connect(false)
+#1 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+#2 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *\nFROM `...', Array, false)
+#3 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+#4 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+#5 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+#6 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+#7 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/app/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+#8 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+#9 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+#10 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(NULL, Object(Config\Cache), false)
+#11 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(334): CodeIgniter\CodeIgniter->run()
+#12 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+#13 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+#14 /Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/vendor/codeigniter4/framework/system/rewrite.php(44): require_once('/Users/macbooka...')
+#15 {main}
+CRITICAL - 2025-07-22 06:54:34 --> CodeIgniter\Database\Exceptions\DatabaseException: Unable to connect to the database.
+Main connection [MySQLi]: Access denied for user '****'@'localhost' (using password: NO)
+[Method: GET, Route: admin/appointments]
+in SYSTEMPATH/Database/BaseConnection.php on line 467.
+ 1 SYSTEMPATH/Database/BaseConnection.php(620): CodeIgniter\Database\BaseConnection->initialize()
+ 2 SYSTEMPATH/Database/BaseBuilder.php(1649): CodeIgniter\Database\BaseConnection->query('SELECT *
+FROM `user`
+WHERE `user`.`id` = :user.id:', [...], false)
+ 3 SYSTEMPATH/Model.php(210): CodeIgniter\Database\BaseBuilder->get()
+ 4 SYSTEMPATH/BaseModel.php(613): CodeIgniter\Model->doFind(true, '1')
+ 5 APPPATH/Controllers/Auth.php(146): CodeIgniter\BaseModel->find('1')
+ 6 APPPATH/Traits/AdminAuthTrait.php(11): App\Controllers\Auth::getCurrentUser()
+ 7 APPPATH/Controllers/Admin.php(194): App\Controllers\Admin->checkAdminAuth()
+ 8 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->appointments()
+ 9 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+10 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+14 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 06:54:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:12:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:12:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:12:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:12:36 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:13:09 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:13:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:13:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:13:41 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:13:41 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:00 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-22 07:14:00 --> Creating scheduled appointment with data: {"branch_id":"1","user_id":"5","dentist_id":"2","appointment_date":"2025-07-22","appointment_time":"13:30","appointment_type":"scheduled","remarks":"","approval_status":"pending","status":"pending_approval"}
+INFO - 2025-07-22 07:14:00 --> Admin-created appointment pending with dentist assigned
+DEBUG - 2025-07-22 07:14:00 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:01 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-22 07:14:06 --> Admin approving appointment ID: 26, Dentist ID: null
+INFO - 2025-07-22 07:14:06 --> Appointment before approval: {"id":"26","branch_id":"1","dentist_id":"2","user_id":"5","appointment_datetime":"2025-07-22 13:30:00","status":"pending_approval","appointment_type":"scheduled","approval_status":"pending","decline_reason":null,"remarks":"","created_at":"2025-07-22 07:14:00","updated_at":"2025-07-22 07:14:00","checked_in_at":null,"checked_in_by":null,"self_checkin":"0","started_at":null,"called_by":null,"treatment_status":null,"treatment_notes":null,"payment_status":"pending","payment_method":null,"payment_amount":null,"payment_date":null,"payment_received_by":null,"payment_notes":null,"appointment_date":"2025-07-22","appointment_time":"13:30"}
+INFO - 2025-07-22 07:14:06 --> AppointmentModel::approveAppointment - ID: 26, Dentist ID: null
+INFO - 2025-07-22 07:14:06 --> Update data for appointment 26: {"approval_status":"approved","status":"confirmed","updated_at":"2025-07-22 07:14:06"}
+INFO - 2025-07-22 07:14:06 --> Update result for appointment 26: success
+INFO - 2025-07-22 07:14:06 --> Admin approved appointment: Patient ID 5, DateTime: 2025-07-22 13:30:00, Date: 2025-07-22, Time: 13:30
+INFO - 2025-07-22 07:14:06 --> Appointment approval result: {"success":true,"message":"Appointment approved successfully"}
+DEBUG - 2025-07-22 07:14:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:07 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:19 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:14:25 --> Previous records: [{"id":"2","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee","treatment":"2nd2nd timeee2nd timeee2nd timeee2nd timeee","notes":"time2nd timeee2nd timeee2nd timeee","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"5","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","treatment":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","notes":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"1","user_id":"5","appointment_id":null,"record_date":"2025-07-20","diagnosis":"dddddddddddmdfoidvidfnoi","treatment":"ddddddddwefmdfewflmkwefklmwfeklm","notes":"lllllm;mk;m;mkm;mk;","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null}]
+DEBUG - 2025-07-22 07:14:25 --> Previous chart: [{"id":"5","dental_record_id":"5","tooth_number":"1","tooth_type":"permanent","condition":"crown","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-21 11:37:10","updated_at":"2025-07-21 11:37:10"},{"id":"6","dental_record_id":"5","tooth_number":"2","tooth_type":"permanent","condition":"healthy","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-21 11:37:10","updated_at":"2025-07-21 11:37:10"},{"id":"7","dental_record_id":"5","tooth_number":"3","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"medium","estimated_cost":null,"created_at":"2025-07-21 11:37:10","updated_at":"2025-07-21 11:37:10"},{"id":"8","dental_record_id":"5","tooth_number":"17","tooth_type":"permanent","condition":"filled","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-21 11:37:10","updated_at":"2025-07-21 11:37:10"},{"id":"9","dental_record_id":"5","tooth_number":"18","tooth_type":"permanent","condition":"cavity","status":"","notes":"","recommended_service_id":null,"priority":"medium","estimated_cost":null,"created_at":"2025-07-21 11:37:10","updated_at":"2025-07-21 11:37:10"},{"id":"10","dental_record_id":"5","tooth_number":"20","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-21 11:37:10","updated_at":"2025-07-21 11:37:10"}]
+DEBUG - 2025-07-22 07:15:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2025-07-22 07:15:32 --> CodeIgniter\Database\Exceptions\DataException: There is no data to update.
+[Method: POST, Route: checkup/save/26]
+in SYSTEMPATH/BaseModel.php on line 1014.
+ 1 SYSTEMPATH/BaseModel.php(1014): CodeIgniter\Database\Exceptions\DataException::forEmptyDataset('update')
+ 2 SYSTEMPATH/Model.php(863): CodeIgniter\BaseModel->update([...], [])
+ 3 APPPATH/Controllers/Checkup.php(228): CodeIgniter\Model->update(6, [...])
+ 4 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Checkup->saveCheckup('26')
+ 5 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Checkup))
+ 6 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+10 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 07:15:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2025-07-22 07:15:40 --> CodeIgniter\Database\Exceptions\DataException: There is no data to update.
+[Method: POST, Route: checkup/save/26]
+in SYSTEMPATH/BaseModel.php on line 1014.
+ 1 SYSTEMPATH/BaseModel.php(1014): CodeIgniter\Database\Exceptions\DataException::forEmptyDataset('update')
+ 2 SYSTEMPATH/Model.php(863): CodeIgniter\BaseModel->update([...], [])
+ 3 APPPATH/Controllers/Checkup.php(228): CodeIgniter\Model->update(7, [...])
+ 4 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Checkup->saveCheckup('26')
+ 5 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Checkup))
+ 6 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+10 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Finals/Perfect_Smile copy/public/index.php')
+DEBUG - 2025-07-22 07:15:45 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:15:46 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:15:46 --> Previous records: [{"id":"6","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"7","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"2","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee","treatment":"2nd2nd timeee2nd timeee2nd timeee2nd timeee","notes":"time2nd timeee2nd timeee2nd timeee","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"5","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","treatment":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","notes":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"1","user_id":"5","appointment_id":null,"record_date":"2025-07-20","diagnosis":"dddddddddddmdfoidvidfnoi","treatment":"ddddddddwefmdfewflmkwefklmwfeklm","notes":"lllllm;mk;m;mkm;mk;","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null}]
+DEBUG - 2025-07-22 07:15:46 --> Previous chart: [{"id":"11","dental_record_id":"6","tooth_number":"1","tooth_type":"permanent","condition":"crown","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"12","dental_record_id":"6","tooth_number":"2","tooth_type":"permanent","condition":"healthy","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"13","dental_record_id":"6","tooth_number":"3","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"14","dental_record_id":"6","tooth_number":"17","tooth_type":"permanent","condition":"filled","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"15","dental_record_id":"6","tooth_number":"18","tooth_type":"permanent","condition":"cavity","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"16","dental_record_id":"6","tooth_number":"20","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"}]
+DEBUG - 2025-07-22 07:16:09 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:09 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-22 07:16:25 --> Creating scheduled appointment with data: {"branch_id":"1","user_id":"5","dentist_id":"2","appointment_date":"2025-07-22","appointment_time":"15:30","appointment_type":"scheduled","remarks":"","approval_status":"pending","status":"pending_approval"}
+INFO - 2025-07-22 07:16:25 --> Admin-created appointment pending with dentist assigned
+DEBUG - 2025-07-22 07:16:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:26 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:31 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:42 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:42 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:44 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:16:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:26 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:28 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:31 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:47 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-22 07:17:47 --> Creating scheduled appointment with data: {"branch_id":"1","user_id":"5","dentist_id":"9","appointment_date":"2025-07-22","appointment_time":"16:30","appointment_type":"scheduled","remarks":"","approval_status":"pending","status":"pending_approval"}
+INFO - 2025-07-22 07:17:47 --> Admin-created appointment pending with dentist assigned
+DEBUG - 2025-07-22 07:17:47 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:50 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:50 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:56 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:17:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-22 07:18:04 --> Admin approving appointment ID: 30, Dentist ID: null
+INFO - 2025-07-22 07:18:04 --> Appointment before approval: {"id":"30","branch_id":"1","dentist_id":"9","user_id":"5","appointment_datetime":"2025-07-22 16:30:00","status":"pending_approval","appointment_type":"scheduled","approval_status":"pending","decline_reason":null,"remarks":"","created_at":"2025-07-22 07:17:47","updated_at":"2025-07-22 07:17:47","checked_in_at":null,"checked_in_by":null,"self_checkin":"0","started_at":null,"called_by":null,"treatment_status":null,"treatment_notes":null,"payment_status":"pending","payment_method":null,"payment_amount":null,"payment_date":null,"payment_received_by":null,"payment_notes":null,"appointment_date":"2025-07-22","appointment_time":"16:30"}
+INFO - 2025-07-22 07:18:04 --> AppointmentModel::approveAppointment - ID: 30, Dentist ID: null
+INFO - 2025-07-22 07:18:04 --> Update data for appointment 30: {"approval_status":"approved","status":"confirmed","updated_at":"2025-07-22 07:18:04"}
+INFO - 2025-07-22 07:18:04 --> Update result for appointment 30: success
+INFO - 2025-07-22 07:18:04 --> Admin approved appointment: Patient ID 5, DateTime: 2025-07-22 16:30:00, Date: 2025-07-22, Time: 16:30
+INFO - 2025-07-22 07:18:04 --> Appointment approval result: {"success":true,"message":"Appointment approved successfully"}
+DEBUG - 2025-07-22 07:18:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:05 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:17 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:17 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:18:17 --> Previous records: [{"id":"6","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"7","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"8","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"2","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee","treatment":"2nd2nd timeee2nd timeee2nd timeee2nd timeee","notes":"time2nd timeee2nd timeee2nd timeee","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"5","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","treatment":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","notes":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"1","user_id":"5","appointment_id":null,"record_date":"2025-07-20","diagnosis":"dddddddddddmdfoidvidfnoi","treatment":"ddddddddwefmdfewflmkwefklmwfeklm","notes":"lllllm;mk;m;mkm;mk;","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null}]
+DEBUG - 2025-07-22 07:18:17 --> Previous chart: [{"id":"11","dental_record_id":"6","tooth_number":"1","tooth_type":"permanent","condition":"crown","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"12","dental_record_id":"6","tooth_number":"2","tooth_type":"permanent","condition":"healthy","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"13","dental_record_id":"6","tooth_number":"3","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"14","dental_record_id":"6","tooth_number":"17","tooth_type":"permanent","condition":"filled","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"15","dental_record_id":"6","tooth_number":"18","tooth_type":"permanent","condition":"cavity","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"16","dental_record_id":"6","tooth_number":"20","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"}]
+DEBUG - 2025-07-22 07:24:48 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:24:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:24:58 --> Previous records: [{"id":"6","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"7","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"8","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"2","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee","treatment":"2nd2nd timeee2nd timeee2nd timeee2nd timeee","notes":"time2nd timeee2nd timeee2nd timeee","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"5","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","treatment":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","notes":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"1","user_id":"5","appointment_id":null,"record_date":"2025-07-20","diagnosis":"dddddddddddmdfoidvidfnoi","treatment":"ddddddddwefmdfewflmkwefklmwfeklm","notes":"lllllm;mk;m;mkm;mk;","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null}]
+DEBUG - 2025-07-22 07:24:58 --> Previous chart: [{"id":"11","dental_record_id":"6","tooth_number":"1","tooth_type":"permanent","condition":"crown","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"12","dental_record_id":"6","tooth_number":"2","tooth_type":"permanent","condition":"healthy","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"13","dental_record_id":"6","tooth_number":"3","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"14","dental_record_id":"6","tooth_number":"17","tooth_type":"permanent","condition":"filled","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"15","dental_record_id":"6","tooth_number":"18","tooth_type":"permanent","condition":"cavity","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"16","dental_record_id":"6","tooth_number":"20","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"}]
+DEBUG - 2025-07-22 07:25:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:25:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:25:25 --> Previous records: [{"id":"6","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"7","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":"2025-07-22","dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"8","user_id":"5","appointment_id":null,"record_date":"2025-07-22","diagnosis":"balik ka mamaya 330pm","treatment":"balik ka mamaya 330pm","notes":"balik ka mamaya 330pm","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"2","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee","treatment":"2nd2nd timeee2nd timeee2nd timeee2nd timeee","notes":"time2nd timeee2nd timeee2nd timeee","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"5","user_id":"5","appointment_id":null,"record_date":"2025-07-21","diagnosis":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","treatment":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","notes":"SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null},{"id":"1","user_id":"5","appointment_id":null,"record_date":"2025-07-20","diagnosis":"dddddddddddmdfoidvidfnoi","treatment":"ddddddddwefmdfewflmkwefklmwfeklm","notes":"lllllm;mk;m;mkm;mk;","xray_image_url":null,"next_appointment_date":null,"dentist_id":"1","dentist_name":"Admin User","appointment_datetime":null}]
+DEBUG - 2025-07-22 07:25:25 --> Previous chart: [{"id":"11","dental_record_id":"6","tooth_number":"1","tooth_type":"permanent","condition":"crown","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"12","dental_record_id":"6","tooth_number":"2","tooth_type":"permanent","condition":"healthy","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"13","dental_record_id":"6","tooth_number":"3","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"14","dental_record_id":"6","tooth_number":"17","tooth_type":"permanent","condition":"filled","status":"none","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"15","dental_record_id":"6","tooth_number":"18","tooth_type":"permanent","condition":"cavity","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"},{"id":"16","dental_record_id":"6","tooth_number":"20","tooth_type":"permanent","condition":"healthy","status":"","notes":"","recommended_service_id":null,"priority":"low","estimated_cost":null,"created_at":"2025-07-22 07:15:32","updated_at":"2025-07-22 07:15:32"}]
+DEBUG - 2025-07-22 07:25:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:25:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:25:35 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-22 07:25:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.

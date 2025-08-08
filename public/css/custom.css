@@ -1,0 +1,682 @@
+body, html {
+    font-family: 'Segoe UI', 'Nunito', Arial, sans-serif !important;
+}
+
+/* Ensure form uses a consistent grid layout */
+#addPatientPanel form .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px; /* Better spacing between fields */
+}
+.patients-table,
+.patients-table th,
+.patients-table td {
+    color: #111 !important;
+}
+/* Make each column use consistent spacing */
+#addPatientPanel .form-control-lg {
+    padding: 14px 20px;
+    font-size: 1rem;
+}
+
+/* Use equal height and vertical centering */
+#addPatientPanel .col-md-4,
+#addPatientPanel .col-md-2,
+#addPatientPanel .col-12 {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Keep consistent spacing between row blocks */
+#addPatientPanel .row.mb-4 {
+    margin-bottom: 20px !important;
+}
+
+/* Fix submit button alignment */
+#addPatientPanel button[type="submit"] {
+    margin-top: 10px;
+}
+
+/* Optional: make spacing inside panel more breathable */
+#addPatientPanel {
+    padding: 32px 24px;
+}
+
+/* Ensure smaller fields don't look cramped */
+#addPatientPanel input[type="number"],
+#addPatientPanel input[type="text"],
+#addPatientPanel input[type="email"],
+#addPatientPanel input[type="date"],
+#addPatientPanel select {
+    min-height: 50px;
+}
+
+#addPatientPanel h5 {
+    margin-bottom: 30px;
+    font-size: 1.4rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+#addPatientPanel .form-control {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: none;
+    transition: 0.3s;
+    background: #ffffff;
+    color: #1e293b;
+}
+
+#addPatientPanel .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.bg-gradient-primary {
+    background: #ffffff !important;
+}
+
+.sidebar {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    box-shadow: 0 4px 24px 0 rgba(0,0,0,0.06);
+    border-right: 1px solid #e2e8f0;
+}
+.sidebar .nav-item .nav-link,
+.sidebar .sidebar-brand,
+.sidebar .sidebar-heading {
+    color: #475569 !important;
+}
+.sidebar .nav-item.active .nav-link {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    box-shadow: 0 2px 8px 0 rgba(15,23,42,0.08);
+    border-radius: 8px;
+    margin: 2px 8px;
+}
+.sidebar .nav-item .nav-link:hover {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border-radius: 8px;
+    margin: 2px 8px;
+}
+.sidebar .nav-item .nav-link i {
+    color: #475569 !important;
+}
+.sidebar .sidebar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: 0.5px;
+    color: #1e293b !important;
+}
+.sidebar .sidebar-divider {
+    border-color: #e2e8f0;
+}
+
+/* Patients Table Styles */
+.patients-table tbody tr:hover {
+    background: #f8fafc !important;
+}
+
+.status-badge {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+.status-active {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+}
+.status-inactive {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+/* Slide-in Panel Styles */
+.slide-in-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 420px;
+    max-width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -2px 0 24px rgba(0,0,0,0.1);
+    border-radius: 16px 0 0 16px;
+    padding: 24px 18px 18px 18px;
+    z-index: 1050;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+    overflow-y: auto;
+    border-left: 1px solid #e2e8f0;
+}
+
+.slide-in-panel.active {
+    transform: translateX(0) !important;
+}
+
+/* Panel Overlay */
+.panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.panel-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+#viewPatientPanel.slide-in-panel { 
+    z-index: 1060; 
+}
+
+#updatePatientPanel.slide-in-panel {
+    z-index: 1070;
+    width: 480px;
+    max-width: 100vw;
+    padding: 32px 24px 24px 24px;
+    background: #ffffff;
+}
+
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #475569;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.close-btn:hover {
+    color: #1e293b;
+}
+
+/* Modern Date Picker Styles */
+.modern-date-picker {
+    position: relative;
+}
+
+.modern-date-picker input {
+    background: #fff !important;
+    border: 2px solid #e6e6f6 !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    padding-right: 45px !important;
+}
+
+.modern-date-picker input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+}
+
+.modern-date-picker input:hover {
+    border-color: #60a5fa !important;
+    transform: translateY(-1px) !important;
+}
+
+.modern-date-picker input::placeholder {
+    color: #a89ad7 !important;
+    font-weight: 500 !important;
+}
+
+/* Modern Select Dropdown Styles */
+.modern-select-wrapper {
+    position: relative;
+}
+
+.modern-select-wrapper select {
+    background: #fff !important;
+    border: 2px solid #e6e6f6 !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    padding-right: 45px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+}
+
+.modern-select-wrapper select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+}
+
+.modern-select-wrapper select:hover {
+    border-color: #60a5fa !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Modern Number Input Styles */
+.modern-number-input {
+    position: relative;
+}
+
+.modern-number-input input {
+    background: #fff !important;
+    border: 2px solid #e6e6f6 !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    font-size: 1rem !important;
+    color: #333 !important;
+    transition: all 0.3s ease !important;
+    padding-right: 45px !important;
+}
+
+.modern-number-input input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+}
+
+.modern-number-input input:hover {
+    border-color: #60a5fa !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Update Patient Form Styles */
+.update-patient-form label {
+    font-weight: 500;
+    color: #475569;
+    font-size: 1.01rem;
+    margin-bottom: 4px;
+}
+
+.update-patient-form input,
+.update-patient-form select,
+.update-patient-form textarea {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 1.08rem;
+    margin-bottom: 12px;
+    background: #ffffff;
+    color: #1e293b;
+    width: 100%;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.update-patient-form input:focus,
+.update-patient-form select:focus,
+.update-patient-form textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.update-patient-form .form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.update-patient-form .form-row > div {
+    flex: 1;
+}
+
+.update-patient-form .avatar-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.update-patient-form .avatar-upload label {
+    margin-bottom: 0;
+}
+
+.update-patient-form .avatar-upload .avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #f5f6fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    border: 2px dashed #e6e6f6;
+    font-size: 2.2rem;
+    color: #b0b0c0;
+    cursor: pointer;
+}
+
+.update-patient-form .avatar-upload .avatar-desc {
+    color: #b0b0c0;
+    font-size: 0.98rem;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+/* Status Badge Styles */
+.status-badge {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.status-active {
+    background: #d4edda !important;
+    color: #155724 !important;
+}
+
+.status-inactive {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+/* Responsive Design for Slide-in Panels */
+@media (max-width: 991px) {
+    .slide-in-panel {
+        width: 100vw !important;
+        border-radius: 0 !important;
+        padding: 24px 8px !important;
+    }
+    
+    #addPatientPanel {
+        padding: 16px 4px !important;
+    }
+    
+    #addPatientPanel .row {
+        gap: 8px !important;
+    }
+    
+    #addPatientPanel .form-control-lg {
+        font-size: 0.98rem;
+        padding: 10px 12px;
+    }
+}
+
+/* Responsive Table */
+@media (max-width: 767px) {
+    .patients-table th,
+    .patients-table td {
+        padding: 10px 6px !important;
+        font-size: 0.95rem !important;
+    }
+    .patients-table td {
+        min-width: 100px !important;
+    }
+    .d-flex.gap-3 {
+        gap: 8px !important;
+    }
+    .patients-table .d-flex.align-items-center {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+}
+
+/* Responsive Heading and Button */
+@media (max-width: 767px) {
+    .d-flex.justify-content-between.align-items-center.mb-4 h1 {
+        font-size: 1.3rem !important;
+    }
+    #showAddPatientFormBtn {
+        font-size: 0.98rem !important;
+        padding: 8px 16px !important;
+    }
+} 
+
+/* Add Patient Panel: Make row fields horizontal on desktop, stack on mobile */
+#addPatientPanel .row.gx-3.gy-3 {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+#addPatientPanel .row.gx-3.gy-3 > .col-md-4,
+#addPatientPanel .row.gx-3.gy-3 > .col-md-6 {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* On small screens, stack vertically */
+@media (max-width: 767px) {
+    #addPatientPanel .row.gx-3.gy-3 {
+        flex-direction: column;
+        gap: 10px;
+    }
+    #addPatientPanel .row.gx-3.gy-3 > .col-md-4,
+    #addPatientPanel .row.gx-3.gy-3 > .col-md-6 {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+/* Modern Patients Table Styles */
+.patients-table,
+.table.align-middle {
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 4px 32px #e6e6f6;
+    overflow: hidden;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 1rem;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.patients-table th,
+.patients-table td,
+.table.align-middle th,
+.table.align-middle td {
+    padding: 18px 12px !important;
+    font-size: 1.05rem !important;
+    border: none;
+    vertical-align: middle;
+}
+.patients-table thead th,
+.table.align-middle thead th {
+    background: #fff;
+    color: #7a5fc0;
+    font-weight: 800;
+    font-size: 1.08rem;
+    border: none;
+}
+.patients-table tbody tr,
+.table.align-middle tbody tr {
+    background: #fff;
+    border-bottom: 1.5px solid #f0eafd;
+    transition: background 0.2s;
+}
+.patients-table tbody tr:hover,
+.table.align-middle tbody tr:hover {
+    background: var(--bg-secondary) !important;
+}
+.patients-table .badge,
+.table.align-middle .badge {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+}
+.patients-table .bg-success,
+.table.align-middle .bg-success {
+    background: #d4edda !important;
+    color: #155724 !important;
+}
+.patients-table .bg-danger,
+.table.align-middle .bg-danger {
+    background: #f8d7da !important;
+    color: #721c24 !important;
+}
+.patients-table .d-flex.align-items-center.gap-3 > div:first-child {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ede6fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #a89ad7;
+}
+.patients-table .d-flex.align-items-center.gap-3 > div:last-child {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.patients-table .d-flex.align-items-center.gap-3 {
+    gap: 12px !important;
+}
+.patients-table a[title='View'] i,
+.patients-table a[title='Edit'] i {
+    color: #6b7680 !important;
+    font-size: 1.15rem;
+}
+.patients-table a[title='Delete'] i {
+    color: #e57373 !important;
+    font-size: 1.15rem;
+}
+
+/* Patients Table Action Icons - Modern Flat Style */
+.patients-table td:last-child a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 18px;
+    background: none !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    transition: transform 0.12s, color 0.12s;
+}
+.patients-table td:last-child a:last-child {
+    margin-right: 0;
+}
+.patients-table td:last-child a i {
+    font-size: 1.55rem !important;
+    color: #6b7680 !important;
+    background: none !important;
+    border-radius: 0;
+    transition: color 0.12s, transform 0.12s;
+}
+.patients-table td:last-child a[title='Delete'] i {
+    color: #ff6333 !important;
+}
+.patients-table td:last-child a:hover i {
+    transform: scale(1.13);
+    color: #4b5563 !important;
+}
+.patients-table td:last-child a[title='Delete']:hover i {
+    color: #d32f2f !important;
+}
+
+/* Remove vertical card layout styles */
+.patients-list, .patient-card, .patient-header, .patient-info, .patient-actions {
+    all: unset;
+}
+
+/* Appointment Panel Styles - Tailwind Compatible */
+/* Only keeping the slide-in panel functionality, form styling is now handled by Tailwind */
+
+#addAppointmentPanel {
+    z-index: 1060;
+}
+
+#doctorAvailabilityPanel {
+    z-index: 1060;
+}
+
+#appointmentInfoPanel {
+    z-index: 1060;
+}
+
+#editAppointmentPanel {
+    z-index: 1060;
+}
+
+/* Ensure panels are visible when active */
+.slide-in-panel.active {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Debug styles - make sure panels are visible */
+.slide-in-panel {
+    visibility: visible;
+    opacity: 1;
+}
+
+@media (max-width: 991px) {
+    .patients-table,
+    .table.align-middle {
+        font-size: 0.98rem;
+    }
+    .patients-table th,
+    .patients-table td,
+    .table.align-middle th,
+    .table.align-middle td {
+        padding: 10px 6px !important;
+        font-size: 0.98rem !important;
+    }
+    
+    /* Appointment panels responsive */
+    #addAppointmentPanel,
+    #doctorAvailabilityPanel,
+    #appointmentInfoPanel,
+    #editAppointmentPanel {
+        width: 100%;
+        max-width: 100vw;
+        border-radius: 0;
+    }
+    
+    #addAppointmentPanel .row,
+    #doctorAvailabilityPanel .row,
+    #editAppointmentPanel .row {
+        flex-direction: column;
+    }
+    
+    #addAppointmentPanel .form-control-lg,
+    #doctorAvailabilityPanel .form-control-lg,
+    #editAppointmentPanel .form-control-lg {
+        font-size: 0.95rem;
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .patients-list {
+        max-width: 98vw;
+        padding: 0 2vw;
+    }
+    .patient-card {
+        padding: 14px 8px;
+    }
+    .patient-header img {
+        width: 38px;
+        height: 38px;
+    }
+    .patient-name {
+        font-size: 1rem;
+    }
+    .patient-info {
+        font-size: 0.95rem;
+    }
+}

@@ -1,0 +1,174 @@
+DEBUG - 2025-07-13 10:57:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:57:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:57:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:57:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:57:27 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:59:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:59:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:59:38 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:59:38 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:59:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 10:59:41 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:00:36 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:04:31 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:04:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+ERROR - 2025-07-13 11:05:09 --> mysqli_sql_exception: Duplicate column name 'occupation' in /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(327): mysqli->query('ALTER TABLE `us...', 0)
+#1 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(738): CodeIgniter\Database\MySQLi\Connection->execute('ALTER TABLE `us...')
+#2 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(652): CodeIgniter\Database\BaseConnection->simpleQuery('ALTER TABLE `us...')
+#3 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/Forge.php(772): CodeIgniter\Database\BaseConnection->query('ALTER TABLE `us...')
+#4 /Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Database/Migrations/2025-07-13-110456_AddMissingPatientFields.php(37): CodeIgniter\Database\Forge->addColumn('user', Array)
+#5 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MigrationRunner.php(876): App\Database\Migrations\AddMissingPatientFields->up()
+#6 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(360): CodeIgniter\CLI\Console->run()
+#11 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(104): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/macbookairm1/Desktop/Project/Perfect-Smile/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+DEBUG - 2025-07-13 11:06:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:02 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:11 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:23 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:44 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:50 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:50 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:50 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:08:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:12:02 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:12:04 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:12:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:12:08 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:12:08 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Male","address":"789 Patient Road","date_of_birth":"","age":"","occupation":"","nationality":""}
+ERROR - 2025-07-13 11:12:08 --> Validation failed: {"date_of_birth":"The date_of_birth field is required."}
+DEBUG - 2025-07-13 11:12:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2025-07-13 11:12:08 --> ErrorException: Array to string conversion
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/templates/patientsTable.php on line 19.
+ 1 APPPATH/Views/templates/patientsTable.php(19): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Array to string conversion', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/templates/patientsTable.php', 19)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/templates/patientsTable.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('templates/patientsTable', [], true)
+ 5 APPPATH/Views/admin/patients.php(8): view('templates/patientsTable', [...])
+ 6 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 7 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 8 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 9 APPPATH/Controllers/Admin.php(36): view('admin/patients', [...])
+10 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+11 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+12 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+13 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+14 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+15 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+16 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+DEBUG - 2025-07-13 11:12:28 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:12:28 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:12:28 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Male","address":"789 Patient Road","date_of_birth":"2025-07-10","age":"","occupation":"","nationality":""}
+INFO - 2025-07-13 11:12:28 --> Update Data: {"name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","address":"789 Patient Road","gender":"Male","date_of_birth":"2025-07-10","age":"","occupation":"","nationality":""}
+ERROR - 2025-07-13 11:12:28 --> Failed to update patient: {"email":"This email is already registered"}
+DEBUG - 2025-07-13 11:12:28 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:12:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:12:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:12:37 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:12:37 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Female","address":"789 Patient Road","date_of_birth":"","age":"","occupation":"","nationality":""}
+ERROR - 2025-07-13 11:12:37 --> Validation failed: {"date_of_birth":"The date_of_birth field is required."}
+DEBUG - 2025-07-13 11:12:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2025-07-13 11:12:37 --> ErrorException: Array to string conversion
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/templates/patientsTable.php on line 19.
+ 1 APPPATH/Views/templates/patientsTable.php(19): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Array to string conversion', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/templates/patientsTable.php', 19)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/templates/patientsTable.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('templates/patientsTable', [], true)
+ 5 APPPATH/Views/admin/patients.php(8): view('templates/patientsTable', [...])
+ 6 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 7 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 8 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 9 APPPATH/Controllers/Admin.php(36): view('admin/patients', [...])
+10 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+11 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+12 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+13 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+14 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+15 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+16 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+DEBUG - 2025-07-13 11:24:18 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:24:24 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:25:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:42:19 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:42:24 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:42:26 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:42:42 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:50:11 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:55:17 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:55:22 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:55:26 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:55:26 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:55:26 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Female","address":"789 Patient Road","date_of_birth":"","age":"","occupation":"","nationality":""}
+ERROR - 2025-07-13 11:55:26 --> Validation failed: {"date_of_birth":"The date_of_birth field is required."}
+DEBUG - 2025-07-13 11:55:26 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:55:28 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:55:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:55:37 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:55:37 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Male","address":"789 Patient Road","date_of_birth":"2025-07-01","age":"3","occupation":"na","nationality":"na"}
+INFO - 2025-07-13 11:55:37 --> Update Data: {"name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","address":"789 Patient Road","gender":"Male","date_of_birth":"2025-07-01","age":"3","occupation":"na","nationality":"na"}
+ERROR - 2025-07-13 11:55:37 --> Failed to update patient: {"email":"This email is already registered"}
+DEBUG - 2025-07-13 11:55:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:55:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:57:36 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:57:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:57:46 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:57:46 --> Update Patient - ID: 7
+INFO - 2025-07-13 11:57:46 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"7","name":"brandon","email":"don@gmail.com","phone":"8987798","gender":"Female","address":"brand","date_of_birth":"2025-07-09","age":"9","occupation":"on","nationality":"din"}
+INFO - 2025-07-13 11:57:46 --> Update Data: {"name":"brandon","email":"don@gmail.com","phone":"8987798","address":"brand","gender":"Female","date_of_birth":"2025-07-09","age":"9","occupation":"on","nationality":"din"}
+INFO - 2025-07-13 11:57:46 --> Patient updated successfully
+DEBUG - 2025-07-13 11:57:46 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:57:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:57:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:57:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:57:57 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:57:57 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Female","address":"789 Patient Road","date_of_birth":"","age":"","occupation":"","nationality":""}
+ERROR - 2025-07-13 11:57:57 --> Validation failed: {"date_of_birth":"The date_of_birth field is required."}
+DEBUG - 2025-07-13 11:57:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:02 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:58:10 --> Update Patient - ID: 3
+INFO - 2025-07-13 11:58:10 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"3","name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","gender":"Female","address":"789 Patient Road","date_of_birth":"2025-07-08","age":"9","occupation":"hh","nationality":"oo"}
+INFO - 2025-07-13 11:58:10 --> Update Data: {"name":"Patient Jane Doe","email":"patient@perfectsmile.com","phone":"1234567892","address":"789 Patient Road","gender":"Female","date_of_birth":"2025-07-08","age":"9","occupation":"hh","nationality":"oo"}
+INFO - 2025-07-13 11:58:10 --> Patient updated successfully
+DEBUG - 2025-07-13 11:58:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:18 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-07-13 11:58:21 --> Update Patient - ID: 7
+INFO - 2025-07-13 11:58:21 --> POST Data: {"csrf_test_name":"c01a337354fb683b022325d6277d3358","patient_id":"7","name":"ccccc","email":"don@gmail.com","phone":"8987798","gender":"Female","address":"brand","date_of_birth":"2025-07-09","age":"9","occupation":"on","nationality":"din"}
+INFO - 2025-07-13 11:58:21 --> Update Data: {"name":"ccccc","email":"don@gmail.com","phone":"8987798","address":"brand","gender":"Female","date_of_birth":"2025-07-09","age":"9","occupation":"on","nationality":"din"}
+INFO - 2025-07-13 11:58:21 --> Patient updated successfully
+DEBUG - 2025-07-13 11:58:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:55 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:58:58 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 11:59:18 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:21:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:21:59 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:21:59 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:22:02 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:22:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:38:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:38:59 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-13 12:39:02 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.

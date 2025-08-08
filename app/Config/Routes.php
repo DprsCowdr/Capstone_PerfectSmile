@@ -1,0 +1,165 @@
+<?php
+
+use CodeIgniter\Router\RouteCollection;
+
+/**
+ * @var RouteCollection $routes
+ */
+$routes->get('/', to: 'Home::index');
+
+// Debug route (REMOVE IN PRODUCTION)
+$routes->get('debug', 'Home::debug');
+
+// Guest routes (no authentication required)
+$routes->get('guest/book-appointment', 'Guest::bookAppointment');
+$routes->post('guest/book-appointment', 'Guest::submitAppointment');
+$routes->get('guest/services', 'Guest::services');
+$routes->get('guest/branches', 'Guest::branches');
+
+// Authentication routes
+$routes->get('login', 'Auth::index');
+$routes->post('auth/login', 'Auth::login');
+$routes->get('auth/register', 'Auth::register');
+$routes->post('auth/registerUser', 'Auth::registerUser');
+$routes->get('auth/logout', 'Auth::logout');
+
+// Dashboard routes
+// $routes->get('dashboard', 'Dashboard::index');
+
+// Admin routes (protected)
+// Debug route (remove in production)
+$routes->get('debug/appointments', 'Debug::checkAppointments');
+$routes->get('debug/add-test', 'Debug::addTestAppointment');
+
+$routes->group('admin', ['filter' => 'auth'], function($routes) {
+    // Main dashboard
+    $routes->get('dashboard', 'AdminController::dashboard');
+    
+    // Branch management
+    $routes->post('switch-branch', 'AdminController::switchBranch');
+    
+    // Patient management routes
+    $routes->get('patients', 'AdminController::patients'); // → patients/index.php
+    $routes->get('patients/add', 'AdminController::addPatient');
+    $routes->post('patients/store', 'AdminController::storePatient');
+    $routes->get('patients/toggle-status/(:num)', 'AdminController::toggleStatus/$1');
+    $routes->get('patients/get/(:num)', 'AdminController::getPatient/$1');
+    $routes->post('patients/update/(:num)', 'AdminController::updatePatient/$1');
+    $routes->get('patients/appointments/(:num)', 'AdminController::getPatientAppointments/$1');
+    $routes->get('patients/create-account/(:num)', 'AdminController::createAccount/$1'); // → patients/create.php
+    $routes->post('patients/save-account/(:num)', 'AdminController::saveAccount/$1');
+    $routes->get('patient-checkups', 'DentalController::patientCheckups'); // → patients/checkups.php
+    
+    // Appointment management routes
+    $routes->get('appointments', 'AdminController::appointments'); // → appointments/index.php
+    $routes->post('appointments/create', 'AdminController::createAppointment');
+    $routes->post('appointments/update/(:num)', 'AdminController::updateAppointment/$1');
+    $routes->post('appointments/delete/(:num)', 'AdminController::deleteAppointment/$1');
+    $routes->post('appointments/approve/(:num)', 'AdminController::approveAppointment/$1');
+    $routes->post('appointments/decline/(:num)', 'AdminController::declineAppointment/$1');
+    $routes->post('appointments/available-dentists', 'AdminController::getAvailableDentists');
+    $routes->get('waitlist', 'AdminController::waitlist'); // → appointments/waitlist.php
+    
+    // Dental management routes (moved to DentalController)
+    $routes->get('dental-records', 'DentalController::records'); // → dental/records.php
+    $routes->get('dental-records/create/(:num)', 'DentalController::createRecord/$1'); // → dental/create_record.php
+    $routes->post('dental-records/store-basic', 'DentalController::storeBasicDentalRecord');
+    $routes->get('dental-records/(:num)', 'DentalController::viewRecord/$1'); // → dental/view_record.php
+    $routes->get('dental-charts', 'DentalController::charts'); // → dental/charts.php
+    $routes->get('dental-charts/(:num)', 'DentalController::viewChart/$1'); // → dental/view_chart.php
+    $routes->get('dental-charts/create/(:num)', 'DentalController::createChart/$1'); // → dental/create_chart.php
+    $routes->get('dental-charts/edit/(:num)', 'DentalController::editChart/$1'); // → dental/edit_chart.php
+    $routes->get('dental-charts/test-3d', 'DentalController::test3DViewer');
+    $routes->post('dental-records/store', 'DentalController::storeDentalRecord');
+    $routes->post('dental-records/update/(:num)', 'DentalController::updateDentalRecord/$1');
+    $routes->get('records', 'AdminController::records'); // → dental/all_records.php
+    
+    // Management routes
+    $routes->get('services', 'AdminController::services'); // → management/services.php
+    $routes->get('procedures', 'AdminController::procedures'); // → management/procedures.php
+    $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
+    $routes->get('branches', 'AdminController::branches'); // → management/branches.php
+    $routes->get('settings', 'AdminController::settings'); // → management/settings.php
+    
+    // Users management routes
+    $routes->get('users', 'AdminController::users'); // → users/index.php
+    $routes->get('users/add', 'AdminController::addUser'); // → users/add.php
+    $routes->post('users/store', 'AdminController::storeUser');
+    $routes->get('users/edit/(:num)', 'AdminController::editUser/$1'); // → users/edit.php
+    $routes->post('users/update/(:num)', 'AdminController::updateUser/$1');
+    $routes->get('users/toggle-status/(:num)', 'AdminController::toggleUserStatus/$1');
+    $routes->get('users/delete/(:num)', 'AdminController::deleteUser/$1');
+    
+    // Billing routes
+    $routes->get('invoice', 'AdminController::invoice'); // → billing/invoice.php
+});
+
+// Checkup routes (accessible by admin and doctor)
+$routes->group('checkup', ['filter' => 'auth'], function($routes) {
+    $routes->get('/', 'Checkup::index');
+    $routes->get('start/(:num)', 'Checkup::startCheckup/$1');
+    $routes->get('patient/(:num)', 'Checkup::patientCheckup/$1');
+    $routes->post('save/(:num)', 'Checkup::saveCheckup/$1');
+    $routes->get('no-show/(:num)', 'Checkup::markNoShow/$1');
+    $routes->post('cancel/(:num)', 'Checkup::cancelAppointment/$1');
+    $routes->get('record/(:num)', 'Checkup::viewRecord/$1');
+    $routes->get('patient-history/(:num)', 'Checkup::getPatientHistory/$1');
+    $routes->get('debug/(:num)', 'Checkup::debug/$1'); // Debug specific appointment
+    $routes->get('debug', 'Checkup::debug'); // Debug today's appointments
+});
+
+// Dentist routes (protected)
+$routes->group('dentist', ['filter' => 'auth'], function($routes) {
+    $routes->get('dashboard', 'Dentist::dashboard');
+    $routes->get('appointments', 'Dentist::appointments');
+    $routes->post('availability/set', 'Dentist::setAvailability');
+    $routes->post('appointments/approve/(:num)', 'Dentist::approveAppointment/$1');
+    $routes->post('appointments/decline/(:num)', 'Dentist::declineAppointment/$1');
+    
+    // Patients Module (accessible by dentist)
+    $routes->get('patients', 'Dentist::patients');
+    $routes->get('patients/search', 'Dentist::searchPatients');
+    $routes->get('patients/(:num)', 'Dentist::patientDetails/$1');
+    
+    // Dental Records (Step 3: Checkup/Consultation)
+    $routes->get('patient-records/(:num)', 'Dentist::patientRecords/$1');
+    $routes->get('dental-chart/(:num)', 'Dentist::dentalChart/$1');
+    $routes->post('records/create', 'Dentist::createRecord');
+    
+    // Procedures (Step 5 & 6: Procedure Scheduling & Execution)
+    $routes->get('procedures', 'Dentist::procedures');
+    $routes->post('procedures/schedule', 'Dentist::scheduleProcedure');
+    $routes->get('procedures/(:num)', 'Dentist::procedureDetails/$1');
+});
+
+// Patient routes (protected)
+$routes->group('patient', ['filter' => 'auth'], function($routes) {
+    $routes->get('dashboard', 'Patient::dashboard');
+    $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
+});
+
+// Patient Check-in routes (for staff/reception)
+$routes->group('checkin', ['filter' => 'auth'], function($routes) {
+    $routes->get('/', 'PatientCheckin::index');
+    $routes->post('process/(:num)', 'PatientCheckin::checkinPatient/$1');
+});
+
+// Treatment Queue routes (for dentists)
+$routes->group('queue', ['filter' => 'auth'], function($routes) {
+    $routes->get('/', 'TreatmentQueue::index');
+    $routes->post('call/(:num)', 'TreatmentQueue::callNext/$1');
+    $routes->get('status', 'TreatmentQueue::getQueueStatus'); // AJAX
+});
+
+// Staff routes (protected)
+$routes->group('staff', ['filter' => 'auth'], function($routes) {
+    $routes->get('dashboard', 'StaffController::dashboard');
+    $routes->get('patients', 'StaffController::patients');
+    $routes->get('patients/add', 'StaffController::addPatient');
+    $routes->post('patients/store', 'StaffController::storePatient');
+    $routes->post('patients/toggle/(:num)', 'StaffController::toggleStatus/$1');
+    $routes->get('patients/get/(:num)', 'StaffController::getPatient/$1');
+    $routes->post('patients/update/(:num)', 'StaffController::updatePatient/$1');
+    $routes->get('appointments', 'StaffController::appointments');
+    $routes->post('appointments/create', 'StaffController::createAppointment');
+});

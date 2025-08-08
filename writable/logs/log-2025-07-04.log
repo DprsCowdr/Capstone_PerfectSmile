@@ -1,0 +1,177 @@
+ERROR - 2025-07-04 18:14:12 --> mysqli_sql_exception: Unknown column 'created_at' in 'field list' in /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(327): mysqli->query('INSERT INTO `se...', 0)
+#1 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(738): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `se...')
+#2 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(652): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `se...')
+#3 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `se...', Array, false)
+#4 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Model.php(394): CodeIgniter\Database\BaseBuilder->insert()
+#5 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/BaseModel.php(843): CodeIgniter\Model->doInsert(Array)
+#6 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Model.php(800): CodeIgniter\BaseModel->insert(Array, false)
+#7 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/BaseModel.php(754): CodeIgniter\Model->insert(Array, false)
+#8 /Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Database/Seeds/SampleDataSeeder.php(49): CodeIgniter\BaseModel->save(Array)
+#9 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/Seeder.php(149): App\Database\Seeds\SampleDataSeeder->run()
+#10 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Commands/Database/Seed.php(79): CodeIgniter\Database\Seeder->call('App\\Database\\Se...')
+#11 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Seed->run(Array)
+#12 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('db:seed', Array)
+#13 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(360): CodeIgniter\CLI\Console->run()
+#14 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(104): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#15 /Users/macbookairm1/Desktop/Project/Perfect-Smile/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#16 {main}
+ERROR - 2025-07-04 18:15:05 --> mysqli_sql_exception: Table 'services' already exists in /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(327): mysqli->query('CREATE TABLE `s...', 0)
+#1 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(738): CodeIgniter\Database\MySQLi\Connection->execute('CREATE TABLE `s...')
+#2 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(652): CodeIgniter\Database\BaseConnection->simpleQuery('CREATE TABLE `s...')
+#3 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/Forge.php(570): CodeIgniter\Database\BaseConnection->query('CREATE TABLE `s...')
+#4 /Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Database/Migrations/2024-01-01-000002_CreateServicesTable.php(41): CodeIgniter\Database\Forge->createTable('services')
+#5 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MigrationRunner.php(876): App\Database\Migrations\CreateServicesTable->up()
+#6 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MigrationRunner.php(182): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+#7 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Commands/Database/Migrate.php(85): CodeIgniter\Database\MigrationRunner->latest(NULL)
+#8 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Migrate->run(Array)
+#9 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('migrate', Array)
+#10 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(360): CodeIgniter\CLI\Console->run()
+#11 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(104): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#12 /Users/macbookairm1/Desktop/Project/Perfect-Smile/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#13 {main}
+ERROR - 2025-07-04 18:15:08 --> mysqli_sql_exception: Unknown column 'created_at' in 'field list' in /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php:327
+Stack trace:
+#0 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/MySQLi/Connection.php(327): mysqli->query('INSERT INTO `se...', 0)
+#1 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(738): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `se...')
+#2 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseConnection.php(652): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `se...')
+#3 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `se...', Array, false)
+#4 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Model.php(394): CodeIgniter\Database\BaseBuilder->insert()
+#5 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/BaseModel.php(843): CodeIgniter\Model->doInsert(Array)
+#6 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Model.php(800): CodeIgniter\BaseModel->insert(Array, false)
+#7 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/BaseModel.php(754): CodeIgniter\Model->insert(Array, false)
+#8 /Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Database/Seeds/SampleDataSeeder.php(49): CodeIgniter\BaseModel->save(Array)
+#9 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Database/Seeder.php(149): App\Database\Seeds\SampleDataSeeder->run()
+#10 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Commands/Database/Seed.php(79): CodeIgniter\Database\Seeder->call('App\\Database\\Se...')
+#11 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Commands.php(74): CodeIgniter\Commands\Database\Seed->run(Array)
+#12 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/CLI/Console.php(47): CodeIgniter\CLI\Commands->run('db:seed', Array)
+#13 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(360): CodeIgniter\CLI\Console->run()
+#14 /Users/macbookairm1/Desktop/Project/Perfect-Smile/vendor/codeigniter4/framework/system/Boot.php(104): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+#15 /Users/macbookairm1/Desktop/Project/Perfect-Smile/spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+#16 {main}
+CRITICAL - 2025-07-04 18:25:48 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "staff/dashboard.php"
+[Method: GET, Route: staff/dashboard]
+in SYSTEMPATH/Exceptions/FrameworkException.php on line 39.
+ 1 SYSTEMPATH/View/View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('staff/dashboard.php')
+ 2 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('staff/dashboard', [], true)
+ 3 APPPATH/Controllers/Staff.php(23): view('staff/dashboard', [...])
+ 4 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Staff->dashboard()
+ 5 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Staff))
+ 6 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+10 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+CRITICAL - 2025-07-04 18:43:23 --> ErrorException: Undefined variable $user
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/admin/patients.php on line 3.
+ 1 APPPATH/Views/admin/patients.php(3): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Undefined variable $user', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php', 3)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 5 APPPATH/Controllers/Admin.php(34): view('admin/patients')
+ 6 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+ 7 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+ 8 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+12 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+CRITICAL - 2025-07-04 18:43:31 --> ErrorException: Undefined variable $user
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/admin/patients.php on line 3.
+ 1 APPPATH/Views/admin/patients.php(3): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Undefined variable $user', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php', 3)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 5 APPPATH/Controllers/Admin.php(34): view('admin/patients')
+ 6 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+ 7 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+ 8 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+12 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+CRITICAL - 2025-07-04 18:44:09 --> ErrorException: Undefined variable $user
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/admin/patients.php on line 3.
+ 1 APPPATH/Views/admin/patients.php(3): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Undefined variable $user', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php', 3)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 5 APPPATH/Controllers/Admin.php(34): view('admin/patients')
+ 6 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+ 7 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+ 8 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+12 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+CRITICAL - 2025-07-04 18:44:10 --> ErrorException: Undefined variable $user
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/admin/patients.php on line 3.
+ 1 APPPATH/Views/admin/patients.php(3): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Undefined variable $user', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php', 3)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 5 APPPATH/Controllers/Admin.php(34): view('admin/patients')
+ 6 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+ 7 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+ 8 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+12 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+DEBUG - 2025-07-04 18:44:13 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2025-07-04 18:44:13 --> ErrorException: Undefined variable $user
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/admin/patients.php on line 3.
+ 1 APPPATH/Views/admin/patients.php(3): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Undefined variable $user', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php', 3)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 5 APPPATH/Controllers/Admin.php(34): view('admin/patients')
+ 6 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+ 7 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+ 8 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+12 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+DEBUG - 2025-07-04 18:45:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+CRITICAL - 2025-07-04 18:45:32 --> ErrorException: Undefined variable $user
+[Method: GET, Route: admin/patients]
+in APPPATH/Views/admin/patients.php on line 3.
+ 1 APPPATH/Views/admin/patients.php(3): CodeIgniter\Debug\Exceptions->errorHandler(2, 'Undefined variable $user', '/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php', 3)
+ 2 SYSTEMPATH/View/View.php(224): include('/Users/macbookairm1/Desktop/Project/Perfect-Smile/app/Views/admin/patients.php')
+ 3 SYSTEMPATH/View/View.php(227): CodeIgniter\View\View->{closure:CodeIgniter\View\View::render():221}()
+ 4 SYSTEMPATH/Common.php(1173): CodeIgniter\View\View->render('admin/patients', [], true)
+ 5 APPPATH/Controllers/Admin.php(34): view('admin/patients')
+ 6 SYSTEMPATH/CodeIgniter.php(933): App\Controllers\Admin->patients()
+ 7 SYSTEMPATH/CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin))
+ 8 SYSTEMPATH/CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH/Boot.php(334): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+12 SYSTEMPATH/rewrite.php(44): require_once('/Users/macbookairm1/Desktop/Project/Perfect-Smile/public/index.php')
+DEBUG - 2025-07-04 18:46:26 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:46:28 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:46:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:46:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:46:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:47:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:47:51 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:47:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:47:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:47:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:56:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:56:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:56:31 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:59:03 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:59:05 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:59:24 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:59:40 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-07-04 18:59:43 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
