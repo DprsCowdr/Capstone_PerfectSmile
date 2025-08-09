@@ -55,16 +55,16 @@
 
     <div class="debug-box">
         <h3>Sample Login Credentials</h3>
-        <p><strong>Dentist Login:</strong></p>
+        <p><strong>Main Dentist Login:</strong></p>
         <ul>
-            <li>Email: <code>doctor@perfectsmile.com</code></li>
-            <li>Password: <code>password</code></li>
+            <li>Email: <code>dr.gonowon@perfectsmile.com</code></li>
+            <li>Password: <code>drminnie123</code></li>
         </ul>
         
-        <p><strong>Dr. Sarah Johnson:</strong></p>
+        <p><strong>Dr. Minnie Gonowon (Head Dentist):</strong></p>
         <ul>
-            <li>Email: <code>sarah.johnson@perfectsmile.com</code></li>
-            <li>Password: <code>password</code></li>
+            <li>Email: <code>dr.gonowon@perfectsmile.com</code></li>
+            <li>Password: <code>drminnie123</code></li>
         </ul>
     </div>
 

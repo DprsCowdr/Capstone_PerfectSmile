@@ -22,14 +22,14 @@ class UserSeeder extends Seeder
                 'gender' => 'male'
             ],
             [
-                'name' => 'Dr. John Smith',
-                'email' => 'doctor@perfectsmile.com',
-                'password' => 'doctor123',
+                'name' => 'Dr. Minnie Gonowon',
+                'email' => 'dr.gonowon@perfectsmile.com',
+                'password' => 'drminnie123',
                 'user_type' => 'doctor',
-                'phone' => '1234567891',
-                'address' => '456 Doctor Avenue',
-                'date_of_birth' => '1985-05-15',
-                'gender' => 'male'
+                'phone' => '09171234567',
+                'address' => 'Perfect Smile Dental Clinic, Main Branch',
+                'date_of_birth' => '1980-03-15',
+                'gender' => 'female'
             ],
             [
                 'name' => 'Patient Jane Doe',
@@ -54,7 +54,18 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($users as $user) {
-            $userModel->save($user);
+            // Check if user exists by email
+            $existingUser = $userModel->where('email', $user['email'])->first();
+            
+            if ($existingUser) {
+                // Update existing user using update method
+                $userModel->update($existingUser['id'], $user);
+                echo "Updated user: " . $user['name'] . "\n";
+            } else {
+                // Create new user
+                $userModel->save($user);
+                echo "Created user: " . $user['name'] . "\n";
+            }
         }
     }
 } 

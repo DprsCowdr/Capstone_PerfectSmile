@@ -62,7 +62,8 @@
         <option value="">Select Dentist (Optional for scheduled appointments)</option>
         <?php if (isset($dentists) && is_array($dentists)): ?>
           <?php foreach ($dentists as $d): ?>
-            <option value="<?= $d['id'] ?>"><?= $d['name'] ?></option>
+            <?php $isDefault = (strpos($d['name'], 'Dr. Minnie Gonowon') !== false || strpos($d['email'], 'dr.gonowon') !== false); ?>
+            <option value="<?= $d['id'] ?>" <?= $isDefault ? 'selected' : '' ?>><?= $d['name'] ?></option>
           <?php endforeach; ?>
         <?php endif; ?>
       </select>

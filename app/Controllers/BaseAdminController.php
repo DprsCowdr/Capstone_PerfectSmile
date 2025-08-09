@@ -238,7 +238,7 @@ abstract class BaseAdminController extends BaseController
         
         $patients = $userModel->where('user_type', 'patient')->findAll();
         $branches = $branchModel->findAll();
-        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+        $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
         
         // Get appointments with branch filtering
         $appointments = $this->appointmentService->getAllAppointments();

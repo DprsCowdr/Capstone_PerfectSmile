@@ -402,7 +402,7 @@ class AdminController extends BaseAdminController
             'email' => 'required|valid_email|is_unique[user.email,id,{id}]',
             'phone' => 'required|min_length[10]',
             'gender' => 'permit_empty|in_list[Male,Female,Other,male,female,other]',
-            'user_type' => 'required|in_list[admin,staff,dentist]',
+            'user_type' => 'required|in_list[admin,staff,doctor]',
             'password' => 'required|min_length[6]',
             'branches' => 'required'
         ]);
@@ -439,7 +439,7 @@ class AdminController extends BaseAdminController
             // Set default position based on user type if position is empty
             if (empty($position)) {
                 switch ($formData['user_type']) {
-                    case 'dentist':
+                    case 'doctor':
                         $position = 'Dentist';
                         break;
                     case 'admin':
@@ -536,7 +536,7 @@ class AdminController extends BaseAdminController
             // Set default position based on user type if position is empty
             if (empty($position)) {
                 switch ($formData['user_type']) {
-                    case 'dentist':
+                    case 'doctor':
                         $position = 'Dentist';
                         break;
                     case 'admin':

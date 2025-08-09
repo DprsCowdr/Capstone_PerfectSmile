@@ -52,7 +52,7 @@ class AppointmentModel extends Model
         'branch_id' => 'required|integer',
         'dentist_id' => 'permit_empty|integer',
         'appointment_datetime' => 'required',
-        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,ongoing,completed,cancelled,no_show]',
+        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,checked_in,ongoing,completed,cancelled,no_show]',
         'appointment_type' => 'permit_empty|in_list[scheduled,walkin]',
         'approval_status' => 'permit_empty|in_list[pending,approved,declined,auto_approved]',
     ];
@@ -410,7 +410,7 @@ class AppointmentModel extends Model
         
         // Get all active dentists (for now, not filtering by branch since no branch assignments exist)
         $userModel = new \App\Models\UserModel();
-        $dentists = $userModel->where('user_type', 'dentist')
+        $dentists = $userModel->where('user_type', 'doctor')
                              ->where('status', 'active')
                              ->findAll();
         

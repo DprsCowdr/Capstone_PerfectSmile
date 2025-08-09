@@ -36,7 +36,7 @@ class Staff extends BaseController
         // Get user counts
         $userModel = new \App\Models\UserModel();
         $totalPatients = $userModel->where('user_type', 'patient')->countAllResults();
-        $totalDentists = $userModel->where('user_type', 'dentist')->countAllResults();
+        $totalDentists = $userModel->where('user_type', 'doctor')->countAllResults();
         
         // Get branch count
         $branchModel = new \App\Models\BranchModel();
@@ -257,7 +257,7 @@ class Staff extends BaseController
         
         $patients = $userModel->where('user_type', 'patient')->findAll();
         $branches = $branchModel->findAll();
-        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+        $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
         
         return view('staff/appointments', [
             'user' => $user,

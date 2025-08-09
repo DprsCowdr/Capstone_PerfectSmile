@@ -22,10 +22,22 @@
                 <!-- Header -->
                 <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg mb-8">
                     <div class="p-6 text-white">
-                        <h1 class="text-3xl font-bold flex items-center">
-                            <i class="fas fa-sign-in-alt mr-4"></i>
-                        </h1>
-                        <p class="mt-2 opacity-90">Manage patient arrivals and check-ins for today</p>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h1 class="text-3xl font-bold flex items-center">
+                                    <i class="fas fa-sign-in-alt mr-4"></i>
+                                    Patient Check-In
+                                </h1>
+                                <p class="mt-2 opacity-90">Manage patient arrivals and check-ins for today</p>
+                            </div>
+                            <div class="hidden md:block">
+                                <a href="<?= base_url('queue') ?>" 
+                                   class="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors">
+                                    <i class="fas fa-users mr-2"></i>
+                                    View Treatment Queue
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -83,6 +95,29 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Flash Messages -->
+                <?php if (session()->getFlashdata('success')): ?>
+                    <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            <span><?= session()->getFlashdata('success') ?></span>
+                        </div>
+                        <?php if (strpos(session()->getFlashdata('success'), 'treatment queue') !== false): ?>
+                            <a href="<?= base_url('queue') ?>" 
+                               class="ml-4 text-green-600 hover:text-green-800 font-medium text-sm underline">
+                                View Queue →
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (session()->getFlashdata('error')): ?>
+                    <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <?= session()->getFlashdata('error') ?>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Appointments List -->
                 <div class="bg-white rounded-xl shadow-lg">

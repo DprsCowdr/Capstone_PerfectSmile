@@ -33,10 +33,18 @@ class TreatmentQueue extends BaseController
                      TIMESTAMPDIFF(MINUTE, checked_in_at, NOW()) as waiting_time')
             ->join('user', 'user.id = appointments.user_id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'checked_in')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('checked_in_at', 'ASC')
-            ->findAll();
+            ->where('appointments.status', 'checked_in');
+            
+        // If user is a doctor, only show their assigned patients OR unassigned patients
+        if ($user['user_type'] === 'doctor') {
+            $waitingPatients = $waitingPatients->groupStart()
+                ->where('appointments.dentist_id', $user['id'])
+                ->orWhere('appointments.dentist_id IS NULL')
+                ->groupEnd();
+        }
+        // If user is admin, show all waiting patients
+        
+        $waitingPatients = $waitingPatients->orderBy('checked_in_at', 'ASC')->findAll();
 
         // Get ongoing treatments
         $ongoingTreatments = $this->appointmentModel
@@ -44,10 +52,15 @@ class TreatmentQueue extends BaseController
                      TIMESTAMPDIFF(MINUTE, started_at, NOW()) as treatment_duration')
             ->join('user', 'user.id = appointments.user_id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'ongoing')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('started_at', 'ASC')
-            ->findAll();
+            ->where('appointments.status', 'ongoing');
+            
+        // If user is a doctor, only show their ongoing treatments
+        if ($user['user_type'] === 'doctor') {
+            $ongoingTreatments = $ongoingTreatments->where('appointments.dentist_id', $user['id']);
+        }
+        // If user is admin, show all ongoing treatments
+        
+        $ongoingTreatments = $ongoingTreatments->orderBy('started_at', 'ASC')->findAll();
 
         return view('queue/dashboard', [
             'user' => $user,
@@ -99,17 +112,30 @@ class TreatmentQueue extends BaseController
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
 
-        $waitingCount = $this->appointmentModel
+        $waitingCountQuery = $this->appointmentModel
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'checked_in')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->countAllResults();
+            ->where('appointments.status', 'checked_in');
+            
+        // If user is a doctor, count their assigned + unassigned patients
+        if ($user['user_type'] === 'doctor') {
+            $waitingCountQuery = $waitingCountQuery->groupStart()
+                ->where('appointments.dentist_id', $user['id'])
+                ->orWhere('appointments.dentist_id IS NULL')
+                ->groupEnd();
+        }
+        
+        $waitingCount = $waitingCountQuery->countAllResults();
 
-        $ongoingCount = $this->appointmentModel
+        $ongoingCountQuery = $this->appointmentModel
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'ongoing')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->countAllResults();
+            ->where('appointments.status', 'ongoing');
+            
+        // If user is a doctor, only count their ongoing treatments
+        if ($user['user_type'] === 'doctor') {
+            $ongoingCountQuery = $ongoingCountQuery->where('appointments.dentist_id', $user['id']);
+        }
+        
+        $ongoingCount = $ongoingCountQuery->countAllResults();
 
         return $this->response->setJSON([
             'waiting' => $waitingCount,

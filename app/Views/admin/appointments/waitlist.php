@@ -266,7 +266,7 @@ function showDentistSelectionModal(appointmentId) {
                             <option value="">-- Select Dentist --</option>
                             <?php 
                             $userModel = new \App\Models\UserModel();
-                            $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+                            $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
                             foreach ($dentists as $dentist): 
                             ?>
                             <option value="<?= $dentist['id'] ?>"><?= $dentist['name'] ?> (ID: <?= $dentist['id'] ?>)</option>
