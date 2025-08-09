@@ -6,6 +6,23 @@
 !*/cache/index.html
 !*/cache/.htaccess
 
+# Writable directory files
+writable/cache/*
+!writable/cache/index.html
+!writable/cache/.htaccess
+writable/logs/*
+!writable/logs/index.html
+!writable/logs/.htaccess
+writable/session/*
+!writable/session/index.html
+!writable/session/.htaccess
+writable/debugbar/*
+!writable/debugbar/index.html
+!writable/debugbar/.htaccess
+writable/uploads/*
+!writable/uploads/index.html
+!writable/uploads/.htaccess
+
 user_guide_src/build/*
 user_guide_src/cilexer/build/*
 user_guide_src/cilexer/dist/*
