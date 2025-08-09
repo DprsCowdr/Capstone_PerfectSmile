@@ -87,4 +87,73 @@ class StaffController extends BaseAdminController
     {
         return $this->createAppointmentLogic('/staff/appointments', 'staff');
     }
+
+    /**
+     * AJAX endpoint to check appointment conflicts
+     */
+    public function checkConflicts()
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $date = $this->request->getPost('date');
+        $time = $this->request->getPost('time');
+        $dentist_id = $this->request->getPost('dentist_id');
+        $branch_id = $this->request->getPost('branch_id');
+
+        if (!$date || !$time) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Date and time are required']);
+        }
+
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $conflicts = $appointmentModel->checkAppointmentConflicts($date, $time, $dentist_id, null, $branch_id);
+            
+            if (empty($conflicts)) {
+                return $this->response->setJSON([
+                    'success' => true, 
+                    'hasConflicts' => false,
+                    'message' => 'No conflicts found'
+                ]);
+            }
+
+            // Format conflict information for frontend
+            $conflictDetails = [];
+            foreach ($conflicts as $conflict) {
+                $conflictDetails[] = [
+                    'patient_name' => $conflict['patient_name'],
+                    'dentist_name' => $conflict['dentist_name'] ?? 'Unassigned',
+                    'appointment_time' => $conflict['appointment_time'],
+                    'status' => $conflict['status'],
+                    'time_diff' => $this->calculateTimeDifference($time, $conflict['appointment_time'])
+                ];
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'hasConflicts' => true,
+                'conflicts' => $conflictDetails,
+                'message' => count($conflicts) . ' potential conflict(s) found'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Staff conflict check error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Error checking conflicts'
+            ]);
+        }
+    }
+
+    /**
+     * Calculate time difference in minutes between two time strings
+     */
+    private function calculateTimeDifference($time1, $time2)
+    {
+        $t1 = strtotime($time1);
+        $t2 = strtotime($time2);
+        return abs($t1 - $t2) / 60; // Convert to minutes
+    }
 }

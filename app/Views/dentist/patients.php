@@ -1,63 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patients - Dentist Dashboard</title>
-    <link href="<?= base_url('css/sb-admin-2.min.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('vendor/datatables/dataTables.bootstrap4.min.css') ?>" rel="stylesheet">
-    <style>
-        .patient-card {
-            transition: all 0.3s ease;
-            border-left: 4px solid #007bff;
-        }
-        .patient-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .status-badge {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
-        }
-        .stat-item {
-            text-align: center;
-            padding: 10px;
-            border-right: 1px solid #dee2e6;
-        }
-        .stat-item:last-child {
-            border-right: none;
-        }
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 0.8rem;
-            color: #6c757d;
-        }
-    </style>
-</head>
-<body id="page-top">
-
-    <!-- Page Wrapper -->
-    <div id="wrapper">
-        
-        <!-- Content Wrapper -->
-        <div id="content-wrapper" class="d-flex flex-column">
-
-            <!-- Main Content -->
-            <div id="content">
-
-                <!-- Begin Page Content -->
-                <div class="container-fluid">
-
-                    <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">
-                            <i class="fas fa-users mr-2"></i>Patients Management
-                        </h1>
+<?= view('templates/header') ?>
+<div class="min-h-screen bg-white flex">
+    <?= view('templates/sidebar', ['user' => $user]) ?>
+    <div class="flex-1 flex flex-col min-h-screen bg-white">
+        <main class="flex-1 px-6 py-8 bg-white">
+            <?= view('templates/patientsTable', ['patients' => $patients, 'user' => $user]) ?>
+        </main>
+    </div>
+</div>
+<?= view('templates/footer') ?>
                         <div>
                             <a href="<?= base_url('dentist/dashboard') ?>" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard

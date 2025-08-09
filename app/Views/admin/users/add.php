@@ -83,7 +83,7 @@
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value="">Select User Type</option>
                                     <option value="staff" <?= old('user_type') === 'staff' ? 'selected' : '' ?>>Staff</option>
-                                    <option value="dentist" <?= old('user_type') === 'dentist' ? 'selected' : '' ?>>Dentist</option>
+                                    <option value="doctor" <?= old('user_type') === 'doctor' ? 'selected' : '' ?>>Dentist</option>
                                     <option value="admin" <?= old('user_type') === 'admin' ? 'selected' : '' ?>>Administrator</option>
                                 </select>
                             </div>

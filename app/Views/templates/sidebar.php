@@ -4,6 +4,92 @@ $userType = $user['user_type'] ?? null;
 $currentUrl = current_url();
 ?>
 
+<!-- Enhanced Sidebar Styles -->
+<style>
+/* Sidebar scroll enhancements */
+#sidebar {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 3px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* Navigation link enhancements */
+.nav-link {
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+
+.nav-link:hover {
+    transform: translateX(2px);
+}
+
+.nav-link.active {
+    background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+    border-right: 3px solid #3182ce;
+    font-weight: 600;
+}
+
+.nav-link.active i {
+    color: #3182ce;
+}
+
+/* Loading state for navigation */
+.nav-link.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.nav-link.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #e2e8f0;
+    border-top: 2px solid #3182ce;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translateY(-50%);
+}
+
+@keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Smooth transitions */
+.nav-section {
+    transition: opacity 0.3s ease;
+}
+
+/* Mobile optimization */
+@media (max-width: 1023px) {
+    #sidebar {
+        backdrop-filter: blur(10px);
+    }
+}
+</style>
+
 <!-- Mobile menu button -->
 <div class="lg:hidden fixed top-4 left-4 z-50">
     <button id="mobileSidebarToggle" class="p-2 rounded-md bg-white shadow-lg border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -15,7 +101,7 @@ $currentUrl = current_url();
 <div id="sidebarOverlay" class="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden hidden"></div>
 
 <!-- Sidebar -->
-<aside id="sidebar" class="fixed lg:relative inset-y-0 left-0 z-50 flex flex-col w-64 h-screen px-4 sm:px-5 py-6 sm:py-8 overflow-y-auto bg-white border-r shadow-lg lg:shadow-none transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+<aside id="sidebar" class="fixed lg:relative inset-y-0 left-0 z-50 flex flex-col w-64 h-screen px-4 sm:px-5 py-6 sm:py-8 overflow-y-auto bg-white border-r shadow-lg lg:shadow-none transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out" data-scroll-preserve="true">
     <!-- Close button for mobile -->
     <div class="flex items-center justify-between lg:hidden mb-4">
         <span class="text-lg font-bold text-gray-800">Menu</span>
@@ -84,10 +170,10 @@ $currentUrl = current_url();
         <nav class="-mx-2 sm:-mx-3 space-y-4 sm:space-y-6">
             <?php
             function nav_link($href, $icon, $label, $currentUrl) {
-                $isActive = strpos($currentUrl, $href) !== false;
-                $baseClass = 'flex items-center px-2 sm:px-3 py-2 sm:py-2 text-gray-600 transition-colors duration-300 transform rounded-lg hover:bg-gray-100 hover:text-gray-700 text-sm sm:text-base';
-                $activeClass = $isActive ? 'bg-gray-100 text-gray-700' : '';
-                return "<a class=\"{$baseClass} {$activeClass}\" href=\"{$href}\">
+                $isActive = strpos($currentUrl, $href) !== false && $href !== '#';
+                $baseClass = 'nav-link flex items-center px-2 sm:px-3 py-2 sm:py-2 text-gray-600 transition-all duration-200 transform rounded-lg hover:bg-gray-100 hover:text-gray-700 text-sm sm:text-base';
+                $activeClass = $isActive ? 'active bg-blue-50 text-blue-700' : '';
+                return "<a class=\"{$baseClass} {$activeClass}\" href=\"{$href}\" data-nav-link>
                     <i class=\"{$icon} w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0\"></i>
                     <span class=\"mx-2 text-xs sm:text-sm font-medium\">{$label}</span>
                 </a>";
@@ -95,14 +181,14 @@ $currentUrl = current_url();
             ?>
             
             <!-- Dashboard Section -->
-            <div class="space-y-2 sm:space-y-3">
+            <div class="nav-section space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Dashboard</label>
                 <?= nav_link(base_url($userType ? $userType . '/dashboard' : '/'), 'fas fa-tachometer-alt', 'Dashboard', $currentUrl) ?>
             </div>
 
             <?php if ($userType === 'admin'): ?>
             <!-- Management Section -->
-            <div class="space-y-2 sm:space-y-3">
+            <div class="nav-section space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Management</label>
                 <?= nav_link(base_url('admin/users'), 'fas fa-user-cog', 'Users', $currentUrl) ?>
                 <?= nav_link(base_url('admin/patients'), 'fas fa-users', 'Patients', $currentUrl) ?>
@@ -115,7 +201,7 @@ $currentUrl = current_url();
             </div>
 
             <!-- Patient Flow Section -->
-            <div class="space-y-2 sm:space-y-3">
+            <div class="nav-section space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Flow</label>
                 <?= nav_link(base_url('checkin'), 'fas fa-sign-in-alt', 'Patient Check-In', $currentUrl) ?>
                 <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
@@ -197,16 +283,57 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     
+    // Scroll Position Preservation
+    const SCROLL_STORAGE_KEY = 'perfectsmile_sidebar_scroll';
+    
+    function saveSidebarScrollPosition() {
+        if (sidebar) {
+            const scrollPosition = sidebar.scrollTop;
+            localStorage.setItem(SCROLL_STORAGE_KEY, scrollPosition.toString());
+        }
+    }
+    
+    function restoreSidebarScrollPosition() {
+        if (sidebar) {
+            const savedScrollPosition = localStorage.getItem(SCROLL_STORAGE_KEY);
+            if (savedScrollPosition) {
+                // Use setTimeout to ensure DOM is fully rendered
+                setTimeout(() => {
+                    sidebar.scrollTop = parseInt(savedScrollPosition, 10);
+                }, 100);
+            }
+        }
+    }
+    
+    // Restore scroll position on page load
+    restoreSidebarScrollPosition();
+    
+    // Save scroll position periodically and on scroll
+    if (sidebar) {
+        sidebar.addEventListener('scroll', () => {
+            // Debounce scroll saving to avoid excessive localStorage writes
+            clearTimeout(sidebar.scrollSaveTimeout);
+            sidebar.scrollSaveTimeout = setTimeout(saveSidebarScrollPosition, 200);
+        });
+    }
+    
+    // Save scroll position before navigation
+    window.addEventListener('beforeunload', saveSidebarScrollPosition);
+    
     function openSidebar() {
         sidebar.classList.remove('-translate-x-full');
         overlay.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
+        // Restore scroll position when opening sidebar on mobile
+        restoreSidebarScrollPosition();
     }
     
     function closeSidebarFn() {
         sidebar.classList.add('-translate-x-full');
         overlay.classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
+        // Save scroll position when closing sidebar on mobile
+        saveSidebarScrollPosition();
     }
     
     if (mobileSidebarToggle) {
@@ -221,12 +348,42 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.addEventListener('click', closeSidebarFn);
     }
     
-    // Close sidebar when clicking on nav links on mobile
-    const navLinks = sidebar.querySelectorAll('a[href]');
+    // Enhanced navigation handling with scroll preservation
+    const navLinks = sidebar.querySelectorAll('a[data-nav-link]');
     navLinks.forEach(link => {
-        link.addEventListener('click', () => {
+        link.addEventListener('click', (e) => {
+            // Don't process if it's a hash link or disabled
+            if (link.href.includes('#') || link.classList.contains('loading')) {
+                return;
+            }
+            
+            // Save scroll position before navigation
+            saveSidebarScrollPosition();
+            
+            // Add loading state
+            link.classList.add('loading');
+            
+            // Close sidebar on mobile with delay
             if (window.innerWidth < 1024) { // lg breakpoint
                 setTimeout(closeSidebarFn, 150);
+            }
+            
+            // Remove loading state after navigation (fallback)
+            setTimeout(() => {
+                link.classList.remove('loading');
+            }, 2000);
+        });
+        
+        // Add visual feedback on hover
+        link.addEventListener('mouseenter', () => {
+            if (!link.classList.contains('active') && !link.classList.contains('loading')) {
+                link.style.transform = 'translateX(2px)';
+            }
+        });
+        
+        link.addEventListener('mouseleave', () => {
+            if (!link.classList.contains('active')) {
+                link.style.transform = 'translateX(0)';
             }
         });
     });
@@ -243,6 +400,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (branchSelector) {
         branchSelector.addEventListener('change', function() {
             const selectedBranchId = this.value;
+            
+            // Save scroll position before branch change
+            saveSidebarScrollPosition();
             
             // Show loading state
             this.disabled = true;
@@ -284,5 +444,62 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+    
+    // Visual feedback for active navigation states
+    function highlightActiveNavItem() {
+        const currentPath = window.location.pathname;
+        navLinks.forEach(link => {
+            const linkPath = new URL(link.href).pathname;
+            // More precise active state detection
+            const isActive = (currentPath === linkPath) || 
+                           (currentPath.startsWith(linkPath) && linkPath !== '/' && linkPath.length > 1);
+            
+            if (isActive && !link.href.includes('#')) {
+                link.classList.add('active', 'bg-blue-50', 'text-blue-700');
+                const icon = link.querySelector('i');
+                if (icon) {
+                    icon.classList.add('text-blue-600');
+                }
+            } else {
+                link.classList.remove('active', 'bg-blue-50', 'text-blue-700');
+                const icon = link.querySelector('i');
+                if (icon) {
+                    icon.classList.remove('text-blue-600');
+                }
+            }
+        });
+    }
+    
+    // Apply active state highlighting
+    highlightActiveNavItem();
+    
+    // Smooth scroll behavior for sidebar
+    if (sidebar) {
+        sidebar.style.scrollBehavior = 'smooth';
+    }
+    
+    // Add scroll position indicator
+    function updateScrollIndicator() {
+        const scrollPercentage = (sidebar.scrollTop / (sidebar.scrollHeight - sidebar.clientHeight)) * 100;
+        // You can add a scroll indicator here if needed
+    }
+    
+    if (sidebar) {
+        sidebar.addEventListener('scroll', updateScrollIndicator);
+    }
+    
+    // Keyboard navigation support
+    document.addEventListener('keydown', (e) => {
+        // Alt + S to focus sidebar
+        if (e.altKey && e.key === 's') {
+            e.preventDefault();
+            sidebar.focus();
+        }
+    });
+    
+    // Debug information (remove in production)
+    console.log('Perfect Smile Sidebar: Enhanced navigation initialized');
+    console.log('Saved scroll position:', localStorage.getItem(SCROLL_STORAGE_KEY));
+    console.log('Active nav links:', navLinks.length);
 });
 </script> 

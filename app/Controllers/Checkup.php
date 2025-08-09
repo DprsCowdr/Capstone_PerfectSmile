@@ -70,9 +70,9 @@ class Checkup extends BaseController
             return redirect()->to('/checkup')->with('error', 'Appointment not found.');
         }
 
-        // Check if appointment is confirmed and for today
-        if ($appointment['status'] !== 'confirmed' || date('Y-m-d') !== $appointment['appointment_date']) {
-            return redirect()->to('/checkup')->with('error', 'Appointment cannot be started.');
+        // Check if appointment is valid for checkup and for today
+        if (!in_array($appointment['status'], ['confirmed', 'checked_in']) || date('Y-m-d') !== $appointment['appointment_date']) {
+            return redirect()->to('/checkup')->with('error', 'Appointment cannot be started. Status: ' . $appointment['status']);
         }
 
         // Start checkup

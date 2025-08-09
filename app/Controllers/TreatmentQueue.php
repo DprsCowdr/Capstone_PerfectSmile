@@ -28,26 +28,39 @@ class TreatmentQueue extends BaseController
         }
 
         // Get checked-in patients waiting for treatment
-        $waitingPatients = $this->appointmentModel
+        $waitingQuery = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, user.phone as patient_phone, 
                      TIMESTAMPDIFF(MINUTE, checked_in_at, NOW()) as waiting_time')
             ->join('user', 'user.id = appointments.user_id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'checked_in')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('checked_in_at', 'ASC')
-            ->findAll();
+            ->where('appointments.status', 'checked_in');
+            
+        // Filter by dentist only if user is a doctor (not admin)
+        if ($user['user_type'] === 'doctor') {
+            $waitingQuery->where('appointments.dentist_id', $user['id']);
+        }
+        
+        $waitingPatients = $waitingQuery->orderBy('checked_in_at', 'ASC')->findAll();
+        
+        log_message('info', "TreatmentQueue: Found " . count($waitingPatients) . " waiting patients (checked_in status)");
+        foreach ($waitingPatients as $patient) {
+            log_message('info', "TreatmentQueue: Waiting patient - ID: {$patient['id']}, Name: {$patient['patient_name']}, Status: {$patient['status']}, Checked in at: {$patient['checked_in_at']}");
+        }
 
         // Get ongoing treatments
-        $ongoingTreatments = $this->appointmentModel
+        $ongoingQuery = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, 
                      TIMESTAMPDIFF(MINUTE, started_at, NOW()) as treatment_duration')
             ->join('user', 'user.id = appointments.user_id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'ongoing')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('started_at', 'ASC')
-            ->findAll();
+            ->where('appointments.status', 'ongoing');
+            
+        // Filter by dentist only if user is a doctor (not admin)
+        if ($user['user_type'] === 'doctor') {
+            $ongoingQuery->where('appointments.dentist_id', $user['id']);
+        }
+        
+        $ongoingTreatments = $ongoingQuery->orderBy('started_at', 'ASC')->findAll();
 
         return view('queue/dashboard', [
             'user' => $user,

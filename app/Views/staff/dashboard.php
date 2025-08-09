@@ -52,17 +52,29 @@
                     </div>
                     <i class="fas fa-clock fa-2x text-gray-300"></i>
                 </div>
-                <!-- Total Branches Card -->
-                <div class="bg-white border-l-4 border-blue-400 shadow rounded-lg p-5 flex items-center justify-between">
+                <!-- Total Dentists Card -->
+                <div class="bg-white border-l-4 border-purple-400 shadow rounded-lg p-5 flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold text-blue-600 uppercase mb-1">Total Branches</div>
-                        <div class="text-2xl font-bold text-gray-800"><?= $totalBranches ?? 0 ?></div>
+                        <div class="text-xs font-bold text-purple-600 uppercase mb-1">Available Dentists</div>
+                        <div class="text-2xl font-bold text-gray-800"><?= $totalDentists ?? 0 ?></div>
                     </div>
-                    <i class="fas fa-building fa-2x text-gray-300"></i>
+                    <i class="fas fa-user-md fa-2x text-gray-300"></i>
                 </div>
             </div>
             <!-- Quick Actions & Recent Activity -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Quick Actions -->
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="border-b px-6 py-3">
+                        <h2 class="text-lg font-bold text-slate-700">Quick Actions</h2>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <a href="<?= base_url('staff/patients') ?>" class="flex items-center justify-center gap-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold py-3 rounded-lg transition"><i class="fas fa-user-plus"></i> Manage Patients</a>
+                        <a href="<?= base_url('staff/appointments') ?>" class="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"><i class="fas fa-calendar-plus"></i> Manage Appointments</a>
+                        <a href="<?= base_url('checkin') ?>" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg transition"><i class="fas fa-sign-in-alt"></i> Patient Check-In</a>
+                        <a href="<?= base_url('queue') ?>" class="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition"><i class="fas fa-users"></i> Treatment Queue</a>
+                    </div>
+                </div>
                 <!-- Pending Approvals -->
                 <?php if (!empty($pendingAppointments)): ?>
                 <div class="bg-white shadow rounded-lg mb-6">

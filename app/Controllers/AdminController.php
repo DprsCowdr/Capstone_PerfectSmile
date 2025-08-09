@@ -420,7 +420,7 @@ class AdminController extends BaseAdminController
             // Set default position based on user type if position is empty
             if (empty($position)) {
                 switch ($formData['user_type']) {
-                    case 'dentist':
+                    case 'doctor':
                         $position = 'Dentist';
                         break;
                     case 'admin':
@@ -517,7 +517,7 @@ class AdminController extends BaseAdminController
             // Set default position based on user type if position is empty
             if (empty($position)) {
                 switch ($formData['user_type']) {
-                    case 'dentist':
+                    case 'doctor':
                         $position = 'Dentist';
                         break;
                     case 'admin':
@@ -647,5 +647,50 @@ class AdminController extends BaseAdminController
             $query->where($branchColumn, $selectedBranchId);
         }
         return $query;
+    }
+
+    /**
+     * Check for appointment conflicts - Clean implementation
+     */
+    public function checkAppointmentConflicts()
+    {
+        // Verify authentication
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        // Get input data
+        $date = $this->request->getPost('appointment_date') ?? $this->request->getPost('date');
+        $time = $this->request->getPost('appointment_time') ?? $this->request->getPost('time');
+        $dentistId = $this->request->getPost('dentist_id');
+        $excludeId = $this->request->getPost('exclude_id');
+
+        // Validate required fields
+        if (!$date || !$time) {
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Date and time are required'
+            ]);
+        }
+
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $conflicts = $appointmentModel->checkTimeConflicts($date, $time, $dentistId, $excludeId);
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'has_conflicts' => !empty($conflicts),
+                'conflicts' => $conflicts,
+                'message' => empty($conflicts) ? 'No conflicts found' : count($conflicts) . ' conflict(s) detected'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Admin conflict check error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Error checking conflicts: ' . $e->getMessage()
+            ]);
+        }
     }
 }

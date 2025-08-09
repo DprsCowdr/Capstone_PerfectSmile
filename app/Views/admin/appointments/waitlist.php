@@ -1,10 +1,10 @@
 <?= view('templates/header') ?>
 
-<div class="min-h-screen bg-[#] flex">
+<div class="min-h-screen bg-gray-50 flex">
     <?= view('templates/sidebar', ['user' => $user]) ?>
-    <div class="flex-1 flex flex-col min-h-screen">
+    <div class="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden">
         <!-- Topbar -->
-        <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6">
+        <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6 flex-shrink-0">
             <button id="sidebarToggleTop" class="block lg:hidden text-gray-600 mr-3 text-2xl focus:outline-none">
                 <i class="fa fa-bars"></i>
             </button>
@@ -24,7 +24,7 @@
             </div>
         </nav>
         <!-- End of Topbar -->
-        <main class="flex-1 px-6 pb-6">
+        <main class="flex-1 px-6 pb-6 overflow-auto min-w-0">
             <h1 class="text-2xl font-bold text-gray-800 mb-6">Waitlist Management</h1>
             <p class="text-gray-600 mb-6">Review and approve pending appointment requests. These requests are NOT yet booked - they will only become appointments after approval.</p>
 
@@ -83,7 +83,7 @@
             </div>
 
             <!-- Pending Appointments -->
-            <div class="bg-white rounded-xl shadow-lg">
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-xl font-bold text-gray-800 flex items-center">
                         <i class="fas fa-clock text-orange-500 mr-3"></i>
@@ -97,64 +97,69 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Dentist</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Dentist</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <?php foreach ($pendingAppointments as $appointment): ?>
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
-                                                <div class="flex-shrink-0 h-10 w-10">
-                                                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                                        <i class="fas fa-user text-blue-600"></i>
+                                                <div class="flex-shrink-0 h-8 w-8">
+                                                    <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                                        <i class="fas fa-user text-blue-600 text-xs"></i>
                                                     </div>
                                                 </div>
-                                                <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900"><?= $appointment['patient_name'] ?></div>
-                                                    <div class="text-sm text-gray-500"><?= $appointment['patient_email'] ?></div>
+                                                <div class="ml-3">
+                                                    <div class="text-sm font-medium text-gray-900 truncate max-w-32"><?= $appointment['patient_name'] ?></div>
+                                                    <div class="text-xs text-gray-500 truncate max-w-32"><?= $appointment['patient_email'] ?></div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-4 whitespace-nowrap">
                                             <div class="text-sm text-gray-900"><?= date('M j, Y', strtotime($appointment['appointment_date'])) ?></div>
-                                            <div class="text-sm text-gray-500"><?= date('g:i A', strtotime($appointment['appointment_time'])) ?></div>
+                                            <div class="text-xs text-gray-500">
+                                                <?= date('g:i A', strtotime($appointment['appointment_time'])) ?>
+                                                <span id="conflict-indicator-<?= $appointment['id'] ?>" class="ml-2 hidden">
+                                                    <i class="fas fa-exclamation-triangle text-orange-500" title="Potential scheduling conflict"></i>
+                                                </span>
+                                            </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 max-w-24 truncate">
                                             <?= $appointment['branch_name'] ?>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 max-w-24 truncate">
                                             <?php if ($appointment['dentist_name']): ?>
                                                 <span class="text-green-600 font-medium"><?= $appointment['dentist_name'] ?></span>
                                             <?php else: ?>
-                                                <span class="text-red-500 italic">Not assigned</span>
+                                                <span class="text-red-500 italic text-xs">Not assigned</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-4 whitespace-nowrap">
                                             <span class="px-2 py-1 text-xs font-semibold rounded-full 
                                                 <?= $appointment['appointment_type'] === 'scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' ?>">
                                                 <?= ucfirst($appointment['appointment_type']) ?>
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-4 py-4 whitespace-nowrap">
                                             <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                                 Pending Request
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div class="flex space-x-2">
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                                            <div class="flex flex-col space-y-1 w-44">
                                                 <button onclick="approveAppointment(<?= $appointment['id'] ?>, '<?= $appointment['dentist_name'] ? 'assigned' : 'unassigned' ?>')" 
-                                                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition-colors">
-                                                    <i class="fas fa-check mr-1"></i><?= $appointment['dentist_name'] ? 'Approve' : 'Assign Dentist & Approve' ?>
+                                                        class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate">
+                                                    <i class="fas fa-check mr-1"></i><?= $appointment['dentist_name'] ? 'Approve' : 'Assign & Approve' ?>
                                                 </button>
                                                 <button onclick="declineAppointment(<?= $appointment['id'] ?>)" 
-                                                        class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                        class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors">
                                                     <i class="fas fa-times mr-1"></i>Decline
                                                 </button>
                                             </div>
@@ -173,7 +178,7 @@
                 <?php endif; ?>
             </div>
         </main>
-        <footer class="bg-white py-4 mt-auto shadow-inner">
+        <footer class="bg-white py-4 shadow-inner flex-shrink-0">
             <div class="text-center text-gray-500 text-sm">
                 &copy; Perfect Smile <?= date('Y') ?>
             </div>
@@ -266,7 +271,7 @@ function showDentistSelectionModal(appointmentId) {
                             <option value="">-- Select Dentist --</option>
                             <?php 
                             $userModel = new \App\Models\UserModel();
-                            $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+                            $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
                             foreach ($dentists as $dentist): 
                             ?>
                             <option value="<?= $dentist['id'] ?>"><?= $dentist['name'] ?> (ID: <?= $dentist['id'] ?>)</option>

@@ -36,7 +36,7 @@ class PatientService
             'email' => 'required|valid_email',
             'phone' => 'required',
             'address' => 'required',
-            'gender' => 'required',
+            'gender' => 'required|in_list[male,female,other]',
             'date_of_birth' => 'required|valid_date',
         ]);
         

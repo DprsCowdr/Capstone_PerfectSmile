@@ -52,7 +52,7 @@ class AppointmentModel extends Model
         'branch_id' => 'required|integer',
         'dentist_id' => 'permit_empty|integer',
         'appointment_datetime' => 'required',
-        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,ongoing,completed,cancelled,no_show]',
+        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,checked_in,ongoing,completed,cancelled,no_show]',
         'appointment_type' => 'permit_empty|in_list[scheduled,walkin]',
         'approval_status' => 'permit_empty|in_list[pending,approved,declined,auto_approved]',
     ];
@@ -118,6 +118,7 @@ class AppointmentModel extends Model
             $data['appointment_datetime'] = $data['appointment_date'] . ' ' . $data['appointment_time'] . ':00';
             unset($data['appointment_date'], $data['appointment_time']);
         }
+        
         // Backend validation: no past dates, only 08:00-17:00
         if (isset($data['appointment_datetime'])) {
             $dt = strtotime($data['appointment_datetime']);
@@ -129,6 +130,7 @@ class AppointmentModel extends Model
                 throw new \Exception('Appointments can only be booked between 08:00 and 17:00.');
             }
         }
+        
         return parent::insert($data, $returnID);
     }
 
@@ -402,44 +404,54 @@ class AppointmentModel extends Model
     }
 
     /**
-     * Get available dentists for a specific date and time
+     * Check for appointment time conflicts
+     * Simple and clean implementation
      */
-    public function getAvailableDentists($date, $time, $branchId)
+    public function checkTimeConflicts($date, $time, $dentistId = null, $excludeId = null)
     {
-        log_message('info', "Checking dentist availability for date: {$date}, time: {$time}, branch: {$branchId}");
+        // Convert to proper datetime format
+        $targetDateTime = $date . ' ' . $time . ':00';
+        $targetTimestamp = strtotime($targetDateTime);
         
-        // Get all active dentists (for now, not filtering by branch since no branch assignments exist)
-        $userModel = new \App\Models\UserModel();
-        $dentists = $userModel->where('user_type', 'dentist')
-                             ->where('status', 'active')
-                             ->findAll();
+        // Define 30-minute conflict window
+        $windowMinutes = 30;
+        $startTime = date('Y-m-d H:i:s', $targetTimestamp - ($windowMinutes * 60));
+        $endTime = date('Y-m-d H:i:s', $targetTimestamp + ($windowMinutes * 60));
         
-        log_message('info', "Found " . count($dentists) . " active dentists: " . json_encode(array_column($dentists, 'name')));
+        // Build query for conflicts
+        $query = $this->select('appointments.id, appointments.appointment_datetime, user.name as patient_name, dentist.name as dentist_name')
+                     ->join('user', 'user.id = appointments.user_id')
+                     ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
+                     ->where('appointment_datetime >=', $startTime)
+                     ->where('appointment_datetime <=', $endTime)
+                     ->whereIn('status', ['confirmed', 'checked_in', 'ongoing'])
+                     ->whereIn('approval_status', ['approved', 'auto_approved']);
         
-        $availableDentists = [];
-        
-        foreach ($dentists as $dentist) {
-            // Check if dentist has availability for this date/time
-            // Combine date and time for comparison
-            $datetime = $date . ' ' . $time . ':00';
-            
-            // Check for conflicting appointments (only approved/confirmed appointments)
-            $conflictingAppointments = $this->where('dentist_id', $dentist['id'])
-                                           ->where('appointment_datetime', $datetime)
-                                           ->whereIn('status', ['confirmed', 'scheduled'])
-                                           ->where('approval_status', 'approved')
-                                           ->countAllResults();
-            
-            log_message('info', "Dentist {$dentist['name']} (ID: {$dentist['id']}) has {$conflictingAppointments} conflicting appointments at {$datetime}");
-            
-            if ($conflictingAppointments == 0) {
-                $availableDentists[] = $dentist;
-            }
+        // Filter by dentist if specified
+        if ($dentistId) {
+            $query->where('appointments.dentist_id', $dentistId);
         }
         
-        log_message('info', "Available dentists: " . json_encode(array_column($availableDentists, 'name')));
+        // Exclude current appointment if updating
+        if ($excludeId) {
+            $query->where('appointments.id !=', $excludeId);
+        }
         
-        return $availableDentists;
+        $conflicts = $query->findAll();
+        
+        // Return formatted conflict data
+        $result = [];
+        foreach ($conflicts as $conflict) {
+            $result[] = [
+                'id' => $conflict['id'],
+                'patient_name' => $conflict['patient_name'],
+                'dentist_name' => $conflict['dentist_name'] ?? 'Unassigned',
+                'appointment_time' => date('H:i', strtotime($conflict['appointment_datetime'])),
+                'time_difference' => abs($targetTimestamp - strtotime($conflict['appointment_datetime'])) / 60
+            ];
+        }
+        
+        return $result;
     }
 
     /**
@@ -449,6 +461,13 @@ class AppointmentModel extends Model
     {
         log_message('info', "AppointmentModel::approveAppointment - ID: {$appointmentId}, Dentist ID: " . ($dentistId ?: 'null'));
         
+        // Get the original appointment data
+        $appointment = parent::find($appointmentId);
+        if (!$appointment) {
+            log_message('error', "Appointment {$appointmentId} not found");
+            return false;
+        }
+        
         $updateData = [
             'approval_status' => 'approved',
             'status' => 'confirmed', // Change from pending_approval to confirmed
@@ -457,9 +476,6 @@ class AppointmentModel extends Model
         
         // Only set dentist_id if provided and appointment doesn't already have one
         if ($dentistId) {
-            // Get the original appointment data (before splitDateTime)
-            $appointment = parent::find($appointmentId);
-            
             if (!$appointment || empty($appointment['dentist_id'])) {
                 $updateData['dentist_id'] = $dentistId;
                 log_message('info', "Setting dentist_id to {$dentistId} for appointment {$appointmentId}");
@@ -526,5 +542,49 @@ class AppointmentModel extends Model
         
         // Apply splitDateTime to each result
         return array_map([$this, 'splitDateTime'], $results);
+    }
+
+    /**
+     * Get available dentists for a specific date, time, and branch
+     *
+     * @param string $date (Y-m-d format)
+     * @param string $time (H:i format)
+     * @param int $branchId
+     * @return array Available dentists
+     */
+    public function getAvailableDentists($date, $time, $branchId)
+    {
+        $datetime = $date . ' ' . $time . ':00';
+        
+        // Get all dentists from the branch
+        $db = \Config\Database::connect();
+        $builder = $db->table('user');
+        $builder->select('user.id, user.name, user.email')
+                ->join('branch_user', 'branch_user.user_id = user.id')
+                ->where('user.user_type', 'doctor')
+                ->where('user.status', 'active')
+                ->where('branch_user.branch_id', $branchId);
+        
+        $allDentists = $builder->get()->getResultArray();
+        
+        $availableDentists = [];
+        
+        foreach ($allDentists as $dentist) {
+            // Check if dentist has any conflicting appointments
+            $conflictBuilder = $db->table('appointments');
+            $conflictBuilder->where('dentist_id', $dentist['id'])
+                           ->where('appointment_datetime <=', $datetime)
+                           ->where('DATE_ADD(appointment_datetime, INTERVAL 30 MINUTE) >', $datetime)
+                           ->where('status !=', 'cancelled')
+                           ->where('status !=', 'completed');
+            
+            $conflicts = $conflictBuilder->countAllResults();
+            
+            if ($conflicts == 0) {
+                $availableDentists[] = $dentist;
+            }
+        }
+        
+        return $availableDentists;
     }
 }

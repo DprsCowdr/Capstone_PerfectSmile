@@ -190,8 +190,8 @@ class UserService
         return [
             'total_patients' => $this->userModel->where('user_type', 'patient')->countAllResults(),
             'active_patients' => $this->userModel->where('user_type', 'patient')->where('status', 'active')->countAllResults(),
-            'total_dentists' => $this->userModel->where('user_type', 'dentist')->countAllResults(),
-            'active_dentists' => $this->userModel->where('user_type', 'dentist')->where('status', 'active')->countAllResults(),
+            'total_dentists' => $this->userModel->where('user_type', 'doctor')->countAllResults(),
+            'active_dentists' => $this->userModel->where('user_type', 'doctor')->where('status', 'active')->countAllResults(),
             'total_staff' => $this->userModel->where('user_type', 'staff')->countAllResults()
         ];
     }
@@ -212,7 +212,7 @@ class UserService
      */
     public function getAllDentists($activeOnly = true)
     {
-        $query = $this->userModel->where('user_type', 'dentist');
+        $query = $this->userModel->where('user_type', 'doctor');
         
         if ($activeOnly) {
             $query->where('status', 'active');
