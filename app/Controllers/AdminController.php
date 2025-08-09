@@ -77,6 +77,22 @@ class AdminController extends BaseAdminController
         return $this->togglePatientStatusLogic($id, '/admin/patients');
     }
 
+    // ==================== PATIENT ACCOUNT ACTIVATION ====================
+    public function patientActivation()
+    {
+        return $this->getPatientActivationView('admin/patients/activation');
+    }
+
+    public function activatePatientAccount($id)
+    {
+        return $this->activatePatientAccountLogic($id, '/admin/patients/activation');
+    }
+
+    public function deactivatePatientAccount($id)
+    {
+        return $this->deactivatePatientAccountLogic($id, '/admin/patients/activation');
+    }
+
     public function createAccount($id)
     {
         $user = $this->getAuthenticatedUser();
@@ -385,6 +401,7 @@ class AdminController extends BaseAdminController
             'name' => 'required|min_length[2]',
             'email' => 'required|valid_email|is_unique[user.email,id,{id}]',
             'phone' => 'required|min_length[10]',
+            'gender' => 'permit_empty|in_list[Male,Female,Other,male,female,other]',
             'user_type' => 'required|in_list[admin,staff,dentist]',
             'password' => 'required|min_length[6]',
             'branches' => 'required'
@@ -404,10 +421,12 @@ class AdminController extends BaseAdminController
             'phone' => $formData['phone'],
             'user_type' => $formData['user_type'],
             'password' => password_hash($formData['password'], PASSWORD_DEFAULT),
-            'gender' => $formData['gender'] ?? 'male',
+            'gender' => $formData['gender'] ?? null,
             'status' => 'active',
             'occupation' => $formData['occupation'] ?? null,
-            'nationality' => $formData['nationality'] ?? null
+            'nationality' => $formData['nationality'] ?? null,
+            'date_of_birth' => !empty($formData['date_of_birth']) ? $formData['date_of_birth'] : null,
+            'age' => !empty($formData['age']) ? (int)$formData['age'] : null
         ];
 
         $userId = $userModel->insert($userData);

@@ -21,9 +21,14 @@
         <main class="flex-1 px-6 pb-6">
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-2xl font-bold text-gray-800">Users Management</h1>
-                <a href="<?= base_url('admin/users/add') ?>" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-plus mr-2"></i> Add User
-                </a>
+                <div class="flex gap-3">
+                    <a href="<?= base_url('admin/patients/activation') ?>" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-user-check mr-2"></i> Patient Activation
+                    </a>
+                    <a href="<?= base_url('admin/users/add') ?>" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-plus mr-2"></i> Add User
+                    </a>
+                </div>
             </div>
 
             <?php if (session()->getFlashdata('success')): ?>

@@ -66,10 +66,25 @@
                                 <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                                 <select id="gender" name="gender" 
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="male" <?= old('gender') === 'male' ? 'selected' : '' ?>>Male</option>
-                                    <option value="female" <?= old('gender') === 'female' ? 'selected' : '' ?>>Female</option>
-                                    <option value="other" <?= old('gender') === 'other' ? 'selected' : '' ?>>Other</option>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male" <?= old('gender') === 'Male' ? 'selected' : '' ?>>Male</option>
+                                    <option value="Female" <?= old('gender') === 'Female' ? 'selected' : '' ?>>Female</option>
+                                    <option value="Other" <?= old('gender') === 'Other' ? 'selected' : '' ?>>Other</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                                <input type="date" id="date_of_birth" name="date_of_birth" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       value="<?= old('date_of_birth') ?>" onchange="calculateAge()">
+                            </div>
+
+                            <div>
+                                <label for="age" class="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                                <input type="number" id="age" name="age" readonly
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none"
+                                       value="<?= old('age') ?>" placeholder="Auto-calculated">
                             </div>
                         </div>
 
@@ -189,6 +204,30 @@ document.getElementById('password').addEventListener('input', function() {
     if (confirmPassword.value) {
         confirmPassword.dispatchEvent(new Event('input'));
     }
+});
+
+// Age calculation function
+function calculateAge() {
+    const birthDate = document.getElementById('date_of_birth').value;
+    if (birthDate) {
+        const today = new Date();
+        const birth = new Date(birthDate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+        
+        document.getElementById('age').value = age >= 0 ? age : '';
+    } else {
+        document.getElementById('age').value = '';
+    }
+}
+
+// Calculate age on page load if date is already selected
+document.addEventListener('DOMContentLoaded', function() {
+    calculateAge();
 });
 </script>
 

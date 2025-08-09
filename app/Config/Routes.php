@@ -48,6 +48,11 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('patients/appointments/(:num)', 'AdminController::getPatientAppointments/$1');
     $routes->get('patients/create-account/(:num)', 'AdminController::createAccount/$1'); // → patients/create.php
     $routes->post('patients/save-account/(:num)', 'AdminController::saveAccount/$1');
+    
+    // Patient Account Activation Routes
+    $routes->get('patients/activation', 'AdminController::patientActivation');
+    $routes->post('patients/activate/(:num)', 'AdminController::activatePatientAccount/$1');
+    $routes->post('patients/deactivate/(:num)', 'AdminController::deactivatePatientAccount/$1');
     $routes->get('patient-checkups', 'DentalController::patientCheckups'); // → patients/checkups.php
     
     // Appointment management routes

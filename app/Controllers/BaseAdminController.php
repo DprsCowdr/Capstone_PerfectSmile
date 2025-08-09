@@ -29,8 +29,11 @@ abstract class BaseAdminController extends BaseController
             return $user;
         }
         
-        $userModel = new \App\Models\UserModel();
-        $patients = $userModel->where('user_type', 'patient')->findAll();
+        // Use UserService to get patients (includes active status filter)
+        $patients = $this->userService->getAllPatients();
+        
+        // Log for debugging
+        log_message('info', 'Patients view: Retrieved ' . count($patients) . ' patients');
         
         // Filter by selected branch if admin has chosen one
         $selectedBranchId = session('selected_branch_id');
@@ -153,6 +156,70 @@ abstract class BaseAdminController extends BaseController
         }
         
         return redirect()->to($redirectPath)->with('error', 'Failed to update patient status.');
+    }
+
+    /**
+     * Get patient activation view - shared logic
+     */
+    protected function getPatientActivationView($viewPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        // Get all patients (both active and inactive) for activation management
+        $patients = $this->userService->getPatientsForActivation();
+        
+        $data = [
+            'user' => $user,
+            'patients' => $patients
+        ];
+        
+        return view($viewPath, $data);
+    }
+
+    /**
+     * Activate patient account - shared logic
+     */
+    protected function activatePatientAccountLogic($id, $redirectPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        $result = $this->userService->activatePatientAccount($id);
+        
+        if ($result && is_array($result)) {
+            $message = "Patient account activated successfully! Temporary password: " . $result['password'];
+            return redirect()->to($redirectPath)->with('success', $message);
+        }
+        
+        $errors = $this->userService->getValidationErrors();
+        $errorMessage = is_array($errors) ? implode(', ', $errors) : 'Failed to activate patient account.';
+        
+        return redirect()->to($redirectPath)->with('error', $errorMessage);
+    }
+
+    /**
+     * Deactivate patient account - shared logic
+     */
+    protected function deactivatePatientAccountLogic($id, $redirectPath)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        
+        if ($this->userService->deactivatePatientAccount($id)) {
+            return redirect()->to($redirectPath)->with('success', 'Patient account deactivated successfully.');
+        }
+        
+        $errors = $this->userService->getValidationErrors();
+        $errorMessage = is_array($errors) ? implode(', ', $errors) : 'Failed to deactivate patient account.';
+        
+        return redirect()->to($redirectPath)->with('error', $errorMessage);
     }
     
     /**

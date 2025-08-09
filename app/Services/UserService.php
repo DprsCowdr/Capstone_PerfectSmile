@@ -19,13 +19,20 @@ class UserService
     public function getAllPatients($limit = null, $offset = 0)
     {
         $query = $this->userModel->where('user_type', 'patient')
+                                ->where('status', 'active')  // Only get active patients
                                 ->orderBy('name', 'ASC');
         
         if ($limit) {
             $query->limit($limit, $offset);
         }
         
-        return $query->findAll();
+        $patients = $query->findAll();
+        
+        // Log patient count for debugging
+        log_message('info', 'Retrieved ' . count($patients) . ' active patients (filtered)');
+        log_message('info', 'Active patient data: ' . json_encode($patients));
+        
+        return $patients;
     }
     
     /**
@@ -47,8 +54,12 @@ class UserService
      */
     public function createPatient($data)
     {
+        // Log the incoming data for debugging
+        log_message('info', 'Creating patient with data: ' . json_encode($data));
+        
         // Validate data
         if (!$this->validatePatientData($data)) {
+            log_message('error', 'Patient validation failed: ' . json_encode($this->getValidationErrors()));
             return false;
         }
         
@@ -57,9 +68,9 @@ class UserService
             'email' => $data['email'],
             'phone' => $data['phone'],
             'address' => $data['address'],
-            'date_of_birth' => $data['date_of_birth'],
+            'date_of_birth' => !empty($data['date_of_birth']) ? $data['date_of_birth'] : null,
             'gender' => $data['gender'],
-            'age' => $data['age'] ?? null,
+            'age' => !empty($data['age']) && is_numeric($data['age']) ? (int)$data['age'] : null,
             'occupation' => $data['occupation'] ?? null,
             'nationality' => $data['nationality'] ?? null,
             'user_type' => 'patient',
@@ -67,7 +78,17 @@ class UserService
             'created_at' => date('Y-m-d H:i:s')
         ];
         
-        return $this->userModel->skipValidation(true)->insert($patientData);
+        log_message('info', 'Patient data to insert: ' . json_encode($patientData));
+        
+        $result = $this->userModel->skipValidation(true)->insert($patientData);
+        
+        if ($result) {
+            log_message('info', 'Patient created successfully with ID: ' . $result);
+        } else {
+            log_message('error', 'Failed to insert patient data');
+        }
+        
+        return $result;
     }
     
     /**
@@ -147,9 +168,12 @@ class UserService
             'email' => 'required|valid_email',
             'phone' => 'required',
             'address' => 'required',
-            'gender' => 'required|in_list[male,female,other]',
-            'date_of_birth' => 'required|valid_date'
+            'gender' => 'required|in_list[Male,Female,Other]',
+            'date_of_birth' => 'permit_empty|valid_date'
         ];
+        
+        // Log validation attempt
+        log_message('info', 'Validating patient data: ' . json_encode($data));
         
         // Check for unique email (excluding current record if updating)
         if ($excludeId) {
@@ -162,6 +186,7 @@ class UserService
         
         if ($existingUser) {
             $this->validationErrors = ['email' => 'Email already exists'];
+            log_message('error', 'Patient validation failed: Email already exists');
             return false;
         }
         
@@ -169,9 +194,11 @@ class UserService
         
         if (!$validation->run($data)) {
             $this->validationErrors = $validation->getErrors();
+            log_message('error', 'Patient validation failed: ' . json_encode($this->validationErrors));
             return false;
         }
         
+        log_message('info', 'Patient validation passed');
         return true;
     }
     
@@ -219,5 +246,84 @@ class UserService
         }
         
         return $query->findAll();
+    }
+
+    /**
+     * Get all patients for account activation (includes inactive patients)
+     */
+    public function getPatientsForActivation()
+    {
+        $query = $this->userModel->where('user_type', 'patient')
+                                ->orderBy('name', 'ASC');
+        
+        $patients = $query->findAll();
+        
+        // Log patient count for debugging
+        log_message('info', 'Retrieved ' . count($patients) . ' patients for activation');
+        
+        return $patients;
+    }
+
+    /**
+     * Activate patient account and generate password
+     */
+    public function activatePatientAccount($patientId)
+    {
+        $patient = $this->getPatient($patientId);
+        if (!$patient) {
+            $this->validationErrors = ['patient' => 'Patient not found'];
+            return false;
+        }
+
+        // Generate a simple password for prototype
+        $tempPassword = 'temp' . rand(1000, 9999);
+        
+        // Update patient with new password and active status
+        $updateData = [
+            'password' => password_hash($tempPassword, PASSWORD_DEFAULT),
+            'status' => 'active',
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $result = $this->userModel->update($patientId, $updateData);
+        
+        if ($result) {
+            log_message('info', "Patient account activated for ID: {$patientId} with temp password: {$tempPassword}");
+            
+            // For prototype, return the password so admin can share it
+            return [
+                'success' => true,
+                'password' => $tempPassword,
+                'patient' => $patient
+            ];
+        }
+        
+        return false;
+    }
+
+    /**
+     * Deactivate patient account
+     */
+    public function deactivatePatientAccount($patientId)
+    {
+        $patient = $this->getPatient($patientId);
+        if (!$patient) {
+            $this->validationErrors = ['patient' => 'Patient not found'];
+            return false;
+        }
+
+        $updateData = [
+            'status' => 'inactive',
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $result = $this->userModel->update($patientId, $updateData);
+        
+        if ($result) {
+            log_message('info', "Patient account deactivated for ID: {$patientId}");
+            return true;
+        }
+        
+        return false;
     }
 }
