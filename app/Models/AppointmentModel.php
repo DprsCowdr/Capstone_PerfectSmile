@@ -52,7 +52,7 @@ class AppointmentModel extends Model
         'branch_id' => 'required|integer',
         'dentist_id' => 'permit_empty|integer',
         'appointment_datetime' => 'required',
-        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,ongoing,completed,cancelled,no_show]',
+        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,checked_in,ongoing,completed,cancelled,no_show]',
         'appointment_type' => 'permit_empty|in_list[scheduled,walkin]',
         'approval_status' => 'permit_empty|in_list[pending,approved,declined,auto_approved]',
     ];
