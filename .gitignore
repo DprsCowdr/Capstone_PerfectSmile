@@ -6,6 +6,9 @@
 !*/cache/index.html
 !*/cache/.htaccess
 
+# Environment files
+.env
+
 # Writable directory files
 writable/cache/*
 !writable/cache/index.html
