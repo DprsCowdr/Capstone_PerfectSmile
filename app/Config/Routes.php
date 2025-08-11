@@ -146,7 +146,7 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
 // Patient Check-in routes (for staff/reception)
 $routes->group('checkin', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'PatientCheckin::index');
-    $routes->post('process/(:num)', 'PatientCheckin::checkinPatient/$1');
+    $routes->post('process/(:num)', 'PatientCheckin::process/$1');
 });
 
 // Treatment Queue routes (for dentists)

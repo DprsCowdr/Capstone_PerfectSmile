@@ -50,29 +50,57 @@ class PatientCheckin extends BaseController
     public function checkinPatient($appointmentId)
     {
         $user = Auth::getCurrentUser();
+        
+        // Log that this method was called
+        log_message('debug', "checkinPatient method called for appointment ID: {$appointmentId}, User type: {$user['user_type']}");
+        
         if (!$user || !in_array($user['user_type'], ['staff', 'admin'])) {
+            log_message('error', "Unauthorized user tried to check in patient. User type: " . ($user ? $user['user_type'] : 'null'));
             return redirect()->to('/login');
         }
 
         $appointment = $this->appointmentModel->find($appointmentId);
         if (!$appointment) {
+            log_message('error', "Appointment not found: {$appointmentId}");
             session()->setFlashdata('error', 'Appointment not found');
             return redirect()->back();
         }
 
-        // Update appointment status to checked_in
-        $result = $this->appointmentModel->update($appointmentId, [
-            'status' => 'checked_in',
-            'checked_in_at' => date('Y-m-d H:i:s'),
-            'checked_in_by' => $user['id']
-        ]);
+        try {
+            // Update appointment status to checked_in
+            $data = [
+                'status' => 'checked_in',
+                'checked_in_at' => date('Y-m-d H:i:s'),
+                'checked_in_by' => $user['id']
+            ];
+            
+            log_message('debug', "Updating appointment with data: " . json_encode($data));
+            
+            $result = $this->appointmentModel->update($appointmentId, $data);
 
-        if ($result) {
-            session()->setFlashdata('success', 'Patient checked in successfully');
-        } else {
-            session()->setFlashdata('error', 'Failed to check in patient');
+            if ($result) {
+                log_message('info', "Patient checked in successfully: {$appointmentId}");
+                session()->setFlashdata('success', 'Patient checked in successfully');
+            } else {
+                log_message('error', "Failed to check in patient: {$appointmentId}. Validation errors: " . print_r($this->appointmentModel->errors(), true));
+                session()->setFlashdata('error', 'Failed to check in patient: ' . implode(', ', $this->appointmentModel->errors()));
+            }
+        } catch (\Exception $e) {
+            log_message('error', "Exception checking in patient: {$appointmentId}. " . $e->getMessage());
+            session()->setFlashdata('error', 'Error: ' . $e->getMessage());
         }
 
         return redirect()->back();
+    }
+    
+    /**
+     * Process check-in request (alias for checkinPatient to match routes)
+     */
+    public function process($appointmentId)
+    {
+        // Log that this method was called
+        log_message('debug', "Process method called for appointment ID: {$appointmentId}");
+        
+        return $this->checkinPatient($appointmentId);
     }
 }
