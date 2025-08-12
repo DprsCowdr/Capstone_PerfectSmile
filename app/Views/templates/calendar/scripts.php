@@ -322,6 +322,26 @@ function updateDayViewForDate(selectedDate) {
   });
 }
 
+// Helper: parse YYYY-MM-DD safely in local timezone (avoids UTC offset shifting day)
+function parseDateLocal(dateStr) {
+  if (!dateStr) return null;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return new Date(dateStr); // fallback
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1; // 0-index
+  const d = parseInt(parts[2], 10);
+  return new Date(y, m, d, 0, 0, 0, 0);
+}
+
+function isPastDay(dateStr) {
+  const cellDate = parseDateLocal(dateStr);
+  if (!cellDate) return false;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  cellDate.setHours(0,0,0,0);
+  return cellDate < today;
+}
+
 function rebuildCalendarGrid() {
   const monthView = document.getElementById('monthView');
   if (!monthView) return;
@@ -360,14 +380,10 @@ function rebuildCalendarGrid() {
         td.className += ' text-gray-300 bg-white';
         td.textContent = cell.day;
       } else {
-        const todayStr = new Date();
-        const cellDate = new Date(cell.date);
-        todayStr.setHours(0,0,0,0);
-        cellDate.setHours(0,0,0,0);
-        const isPast = cell.date && cellDate < todayStr;
+  const isPast = cell.date && isPastDay(cell.date);
         if (isPast) {
           // Past day: gray, not clickable, no pointer, no hover, no tooltip
-          td.className += ' text-gray-300 bg-gray-50 cursor-not-allowed';
+          td.className += ' text-gray-300 bg-gray-50 cursor-not-allowed pointer-events-none';
           td.textContent = cell.day;
         } else {
           // Today or future: interactive
@@ -387,17 +403,33 @@ function rebuildCalendarGrid() {
           if (isPast && !window.showPastAppointments()) showCount = false;
         }
         if (dayAppointments.length > 0 && showCount) {
-          td.classList.add('relative');
-          const bgOverlay = document.createElement('div');
-          bgOverlay.className = 'absolute inset-0 bg-blue-50 border-2 border-blue-100 rounded-lg opacity-80 pointer-events-none';
-          td.appendChild(bgOverlay);
-          const appointmentDiv = document.createElement('div');
-          appointmentDiv.className = 'relative z-10 mt-1 text-xs text-blue-700 font-medium flex items-center justify-center';
-          const span = document.createElement('span');
-          span.className = 'bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200';
-          span.innerHTML = `<i class="fas fa-calendar-check mr-1 text-blue-600"></i>${dayAppointments.length} apt${dayAppointments.length > 1 ? 's' : ''}`;
-          appointmentDiv.appendChild(span);
-          td.appendChild(appointmentDiv);
+          // Rebuild inner structure so overlay sits behind day number & badge
+          const dayNum = cell.day || ''; // preserve day number
+          td.classList.add('relative','overflow-hidden','p-0');
+          td.innerHTML = '';
+          const wrapper = document.createElement('div');
+          wrapper.className = 'relative w-full h-full';
+
+          const overlay = document.createElement('div');
+          overlay.className = 'absolute inset-0 bg-blue-50 border border-blue-200 rounded-md pointer-events-none z-0';
+          wrapper.appendChild(overlay);
+
+          if (dayNum !== '') {
+            const daySpan = document.createElement('span');
+            daySpan.className = 'absolute top-1 left-1 text-[10px] sm:text-xs font-semibold text-gray-700 z-10';
+            daySpan.textContent = dayNum;
+            wrapper.appendChild(daySpan);
+          }
+
+          const badgeContainer = document.createElement('div');
+          badgeContainer.className = 'absolute bottom-1 right-1 z-10';
+          const badge = document.createElement('span');
+            badge.className = 'inline-flex items-center gap-1 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 text-[10px] sm:text-xs font-medium text-blue-700 shadow-sm';
+            badge.innerHTML = `<i class="fas fa-calendar-check text-blue-600"></i>${dayAppointments.length} apt${dayAppointments.length > 1 ? 's' : ''}`;
+          badgeContainer.appendChild(badge);
+          wrapper.appendChild(badgeContainer);
+
+          td.appendChild(wrapper);
         }
       }
       row.appendChild(td);
@@ -483,7 +515,7 @@ function openAddAppointmentPanelWithTime(date, time) {
       
       panel.classList.add('active');
     }
-  } else if (userType === 'doctor') {
+  } else if (userType === 'dentist') { // FIX: previous code used 'doctor' which never matched DB user_type
     const availabilityPanel = document.getElementById('doctorAvailabilityPanel');
     if (availabilityPanel) {
       const dateInput = document.getElementById('availabilityDate');
@@ -502,12 +534,22 @@ function openAddAppointmentPanelWithTime(date, time) {
       
       availabilityPanel.classList.add('active');
     }
+  } else {
+    // View-only roles (patient, others): show info panel if available
+    const infoPanel = document.getElementById('appointmentInfoPanel');
+    if (infoPanel) {
+      if (typeof loadAppointmentsForDate === 'function') {
+        loadAppointmentsForDate(date);
+      }
+      infoPanel.classList.add('active');
+    }
   }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     // Function to load appointments for a specific date
-    function loadAppointmentsForDate(date) {
+  // Expose globally so openAddAppointmentPanelWithTime can invoke for view-only roles
+  window.loadAppointmentsForDate = function loadAppointmentsForDate(date) {
         const contentDiv = document.getElementById('appointmentInfoContent');
         if (!contentDiv) return;
         
@@ -576,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         contentDiv.innerHTML = html;
-    }
+  };
     
     // Function to get status class for styling
     function getStatusClass(status) {
