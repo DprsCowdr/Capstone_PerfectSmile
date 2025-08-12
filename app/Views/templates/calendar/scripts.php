@@ -462,18 +462,54 @@ function updateWeekView() {
   weekDaysHeaderRow.innerHTML = '<th class="w-24 text-xs text-left text-gray-400 font-normal"></th>' +
     weekDays.map(wd => `<th class="text-center text-xs text-gray-500 font-medium">${wd.label}<br><span class="font-normal">Others</span></th>`).join('');
 
-  // Render body
+  // Render body (all-day + hourly rows). We will inject appointments after structure is built.
   let html = '';
-  // All-day row
-  html += '<tr><td class="bg-gray-100 text-xs text-gray-400 py-2 px-2 align-top">all-day</td>' +
-    weekDays.map(wd => `<td class="bg-gray-100 cursor-pointer" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`).join('') + '</tr>';
+  // All-day row (index marker data-hour="all")
+  html += '<tr data-hour="all"><td class="bg-gray-100 text-[10px] sm:text-xs text-gray-400 py-2 px-2 align-top">all-day</td>' +
+    weekDays.map(wd => `<td class="bg-gray-100 cursor-pointer align-top" data-date="${wd.date}" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`).join('') + '</tr>';
   // Hourly rows
   for (let h = 6; h <= 16; h++) {
-    const time = String(h).padStart(2, '0') + ':00';
-    html += `<tr><td class="text-xs text-gray-400 py-2 px-2 align-top border-t">${h <= 12 ? h : h-12}${h < 12 ? 'am' : 'pm'}</td>` +
-      weekDays.map(wd => `<td class="border-t cursor-pointer hover:bg-gray-50" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')"></td>`).join('') + '</tr>';
+    const hourKey = String(h).padStart(2, '0');
+    const time = hourKey + ':00';
+    html += `<tr data-hour="${hourKey}"><td class="text-[10px] sm:text-xs text-gray-400 py-2 px-2 align-top border-t">${h <= 12 ? h : h-12}${h < 12 ? 'am' : 'pm'}</td>` +
+      weekDays.map(wd => `<td class="border-t cursor-pointer hover:bg-gray-50 align-top" data-date="${wd.date}" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')"></td>`).join('') + '</tr>';
   }
   weekViewBody.innerHTML = html;
+
+  // Inject appointments into the proper cells
+  const appointments = window.appointments || [];
+  if (appointments.length) {
+    appointments.forEach(apt => {
+      const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : null);
+      if (!aptDate) return;
+      const aptTimeRaw = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : null);
+      const hourKey = aptTimeRaw ? aptTimeRaw.substring(0,2) : null;
+      // Find column index (date must exist in current week)
+      const dayIdx = weekDays.findIndex(d => d.date === aptDate);
+      if (dayIdx === -1) return; // not in this week
+      // Determine target row: hour row if hourKey present else all-day
+      let rowSelector = hourKey ? `tr[data-hour="${hourKey}"]` : 'tr[data-hour="all"]';
+      const row = weekViewBody.querySelector(rowSelector);
+      if (!row) return;
+      const cell = row.querySelector(`td[data-date="${aptDate}"]`);
+      if (!cell) return;
+      // Build appointment chip
+      const chip = document.createElement('div');
+      chip.className = 'group relative mb-1 last:mb-0 px-1.5 py-0.5 rounded-md border text-[10px] sm:text-[11px] leading-tight font-medium truncate max-w-full ' +
+        (apt.status === 'approved' || apt.approval_status === 'approved' ? 'bg-green-50 border-green-300 text-green-700' : 'bg-blue-50 border-blue-300 text-blue-700');
+      const patient = apt.patient_name || apt.patient_full_name || 'Patient';
+      const timeDisp = aptTimeRaw || '';
+      chip.textContent = (timeDisp ? timeDisp + ' ' : '') + patient;
+      chip.title = `${patient}${timeDisp ? ' @ ' + timeDisp : ''}`;
+      // Click to open details panel (reuse existing function if available)
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        if (typeof loadAppointmentsForDate === 'function') loadAppointmentsForDate(aptDate);
+        openAppointmentInfoPanelById && openAppointmentInfoPanelById(apt.id);
+      });
+      cell.appendChild(chip);
+    });
+  }
 }
 
 // Keep the old navigateDay function for backward compatibility but make it not change URL
