@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\AppointmentModel;
 use App\Models\DentalRecordModel;
 use App\Models\DentalChartModel;
+use App\Models\PatientModel;
 use App\Models\UserModel;
 use App\Controllers\Auth;
 
@@ -13,6 +14,7 @@ class Checkup extends BaseController
     protected $appointmentModel;
     protected $dentalRecordModel;
     protected $dentalChartModel;
+    protected $patientModel;
     protected $userModel;
 
     public function __construct()
@@ -20,6 +22,7 @@ class Checkup extends BaseController
         $this->appointmentModel = new AppointmentModel();
         $this->dentalRecordModel = new DentalRecordModel();
         $this->dentalChartModel = new DentalChartModel();
+        $this->patientModel = new PatientModel();
         $this->userModel = new UserModel();
     }
 
@@ -102,6 +105,12 @@ class Checkup extends BaseController
             return redirect()->to('/checkup')->with('error', 'Appointment is not in progress.');
         }
 
+        // Get or create patient record (user record with medical history)
+        $patient = $this->patientModel->getPatientWithMedicalHistory($appointment['user_id']);
+        
+        // Get patient's medical history
+        $patientWithHistory = $this->patientModel->getPatientWithMedicalHistory($patient['id']);
+
         // Get patient's previous dental records
         $previousRecords = $this->dentalRecordModel->getPatientRecords($appointment['user_id']);
         log_message('info', "Patient {$appointment['user_id']} has " . count($previousRecords) . " previous records");
@@ -150,6 +159,7 @@ class Checkup extends BaseController
         return view('checkup/patient_checkup', [
             'user' => $user,
             'appointment' => $appointment,
+            'patient' => $patientWithHistory,
             'previousRecords' => $previousRecords,
             'previousChart' => $previousChart,
             'toothConditions' => $toothConditions,
@@ -187,76 +197,141 @@ class Checkup extends BaseController
             return redirect()->back()->withInput()->with('error', $validation->getErrors());
         }
 
-        // Check if a dental record already exists for this appointment
-        $existingRecord = $this->dentalRecordModel->where('appointment_id', $appointmentId)->first();
+        try {
+            $db = \Config\Database::connect();
+            $db->transStart();
 
-        $recordData = [
-            'user_id' => $appointment['user_id'],
-            'dentist_id' => $user['id'],
-            'record_date' => date('Y-m-d'),
-            'diagnosis' => $this->request->getPost('diagnosis'),
-            'treatment' => $this->request->getPost('treatment'),
-            'notes' => $this->request->getPost('notes'),
-            'next_appointment_date' => $this->request->getPost('next_appointment_date') ?: null,
-            'appointment_id' => $appointmentId
-        ];
+            // Get or create patient record (user record with medical history)
+            $patient = $this->patientModel->getPatientWithMedicalHistory($appointment['user_id']);
+            $patientId = $appointment['user_id']; // Use existing user_id as patient_id
 
-        if ($existingRecord) {
-            $recordId = $existingRecord['id'];
-            $this->dentalRecordModel->update($recordId, $recordData);
-        } else {
-            $recordId = $this->dentalRecordModel->insert($recordData);
-        }
-
-        if (!$recordId) {
-            return redirect()->back()->withInput()->with('error', 'Failed to save dental record.');
-        }
-
-        // Save dental chart data
-        $chartData = $this->request->getPost('dental_chart');
-        if ($chartData && is_array($chartData)) {
-            log_message('info', "Checkup save - Chart data received: " . json_encode($chartData));
-            $chartSaveResult = $this->dentalChartModel->saveChart($recordId, $chartData);
-            log_message('info', "Checkup save - Chart save result: " . ($chartSaveResult ? 'success' : 'failed'));
-        } else {
-            log_message('info', "Checkup save - No chart data received or invalid format");
-        }
-
-        // Create next appointment if date and time are provided
-        $nextAppointmentDate = $this->request->getPost('next_appointment_date');
-        $nextAppointmentTime = $this->request->getPost('next_appointment_time');
-        
-        if ($nextAppointmentDate && $nextAppointmentTime) {
-            $nextAppointmentData = [
-                'user_id' => $appointment['user_id'],
-                'branch_id' => $appointment['branch_id'],
-                'dentist_id' => $user['id'],
-                'appointment_datetime' => $nextAppointmentDate . ' ' . $nextAppointmentTime . ':00',
-                'status' => 'pending',
-                'appointment_type' => 'scheduled',
-                'approval_status' => 'pending',
-                'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('diagnosis')
+            // Collect medical history data from the form
+            $medicalHistoryData = [
+                'previous_dentist' => $this->request->getPost('previous_dentist'),
+                'last_dental_visit' => $this->request->getPost('last_dental_visit'),
+                'physician_name' => $this->request->getPost('physician_name'),
+                'physician_specialty' => $this->request->getPost('physician_specialty'),
+                'physician_phone' => $this->request->getPost('physician_phone'),
+                'physician_address' => $this->request->getPost('physician_address'),
+                'good_health' => $this->request->getPost('good_health'),
+                'under_treatment' => $this->request->getPost('under_treatment'),
+                'treatment_condition' => $this->request->getPost('treatment_condition'),
+                'serious_illness' => $this->request->getPost('serious_illness'),
+                'illness_details' => $this->request->getPost('illness_details'),
+                'hospitalized' => $this->request->getPost('hospitalized'),
+                'hospitalization_where' => $this->request->getPost('hospitalization_where'),
+                'hospitalization_when' => $this->request->getPost('hospitalization_when'),
+                'hospitalization_why' => $this->request->getPost('hospitalization_why'),
+                'tobacco_use' => $this->request->getPost('tobacco_use'),
+                'blood_pressure' => $this->request->getPost('blood_pressure'),
+                'allergies' => $this->request->getPost('allergies'),
+                'pregnant' => $this->request->getPost('pregnant'),
+                'nursing' => $this->request->getPost('nursing'),
+                'birth_control' => $this->request->getPost('birth_control'),
+                'medical_conditions' => $this->request->getPost('medical_conditions') ?: [],
+                'other_conditions' => $this->request->getPost('other_conditions'),
             ];
-            
-            $newAppointmentId = $this->appointmentModel->insert($nextAppointmentData);
-            
-            if ($newAppointmentId) {
-                // Update the dental record with the new appointment ID
-                $this->dentalRecordModel->update($recordId, [
-                    'next_appointment_id' => $newAppointmentId
-                ]);
+
+            // Remove empty values to avoid unnecessary database updates
+            $medicalHistoryData = array_filter($medicalHistoryData, function($value) {
+                return $value !== null && $value !== '' && $value !== [];
+            });
+
+            // Update patient medical history if data provided
+            if (!empty($medicalHistoryData)) {
+                $this->patientModel->updateMedicalHistory($patientId, $medicalHistoryData);
+                log_message('info', "Updated medical history for patient ID: {$patientId}");
             }
+
+            // Check if a dental record already exists for this appointment
+            $existingRecord = $this->dentalRecordModel->where('appointment_id', $appointmentId)->first();
+
+            $recordData = [
+                'user_id' => $appointment['user_id'],
+                'dentist_id' => $user['id'],
+                'record_date' => date('Y-m-d'),
+                'diagnosis' => $this->request->getPost('diagnosis'),
+                'treatment' => $this->request->getPost('treatment'),
+                'notes' => $this->request->getPost('notes'),
+                'next_appointment_date' => $this->request->getPost('next_appointment_date') ?: null,
+                'appointment_id' => $appointmentId
+            ];
+
+            if ($existingRecord) {
+                $recordId = $existingRecord['id'];
+                $this->dentalRecordModel->update($recordId, $recordData);
+                log_message('info', "Updated existing dental record ID: {$recordId}");
+            } else {
+                $recordId = $this->dentalRecordModel->insert($recordData);
+                log_message('info', "Created new dental record ID: {$recordId}");
+            }
+
+            if (!$recordId) {
+                throw new \Exception('Failed to save dental record.');
+            }
+
+            // Save dental chart data
+            $chartData = $this->request->getPost('dental_chart');
+            if ($chartData && is_array($chartData)) {
+                log_message('info', "Checkup save - Chart data received: " . json_encode($chartData));
+                $chartSaveResult = $this->dentalChartModel->saveChart($recordId, $chartData);
+                log_message('info', "Checkup save - Chart save result: " . ($chartSaveResult ? 'success' : 'failed'));
+                
+                if (!$chartSaveResult) {
+                    log_message('error', "Failed to save dental chart for record ID: {$recordId}");
+                }
+            } else {
+                log_message('info', "Checkup save - No chart data received or invalid format");
+            }
+
+            // Create next appointment if date and time are provided
+            $nextAppointmentDate = $this->request->getPost('next_appointment_date');
+            $nextAppointmentTime = $this->request->getPost('next_appointment_time');
+            
+            if ($nextAppointmentDate && $nextAppointmentTime) {
+                $nextAppointmentData = [
+                    'user_id' => $appointment['user_id'],
+                    'branch_id' => $appointment['branch_id'],
+                    'dentist_id' => $user['id'],
+                    'appointment_datetime' => $nextAppointmentDate . ' ' . $nextAppointmentTime . ':00',
+                    'status' => 'pending',
+                    'appointment_type' => 'scheduled',
+                    'approval_status' => 'pending',
+                    'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('diagnosis')
+                ];
+                
+                $newAppointmentId = $this->appointmentModel->insert($nextAppointmentData);
+                
+                if ($newAppointmentId) {
+                    // Update the dental record with the new appointment ID
+                    $this->dentalRecordModel->update($recordId, [
+                        'next_appointment_id' => $newAppointmentId
+                    ]);
+                    log_message('info', "Created follow-up appointment ID: {$newAppointmentId}");
+                }
+            }
+
+            // Complete the appointment
+            $this->appointmentModel->completeCheckup($appointmentId);
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                throw new \Exception('Database transaction failed.');
+            }
+
+            $successMessage = 'Checkup completed and all data saved successfully.';
+            if ($nextAppointmentDate && $nextAppointmentTime) {
+                $successMessage .= ' Follow-up appointment scheduled for ' . date('M j, Y', strtotime($nextAppointmentDate)) . ' at ' . date('g:i A', strtotime($nextAppointmentTime)) . '.';
+            }
+
+            log_message('info', "Checkup completed successfully for appointment ID: {$appointmentId}");
+            return redirect()->to('/checkup')->with('success', $successMessage);
+
+        } catch (\Exception $e) {
+            log_message('error', "Error saving checkup data: " . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Failed to save checkup data: ' . $e->getMessage());
         }
-
-        // Complete the appointment
-        $this->appointmentModel->completeCheckup($appointmentId);
-
-        $successMessage = 'Checkup completed and dental record saved successfully.';
-        if ($nextAppointmentDate && $nextAppointmentTime) {
-            $successMessage .= ' Follow-up appointment scheduled for ' . date('M j, Y', strtotime($nextAppointmentDate)) . ' at ' . date('g:i A', strtotime($nextAppointmentTime)) . '.';
-        }
-
-        return redirect()->to('/checkup')->with('success', $successMessage);
     }
 
     /**

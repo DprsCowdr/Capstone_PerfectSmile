@@ -24,6 +24,7 @@
                     <div class="p-6 text-white">
                         <h1 class="text-3xl font-bold flex items-center">
                             <i class="fas fa-sign-in-alt mr-4"></i>
+                            Patient Check-in
                         </h1>
                         <p class="mt-2 opacity-90">Manage patient arrivals and check-ins for today</p>
                     </div>

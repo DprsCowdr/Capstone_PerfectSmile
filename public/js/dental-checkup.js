@@ -392,12 +392,16 @@ class PatientCheckup {
             case 'extraction_needed':
                 color = { r: 0.8, g: 0.1, b: 0.1 }; // Dark red
                 break;
+            case 'missing':
+                // For missing teeth, pass null color and missing flag
+                this.dental3DViewer.setToothColor(toothNumber, null, true);
+                return; // Exit early for missing teeth
             default:
                 color = null; // Default tooth color
         }
         
-        // Apply color to the 3D model tooth
-        this.dental3DViewer.setToothColor(toothNumber, color);
+        // Apply color to the 3D model tooth (non-missing teeth)
+        this.dental3DViewer.setToothColor(toothNumber, color, false);
     }
     
     getToothConditionFromDatabase(toothNumber) {

@@ -78,6 +78,16 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('dental-records/store', 'DentalController::storeDentalRecord');
     $routes->post('dental-records/update/(:num)', 'DentalController::updateDentalRecord/$1');
     $routes->get('records', 'AdminController::records'); // → dental/all_records.php
+    $routes->delete('dental-records/delete/(:num)', 'AdminController::deleteRecord/$1'); // Delete dental record
+    
+    // Patient records popup routes
+    $routes->get('patient-info/(:num)', 'AdminController::getPatientInfo/$1');
+    $routes->post('patient-notes/(:num)', 'AdminController::updatePatientNotes/$1');
+    $routes->get('patient-dental-records/(:num)', 'AdminController::getPatientDentalRecords/$1');
+    $routes->get('patient-dental-chart/(:num)', 'AdminController::getPatientDentalChart/$1');
+    $routes->get('patient-appointments/(:num)', 'AdminController::getPatientAppointmentsModal/$1');
+    $routes->get('patient-treatments/(:num)', 'AdminController::getPatientTreatments/$1');
+    $routes->get('patient-medical-records/(:num)', 'AdminController::getPatientMedicalRecords/$1');
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
@@ -153,6 +163,7 @@ $routes->group('checkin', ['filter' => 'auth'], function($routes) {
 $routes->group('queue', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'TreatmentQueue::index');
     $routes->post('call/(:num)', 'TreatmentQueue::callNext/$1');
+    $routes->post('complete/(:num)', 'TreatmentQueue::completeTreatment/$1');
     $routes->get('status', 'TreatmentQueue::getQueueStatus'); // AJAX
 });
 

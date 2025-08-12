@@ -23,7 +23,7 @@ class TreatmentQueue extends BaseController
     public function index()
     {
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin'])) {
             return redirect()->to('/login');
         }
 
@@ -35,8 +35,8 @@ class TreatmentQueue extends BaseController
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
             ->where('appointments.status', 'checked_in');
             
-        // Only filter by dentist if the current user is a doctor
-        if ($user['user_type'] === 'doctor') {
+        // Only filter by dentist if the current user is a dentist/doctor
+        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
             $waitingPatients = $waitingPatients->where('appointments.dentist_id', $user['id']);
         }
         
@@ -51,8 +51,8 @@ class TreatmentQueue extends BaseController
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
             ->where('appointments.status', 'ongoing');
             
-        // Only filter by dentist if the current user is a doctor
-        if ($user['user_type'] === 'doctor') {
+        // Only filter by dentist if the current user is a dentist/doctor
+        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
             $ongoingTreatments = $ongoingTreatments->where('appointments.dentist_id', $user['id']);
         }
             
@@ -76,7 +76,7 @@ class TreatmentQueue extends BaseController
         // Log that this method was called
         log_message('debug', "callNext method called for appointment ID: {$appointmentId}, User type: {$user['user_type']}");
         
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin', 'staff'])) {
             log_message('error', "Unauthorized user tried to call patient. User type: " . ($user ? $user['user_type'] : 'null'));
             return redirect()->to('/login');
         }
@@ -109,9 +109,9 @@ class TreatmentQueue extends BaseController
             $result = $this->appointmentModel->update($appointmentId, $data);
 
             if ($result) {
-                // If the user is a doctor, redirect to checkup module
-                if ($user['user_type'] === 'doctor') {
-                    log_message('info', "Doctor called patient for treatment: {$appointmentId}");
+                // If the user is a dentist/doctor, redirect to checkup module
+                if (in_array($user['user_type'], ['dentist', 'doctor'])) {
+                    log_message('info', "Dentist called patient for treatment: {$appointmentId}");
                     return redirect()->to("/checkup/patient/{$appointmentId}")
                         ->with('success', 'Patient called for treatment');
                 } else {
@@ -146,8 +146,8 @@ class TreatmentQueue extends BaseController
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
             ->where('appointments.status', 'checked_in');
             
-        // Only filter by dentist if the current user is a doctor
-        if ($user['user_type'] === 'doctor') {
+        // Only filter by dentist if the current user is a dentist/doctor
+        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
             $waitingQuery = $waitingQuery->where('appointments.dentist_id', $user['id']);
         }
         
@@ -157,8 +157,8 @@ class TreatmentQueue extends BaseController
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
             ->where('appointments.status', 'ongoing');
             
-        // Only filter by dentist if the current user is a doctor
-        if ($user['user_type'] === 'doctor') {
+        // Only filter by dentist if the current user is a dentist/doctor
+        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
             $ongoingQuery = $ongoingQuery->where('appointments.dentist_id', $user['id']);
         }
         
@@ -169,5 +169,58 @@ class TreatmentQueue extends BaseController
             'ongoing' => $ongoingCount,
             'timestamp' => date('Y-m-d H:i:s')
         ]);
+    }
+
+    /**
+     * Complete a treatment
+     */
+    public function completeTreatment($appointmentId)
+    {
+        $user = Auth::getCurrentUser();
+        
+        log_message('debug', "completeTreatment method called for appointment ID: {$appointmentId}");
+        
+        if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin', 'staff'])) {
+            log_message('error', "Unauthorized user tried to complete treatment. User type: " . ($user ? $user['user_type'] : 'null'));
+            return redirect()->to('/login');
+        }
+
+        $appointment = $this->appointmentModel->find($appointmentId);
+        if (!$appointment) {
+            log_message('error', "Appointment not found: {$appointmentId}");
+            session()->setFlashdata('error', 'Appointment not found');
+            return redirect()->back();
+        }
+
+        if ($appointment['status'] !== 'ongoing') {
+            log_message('error', "Invalid appointment status for completion: {$appointment['status']}");
+            session()->setFlashdata('error', 'Treatment is not currently ongoing');
+            return redirect()->back();
+        }
+
+        try {
+            $data = [
+                'status' => 'completed',
+                'completed_at' => date('Y-m-d H:i:s'),
+                'completed_by' => $user['id']
+            ];
+            
+            log_message('debug', "Completing treatment with data: " . json_encode($data));
+            
+            $result = $this->appointmentModel->update($appointmentId, $data);
+
+            if ($result) {
+                log_message('info', "Treatment completed successfully: {$appointmentId}");
+                session()->setFlashdata('success', 'Treatment completed successfully');
+            } else {
+                log_message('error', "Failed to complete treatment: {$appointmentId}. Validation errors: " . print_r($this->appointmentModel->errors(), true));
+                session()->setFlashdata('error', 'Failed to complete treatment: ' . implode(', ', $this->appointmentModel->errors()));
+            }
+        } catch (\Exception $e) {
+            log_message('error', "Exception completing treatment: {$appointmentId}. " . $e->getMessage());
+            session()->setFlashdata('error', 'Error: ' . $e->getMessage());
+        }
+
+        return redirect()->back();
     }
 }

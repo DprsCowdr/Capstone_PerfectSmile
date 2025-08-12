@@ -1,0 +1,396 @@
+/* Records Management Additional Styles */
+
+/* Modal Improvements */
+.record-tab {
+    transition: all 0.2s ease-in-out;
+}
+
+.record-tab:hover {
+    transform: translateY(-1px);
+}
+
+/* Loading states */
+.modal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+/* Enhanced table styles */
+.records-table {
+    font-size: 0.875rem;
+}
+
+.records-table tr:hover {
+    background-color: #f9fafb;
+    transition: background-color 0.2s ease;
+}
+
+/* Button improvements */
+.action-button {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.action-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Medical sections */
+.medical-section {
+    min-height: 200px;
+}
+
+.medical-tab-btn {
+    transition: all 0.2s ease;
+}
+
+/* Stats cards animation */
+.stats-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 3D viewer container improvements */
+#dentalModalViewer {
+    min-height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .record-tab {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    #dentalModalViewer {
+        min-height: 300px;
+    }
+    
+    .modal-content {
+        margin: 10px;
+        max-width: calc(100vw - 20px);
+    }
+}
+
+/* Loading spinner improvements */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Alert improvements */
+.alert-notification {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Tooth grid improvements */
+.tooth-grid .tooth-item {
+    transition: all 0.2s ease;
+}
+
+.tooth-grid .tooth-item:hover {
+    transform: scale(1.1);
+    z-index: 10;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Resizable Modal Styles */
+.modal-overlay {
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-overlay.hidden {
+    animation: fadeOut 0.3s ease-in;
+}
+
+.modal-container {
+    animation: slideIn 0.3s ease-out;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
+.resizable-modal {
+    resize: both;
+    overflow: hidden;
+    min-width: 600px;
+    min-height: 400px;
+    max-width: 95vw;
+    max-height: 95vh;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: modalShow 0.3s ease-out forwards;
+    position: relative;
+}
+
+/* Prevent modal from going off-screen */
+.resizable-modal:not(.fullscreen) {
+    contain: layout;
+}
+
+.modal-header-resizable {
+    cursor: move;
+    user-select: none;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.resize-handle-se {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: se-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    transition: color 0.2s ease;
+}
+
+.resize-handle-se:hover {
+    color: #6b7280;
+}
+
+.fullscreen-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.fullscreen-btn:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.modal-content-resizable {
+    height: calc(100% - 140px);
+    overflow-y: auto;
+    background: #fafafa;
+}
+
+/* Enhanced Tab Styles */
+.record-tab {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.record-tab::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.record-tab:hover::before {
+    left: 100%;
+}
+
+.record-tab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.record-tab.bg-blue-600 {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.record-tab.bg-gray-100:hover {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #1f2937;
+}
+
+/* Modal Content Transitions */
+#modalContent {
+    transition: all 0.3s ease-in-out;
+}
+
+.modal-content-loading {
+    opacity: 0.7;
+    filter: blur(1px);
+}
+
+.modal-content-loaded {
+    opacity: 1;
+    filter: blur(0);
+}
+
+/* Enhanced Records Table Styles */
+.records-table-actions {
+    min-width: 280px;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn-view {
+    color: #2563eb;
+    border-color: #bfdbfe;
+    background-color: #eff6ff;
+}
+
+.action-btn-view:hover {
+    background-color: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.action-btn-edit {
+    color: #7c3aed;
+    border-color: #c4b5fd;
+    background-color: #f3f4f6;
+}
+
+.action-btn-edit:hover {
+    background-color: #e5e7eb;
+    border-color: #a78bfa;
+}
+
+.action-btn-delete {
+    color: #dc2626;
+    border-color: #fecaca;
+    background-color: #fef2f2;
+}
+
+.action-btn-delete:hover {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+}
+
+/* Full width table improvements */
+.full-width-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.full-width-table th:nth-child(1) { width: 12%; }  /* Date */
+.full-width-table th:nth-child(2) { width: 30%; }  /* Patient */
+.full-width-table th:nth-child(3) { width: 15%; }  /* Type */
+.full-width-table th:nth-child(4) { width: 15%; }  /* Status */
+.full-width-table th:nth-child(5) { width: 28%; }  /* Actions */
+
+/* Fullscreen modal styles */
+.resizable-modal.fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    min-width: none !important;
+    min-height: none !important;
+    z-index: 9999 !important;
+    transform: none !important;
+    resize: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    animation: modalFullscreen 0.3s ease-out forwards;
+}
+
+/* Smooth Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translate(-50%, -60px) scale(0.9);
+    }
+    to { 
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+
+@keyframes modalShow {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes modalFullscreen {
+    from {
+        border-radius: 12px;
+    }
+    to {
+        border-radius: 0;
+    }
+}

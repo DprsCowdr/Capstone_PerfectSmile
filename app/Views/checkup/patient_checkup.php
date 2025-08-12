@@ -91,30 +91,362 @@
                 </h2>
             </div>
             <div class="p-4 sm:p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Patient Name</label>
-                        <p class="text-base sm:text-lg font-semibold text-gray-900"><?= $appointment['patient_name'] ?></p>
+                <!-- Basic Patient Information -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Basic Information</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Patient Name</label>
+                            <p class="text-base sm:text-lg font-semibold text-gray-900"><?= $appointment['patient_name'] ?></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <p class="text-sm sm:text-base text-gray-600 break-words"><?= $appointment['patient_email'] ?></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <p class="text-sm sm:text-base text-gray-600"><?= $appointment['patient_phone'] ?></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                            <p class="text-sm sm:text-base text-gray-600"><?= $appointment['patient_dob'] ? date('M j, Y', strtotime($appointment['patient_dob'])) : 'Not provided' ?></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                            <p class="text-sm sm:text-base text-gray-600"><?= ucfirst($appointment['patient_gender']) ?></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Appointment Time</label>
+                            <p class="text-sm sm:text-base text-gray-600"><?= date('g:i A', strtotime($appointment['appointment_time'])) ?></p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <p class="text-sm sm:text-base text-gray-600 break-words"><?= $appointment['patient_email'] ?></p>
+                </div>
+
+                <!-- Dental History -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Dental History</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label for="previous_dentist" class="block text-sm font-medium text-gray-700 mb-2">Previous Dentist <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <input type="text" id="previous_dentist" name="previous_dentist" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="Enter previous dentist name (leave blank if none)" 
+                                   value="<?= esc($patient['previous_dentist'] ?? old('previous_dentist')) ?>"
+                                   onchange="updateHiddenField('previous_dentist', this.value)">
+                        </div>
+                        <div>
+                            <label for="last_dental_visit" class="block text-sm font-medium text-gray-700 mb-2">Last Dental Visit Date <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <input type="date" id="last_dental_visit" name="last_dental_visit" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   value="<?= esc($patient['last_dental_visit'] ?? old('last_dental_visit')) ?>"
+                                   onchange="updateHiddenField('last_dental_visit', this.value)">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <p class="text-sm sm:text-base text-gray-600"><?= $appointment['patient_phone'] ?></p>
+                </div>
+
+                <!-- Medical History -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Medical History <span class="text-gray-500 font-normal text-sm">(All fields optional)</span></h3>
+                    
+                    <!-- Optional Notice -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-center">
+                            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                            <p class="text-sm text-blue-700">
+                                <span class="font-medium">For Staff Convenience:</span> All medical history fields are optional. You can leave any field blank if the patient doesn't have the information, doesn't know the answer, or prefers not to answer. Only Diagnosis and Treatment Plan are required to complete the checkup.
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                        <p class="text-sm sm:text-base text-gray-600"><?= $appointment['patient_dob'] ? date('M j, Y', strtotime($appointment['patient_dob'])) : 'Not provided' ?></p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                        <div>
+                            <label for="physician_name" class="block text-sm font-medium text-gray-700 mb-2">Name of Physician <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <input type="text" id="physician_name" name="physician_name" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="Enter physician name (leave blank if none)" 
+                                   value="<?= esc($patient['physician_name'] ?? old('physician_name')) ?>"
+                                   onchange="updateHiddenField('physician_name', this.value)">
+                        </div>
+                        <div>
+                            <label for="physician_specialty" class="block text-sm font-medium text-gray-700 mb-2">Specialty <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <input type="text" id="physician_specialty" name="physician_specialty" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="Enter specialty (leave blank if not applicable)" 
+                                   value="<?= esc($patient['physician_specialty'] ?? old('physician_specialty')) ?>"
+                                   onchange="updateHiddenField('physician_specialty', this.value)">
+                        </div>
+                        <div>
+                            <label for="physician_phone" class="block text-sm font-medium text-gray-700 mb-2">Office Telephone Number <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <input type="tel" id="physician_phone" name="physician_phone" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="Enter office phone number (leave blank if unknown)" 
+                                   value="<?= esc($patient['physician_phone'] ?? old('physician_phone')) ?>"
+                                   onchange="updateHiddenField('physician_phone', this.value)">
+                        </div>
+                        <div>
+                            <label for="physician_address" class="block text-sm font-medium text-gray-700 mb-2">Office Address <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <textarea id="physician_address" name="physician_address" rows="2"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                      placeholder="Enter office address (leave blank if unknown)"
+                                      onchange="updateHiddenField('physician_address', this.value)"><?= esc($patient['physician_address'] ?? old('physician_address')) ?></textarea>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                        <p class="text-sm sm:text-base text-gray-600"><?= ucfirst($appointment['patient_gender']) ?></p>
+
+                    <!-- General Health Questions -->
+                    <div class="space-y-4 mb-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Are you in good health? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="good_health" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('good_health', this.value)">
+                                        <span class="ml-2 text-sm">Yes</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="good_health" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('good_health', this.value)">
+                                        <span class="ml-2 text-sm">No</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="good_health" value="" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('good_health', this.value)">
+                                        <span class="ml-2 text-sm">Skip</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Are you under medical treatment now? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                                <div class="flex space-x-4">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="under_treatment" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('under_treatment', this.value); toggleTreatmentCondition()">
+                                        <span class="ml-2 text-sm">Yes</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="under_treatment" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('under_treatment', this.value); toggleTreatmentCondition()">
+                                        <span class="ml-2 text-sm">No</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="under_treatment" value="" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('under_treatment', this.value); toggleTreatmentCondition()">
+                                        <span class="ml-2 text-sm">Skip</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="treatment_condition_div" class="hidden">
+                            <label for="treatment_condition" class="block text-sm font-medium text-gray-700 mb-2">If yes, what is the condition being treated? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                            <input type="text" id="treatment_condition" name="treatment_condition" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="Enter condition being treated (leave blank if not applicable)" 
+                                   value="<?= esc($patient['treatment_condition'] ?? old('treatment_condition')) ?>"
+                                   onchange="updateHiddenField('treatment_condition', this.value)">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Appointment Time</label>
-                        <p class="text-sm sm:text-base text-gray-600"><?= date('g:i A', strtotime($appointment['appointment_time'])) ?></p>
+
+                    <div class="space-y-4 mb-6">
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Have you ever had a serious illness or surgical operation?</label>
+                                <div class="flex space-x-4 mb-2">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="serious_illness" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('serious_illness', this.value); toggleIllnessDetails()">
+                                        <span class="ml-2 text-sm">Yes</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="serious_illness" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('serious_illness', this.value); toggleIllnessDetails()">
+                                        <span class="ml-2 text-sm">No</span>
+                                    </label>
+                                </div>
+                                <div id="illness_details_div" class="hidden">
+                                    <input type="text" id="illness_details" name="illness_details" 
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                           placeholder="If yes, what illness or operation?" 
+                                           value="<?= esc($patient['illness_details'] ?? old('illness_details')) ?>"
+                                           onchange="updateHiddenField('illness_details', this.value)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Have you ever been hospitalized?</label>
+                            <div class="flex space-x-4 mb-2">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="hospitalized" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('hospitalized', this.value); toggleHospitalizationDetails()">
+                                    <span class="ml-2 text-sm">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="hospitalized" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('hospitalized', this.value); toggleHospitalizationDetails()">
+                                    <span class="ml-2 text-sm">No</span>
+                                </label>
+                            </div>
+                            <div id="hospitalization_details_div" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <input type="text" name="hospitalization_where" placeholder="Where?" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                       value="<?= esc($patient['hospitalization_where'] ?? old('hospitalization_where')) ?>"
+                                       onchange="updateHiddenField('hospitalization_where', this.value)">
+                                <input type="text" name="hospitalization_when" placeholder="When?" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                       value="<?= esc($patient['hospitalization_when'] ?? old('hospitalization_when')) ?>"
+                                       onchange="updateHiddenField('hospitalization_when', this.value)">
+                                <input type="text" name="hospitalization_why" placeholder="Why?" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                       value="<?= esc($patient['hospitalization_why'] ?? old('hospitalization_why')) ?>"
+                                       onchange="updateHiddenField('hospitalization_why', this.value)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Do you use tobacco products? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                            <div class="flex space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="tobacco_use" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('tobacco_use', this.value)">
+                                    <span class="ml-2 text-sm">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="tobacco_use" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('tobacco_use', this.value)">
+                                    <span class="ml-2 text-sm">No</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="tobacco_use" value="" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('tobacco_use', this.value)">
+                                    <span class="ml-2 text-sm">Skip</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="blood_pressure" class="block text-sm font-medium text-gray-700 mb-2">Blood Pressure (mmHg) <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                            <input type="text" id="blood_pressure" name="blood_pressure" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="e.g., 120/80 (leave blank if unknown)" 
+                                   value="<?= esc($patient['blood_pressure'] ?? old('blood_pressure')) ?>"
+                                   onchange="updateHiddenField('blood_pressure', this.value)">
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="allergies" class="block text-sm font-medium text-gray-700 mb-2">Are you allergic to any of the following? (e.g., Local Anesthetic, Penicillin, Antibiotics, or others) <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <textarea id="allergies" name="allergies" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                  placeholder="Specify any allergies (leave blank if none)"
+                                  onchange="updateHiddenField('allergies', this.value)"><?= esc($patient['allergies'] ?? old('allergies')) ?></textarea>
+                    </div>
+                </div>
+
+                <!-- For Women Only -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">For Women Only <span class="text-gray-500 font-normal text-sm">(All fields optional)</span></h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Are you pregnant? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                            <div class="flex space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="pregnant" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('pregnant', this.value)">
+                                    <span class="ml-2 text-sm">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="pregnant" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('pregnant', this.value)">
+                                    <span class="ml-2 text-sm">No</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="pregnant" value="na" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('pregnant', this.value)">
+                                    <span class="ml-2 text-sm">N/A</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Are you nursing? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                            <div class="flex space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="nursing" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('nursing', this.value)">
+                                    <span class="ml-2 text-sm">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="nursing" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('nursing', this.value)">
+                                    <span class="ml-2 text-sm">No</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="nursing" value="na" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('nursing', this.value)">
+                                    <span class="ml-2 text-sm">N/A</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Are you taking birth control pills? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                            <div class="flex space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="birth_control" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('birth_control', this.value)">
+                                    <span class="ml-2 text-sm">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="birth_control" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('birth_control', this.value)">
+                                    <span class="ml-2 text-sm">No</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="birth_control" value="na" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('birth_control', this.value)">
+                                    <span class="ml-2 text-sm">N/A</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medical Conditions -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Medical Conditions <span class="text-gray-500 font-normal text-sm">(All optional)</span></h3>
+                    <p class="text-sm text-gray-600 mb-4">Do you have or have you ever had any of the following? (Check all that apply - leave blank if none or unknown)</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <?php
+                        $medicalConditions = [
+                            'high_blood_pressure' => 'High blood pressure',
+                            'low_blood_pressure' => 'Low blood pressure',
+                            'epilepsy' => 'Epilepsy/Convulsion',
+                            'aids_hiv' => 'AIDS or HIV infection',
+                            'std' => 'Sexually transmitted disease',
+                            'stomach_ulcers' => 'Stomach trouble/Ulcers',
+                            'fainting' => 'Fainting Seizure',
+                            'weight_loss' => 'Rapid weight loss',
+                            'radiation_therapy' => 'Radiation Therapy',
+                            'joint_replacement' => 'Joint replacement/implant',
+                            'heart_surgery' => 'Heart surgery',
+                            'heart_attack' => 'Heart attack',
+                            'thyroid_problem' => 'Thyroid problem',
+                            'heart_disease' => 'Heart disease',
+                            'heart_murmur' => 'Heart murmur',
+                            'hepatitis_liver' => 'Hepatitis/Liver disease',
+                            'rheumatic_fever' => 'Rheumatic fever',
+                            'hay_fever' => 'Hay fever/Allergies',
+                            'respiratory_problem' => 'Respiratory problem',
+                            'hepatitis_jaundice' => 'Hepatitis/Jaundice',
+                            'tuberculosis' => 'Tuberculosis',
+                            'swollen_ankles' => 'Swollen ankles',
+                            'kidney_disease' => 'Kidney disease',
+                            'diabetes' => 'Diabetes',
+                            'chest_pain' => 'Chest pain',
+                            'stroke' => 'Stroke',
+                            'cancer_tumors' => 'Cancer/Tumors',
+                            'anemia' => 'Anemia',
+                            'angina' => 'Angina',
+                            'asthma' => 'Asthma',
+                            'emphysema' => 'Emphysema',
+                            'bleeding_problem' => 'Bleeding problem',
+                            'blood_disease' => 'Blood disease',
+                            'head_injuries' => 'Head injuries',
+                            'arthritis' => 'Arthritis/Rheumatism'
+                        ];
+                        
+                        foreach ($medicalConditions as $key => $condition): ?>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" name="medical_conditions[]" value="<?= $key ?>" class="form-checkbox text-blue-600 rounded">
+                                <span class="ml-2 text-sm"><?= $condition ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="mt-4">
+                        <label for="other_conditions" class="block text-sm font-medium text-gray-700 mb-2">Others (specify) <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="text" id="other_conditions" name="other_conditions" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="Specify other medical conditions (leave blank if none)" 
+                               value="<?= esc($patient['other_conditions'] ?? old('other_conditions')) ?>"
+                               onchange="updateHiddenField('other_conditions', this.value)">
                     </div>
                 </div>
             </div>
@@ -122,6 +454,37 @@
 
         <!-- Checkup Form -->
         <form action="/checkup/save/<?= $appointment['id'] ?>" method="POST" class="space-y-8">
+            <!-- Medical History Fields (Hidden inputs to include in main form) -->
+            <?php if (isset($patient)): ?>
+                <input type="hidden" name="previous_dentist" value="<?= esc($patient['previous_dentist'] ?? '') ?>">
+                <input type="hidden" name="last_dental_visit" value="<?= esc($patient['last_dental_visit'] ?? '') ?>">
+                <input type="hidden" name="physician_name" value="<?= esc($patient['physician_name'] ?? '') ?>">
+                <input type="hidden" name="physician_specialty" value="<?= esc($patient['physician_specialty'] ?? '') ?>">
+                <input type="hidden" name="physician_phone" value="<?= esc($patient['physician_phone'] ?? '') ?>">
+                <input type="hidden" name="physician_address" value="<?= esc($patient['physician_address'] ?? '') ?>">
+                <input type="hidden" name="good_health" value="<?= esc($patient['good_health'] ?? '') ?>">
+                <input type="hidden" name="under_treatment" value="<?= esc($patient['under_treatment'] ?? '') ?>">
+                <input type="hidden" name="treatment_condition" value="<?= esc($patient['treatment_condition'] ?? '') ?>">
+                <input type="hidden" name="serious_illness" value="<?= esc($patient['serious_illness'] ?? '') ?>">
+                <input type="hidden" name="illness_details" value="<?= esc($patient['illness_details'] ?? '') ?>">
+                <input type="hidden" name="hospitalized" value="<?= esc($patient['hospitalized'] ?? '') ?>">
+                <input type="hidden" name="hospitalization_where" value="<?= esc($patient['hospitalization_where'] ?? '') ?>">
+                <input type="hidden" name="hospitalization_when" value="<?= esc($patient['hospitalization_when'] ?? '') ?>">
+                <input type="hidden" name="hospitalization_why" value="<?= esc($patient['hospitalization_why'] ?? '') ?>">
+                <input type="hidden" name="tobacco_use" value="<?= esc($patient['tobacco_use'] ?? '') ?>">
+                <input type="hidden" name="blood_pressure" value="<?= esc($patient['blood_pressure'] ?? '') ?>">
+                <input type="hidden" name="allergies" value="<?= esc($patient['allergies'] ?? '') ?>">
+                <input type="hidden" name="pregnant" value="<?= esc($patient['pregnant'] ?? '') ?>">
+                <input type="hidden" name="nursing" value="<?= esc($patient['nursing'] ?? '') ?>">
+                <input type="hidden" name="birth_control" value="<?= esc($patient['birth_control'] ?? '') ?>">
+                <input type="hidden" name="other_conditions" value="<?= esc($patient['other_conditions'] ?? '') ?>">
+                <?php if (isset($patient['medical_conditions']) && is_array($patient['medical_conditions'])): ?>
+                    <?php foreach ($patient['medical_conditions'] as $condition): ?>
+                        <input type="hidden" name="medical_conditions[]" value="<?= esc($condition) ?>">
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            <?php endif; ?>
+            
             <!-- Dental Chart Section -->
             <div class="bg-white rounded-xl shadow-lg">
                 <div class="p-4 sm:p-6 border-b border-gray-200">
@@ -435,47 +798,128 @@
                 <div class="p-4 sm:p-6 border-b border-gray-200">
                     <h2 class="text-lg sm:text-xl font-bold text-gray-800 flex items-center">
                         <i class="fas fa-stethoscope text-blue-500 mr-2 sm:mr-3"></i>
-                        Diagnosis & Treatment
+                        Diagnosis & Treatment <span class="text-red-500 text-sm font-normal">(Required)</span>
                     </h2>
+                    <p class="text-sm text-gray-600 mt-2">Complete the essential medical findings and treatment plan for this checkup.</p>
                 </div>
                 <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
                     <div>
-                        <label for="diagnosis" class="block text-sm font-medium text-gray-700 mb-2">Diagnosis *</label>
+                        <label for="diagnosis" class="block text-sm font-medium text-gray-700 mb-2">
+                            Diagnosis <span class="text-red-500">*</span>
+                            <span class="text-gray-500 font-normal">(Required for medical records)</span>
+                        </label>
+                        
+                        <!-- Quick Diagnosis Templates -->
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-2">Quick Templates (click to use):</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                <button type="button" onclick="setDiagnosis('Routine dental cleaning completed. No cavities or issues detected.')" 
+                                        class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 text-xs rounded-lg border border-green-300 transition-colors">
+                                    ✓ Routine Cleaning
+                                </button>
+                                <button type="button" onclick="setDiagnosis('Cavity detected requiring filling treatment.')" 
+                                        class="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs rounded-lg border border-yellow-300 transition-colors">
+                                    ⚠ Cavity Found
+                                </button>
+                                <button type="button" onclick="setDiagnosis('Gingivitis - mild gum inflammation detected.')" 
+                                        class="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs rounded-lg border border-orange-300 transition-colors">
+                                    📋 Gingivitis
+                                </button>
+                                <button type="button" onclick="setDiagnosis('Plaque and tartar buildup - professional cleaning performed.')" 
+                                        class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs rounded-lg border border-blue-300 transition-colors">
+                                    🦷 Plaque Removal
+                                </button>
+                                <button type="button" onclick="setDiagnosis('Tooth sensitivity reported by patient.')" 
+                                        class="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs rounded-lg border border-purple-300 transition-colors">
+                                    😬 Sensitivity
+                                </button>
+                                <button type="button" onclick="setDiagnosis('Orthodontic consultation and evaluation completed.')" 
+                                        class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs rounded-lg border border-indigo-300 transition-colors">
+                                    📐 Orthodontic
+                                </button>
+                                <button type="button" onclick="clearDiagnosis()" 
+                                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg border border-gray-300 transition-colors">
+                                    🗑️ Clear Field
+                                </button>
+                            </div>
+                        </div>
+                        
                         <textarea id="diagnosis" name="diagnosis" rows="4" required
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                                  placeholder="Enter detailed diagnosis..."><?= old('diagnosis') ?></textarea>
+                                  placeholder="Enter detailed diagnosis (e.g., 'Routine dental cleaning completed', 'Cavity detected on tooth #14', 'Gingivitis - mild', etc.)..."><?= old('diagnosis') ?></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Include dental conditions found, cleaning performed, or note 'No issues detected' for routine checkups.</p>
                     </div>
 
                     <div>
-                        <label for="treatment" class="block text-sm font-medium text-gray-700 mb-2">Treatment Plan *</label>
+                        <label for="treatment" class="block text-sm font-medium text-gray-700 mb-2">
+                            Treatment Plan <span class="text-red-500">*</span>
+                            <span class="text-gray-500 font-normal">(Required for medical records)</span>
+                        </label>
+                        
+                        <!-- Quick Treatment Templates -->
+                        <div class="mb-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-2">Quick Templates (click to use):</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                <button type="button" onclick="setTreatment('Continue regular oral hygiene routine. Return in 6 months for routine cleaning.')" 
+                                        class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 text-xs rounded-lg border border-green-300 transition-colors">
+                                    ✓ Routine Care
+                                </button>
+                                <button type="button" onclick="setTreatment('Schedule appointment for filling procedure within 2 weeks.')" 
+                                        class="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs rounded-lg border border-yellow-300 transition-colors">
+                                    🔧 Schedule Filling
+                                </button>
+                                <button type="button" onclick="setTreatment('Improve brushing and flossing technique. Use antibacterial mouthwash daily.')" 
+                                        class="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs rounded-lg border border-orange-300 transition-colors">
+                                    📋 Oral Hygiene
+                                </button>
+                                <button type="button" onclick="setTreatment('Professional cleaning completed. Use sensitive toothpaste as recommended.')" 
+                                        class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs rounded-lg border border-blue-300 transition-colors">
+                                    🦷 Sensitivity Care
+                                </button>
+                                <button type="button" onclick="setTreatment('Follow-up appointment in 3 months to monitor progress.')" 
+                                        class="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs rounded-lg border border-purple-300 transition-colors">
+                                    📅 Follow-up
+                                </button>
+                                <button type="button" onclick="setTreatment('Refer to orthodontist for detailed evaluation and treatment planning.')" 
+                                        class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs rounded-lg border border-indigo-300 transition-colors">
+                                    📐 Orthodontic Referral
+                                </button>
+                                <button type="button" onclick="clearTreatment()" 
+                                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg border border-gray-300 transition-colors">
+                                    🗑️ Clear Field
+                                </button>
+                            </div>
+                        </div>
+                        
                         <textarea id="treatment" name="treatment" rows="4" required
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                                  placeholder="Enter treatment plan..."><?= old('treatment') ?></textarea>
+                                  placeholder="Enter treatment plan (e.g., 'Continue regular oral hygiene', 'Schedule filling for tooth #14', 'Return in 6 months for routine cleaning', etc.)..."><?= old('treatment') ?></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Describe immediate treatments performed and future treatment recommendations.</p>
                     </div>
 
                     <div>
-                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes <span class="text-gray-500 font-normal">(Optional)</span></label>
                         <textarea id="notes" name="notes" rows="3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                                  placeholder="Any additional notes or observations..."><?= old('notes') ?></textarea>
+                                  placeholder="Any additional observations, patient concerns, or special instructions (leave blank if none)..."><?= old('notes') ?></textarea>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                            <label for="next_appointment_date" class="block text-sm font-medium text-gray-700 mb-2">Next Appointment Date</label>
+                            <label for="next_appointment_date" class="block text-sm font-medium text-gray-700 mb-2">Next Appointment Date <span class="text-gray-500 font-normal">(Optional)</span></label>
                             <input type="date" id="next_appointment_date" name="next_appointment_date"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                                    value="<?= old('next_appointment_date') ?>">
                         </div>
 
                         <div>
-                            <label for="next_appointment_time" class="block text-sm font-medium text-gray-700 mb-2">Next Appointment Time</label>
+                            <label for="next_appointment_time" class="block text-sm font-medium text-gray-700 mb-2">Next Appointment Time <span class="text-gray-500 font-normal">(Optional)</span></label>
                             <input type="time" id="next_appointment_time" name="next_appointment_time"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                                    value="<?= old('next_appointment_time') ?>">
                         </div>
                     </div>
-                    <p class="text-xs sm:text-sm text-gray-500">Leave appointment fields empty if no follow-up is needed</p>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-2"><span class="font-medium">Note:</span> Leave appointment fields empty if no follow-up is needed. All medical history fields are optional - staff can skip any fields if patient doesn't have the information or prefers not to answer.</p>
                 </div>
             </div>
 
@@ -523,6 +967,194 @@
     grid-template-columns: repeat(16, minmax(0, 1fr));
 }
 </style>
+
+<script>
+function toggleTreatmentCondition() {
+    const underTreatmentYes = document.querySelector('input[name="under_treatment"][value="yes"]');
+    const treatmentConditionDiv = document.getElementById('treatment_condition_div');
+    
+    if (underTreatmentYes.checked) {
+        treatmentConditionDiv.classList.remove('hidden');
+    } else {
+        treatmentConditionDiv.classList.add('hidden');
+    }
+}
+
+function toggleIllnessDetails() {
+    const seriousIllnessYes = document.querySelector('input[name="serious_illness"][value="yes"]');
+    const illnessDetailsDiv = document.getElementById('illness_details_div');
+    
+    if (seriousIllnessYes.checked) {
+        illnessDetailsDiv.classList.remove('hidden');
+    } else {
+        illnessDetailsDiv.classList.add('hidden');
+    }
+}
+
+function toggleHospitalizationDetails() {
+    const hospitalizedYes = document.querySelector('input[name="hospitalized"][value="yes"]');
+    const hospitalizationDetailsDiv = document.getElementById('hospitalization_details_div');
+    
+    if (hospitalizedYes.checked) {
+        hospitalizationDetailsDiv.classList.remove('hidden');
+    } else {
+        hospitalizationDetailsDiv.classList.add('hidden');
+    }
+}
+
+function updateHiddenField(fieldName, value) {
+    const hiddenField = document.querySelector(`input[type="hidden"][name="${fieldName}"]`);
+    if (hiddenField) {
+        hiddenField.value = value;
+    }
+}
+
+function updateHiddenFieldRadio(fieldName, value) {
+    updateHiddenField(fieldName, value);
+    // Also handle conditional fields
+    if (fieldName === 'under_treatment') {
+        toggleTreatmentCondition();
+    } else if (fieldName === 'serious_illness') {
+        toggleIllnessDetails();
+    } else if (fieldName === 'hospitalized') {
+        toggleHospitalizationDetails();
+    }
+}
+
+function updateMedicalConditions() {
+    // Remove existing hidden medical condition inputs
+    const existingConditions = document.querySelectorAll('input[type="hidden"][name="medical_conditions[]"]');
+    existingConditions.forEach(input => input.remove());
+    
+    // Add new hidden inputs for checked conditions
+    const checkedConditions = document.querySelectorAll('input[name="medical_conditions[]"]:checked');
+    const form = document.querySelector('form[action*="/checkup/save/"]');
+    
+    checkedConditions.forEach(checkbox => {
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'medical_conditions[]';
+        hiddenInput.value = checkbox.value;
+        form.appendChild(hiddenInput);
+    });
+}
+
+// Initialize form state on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if any conditional fields should be shown
+    toggleTreatmentCondition();
+    toggleIllnessDetails();
+    toggleHospitalizationDetails();
+    
+    // Populate existing medical history data
+    <?php if (isset($patient)): ?>
+        // Set radio button values
+        <?php if (!empty($patient['good_health'])): ?>
+            const goodHealthRadio = document.querySelector(`input[name="good_health"][value="<?= $patient['good_health'] ?>"]`);
+            if (goodHealthRadio) goodHealthRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['under_treatment'])): ?>
+            const underTreatmentRadio = document.querySelector(`input[name="under_treatment"][value="<?= $patient['under_treatment'] ?>"]`);
+            if (underTreatmentRadio) underTreatmentRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['serious_illness'])): ?>
+            const seriousIllnessRadio = document.querySelector(`input[name="serious_illness"][value="<?= $patient['serious_illness'] ?>"]`);
+            if (seriousIllnessRadio) seriousIllnessRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['hospitalized'])): ?>
+            const hospitalizedRadio = document.querySelector(`input[name="hospitalized"][value="<?= $patient['hospitalized'] ?>"]`);
+            if (hospitalizedRadio) hospitalizedRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['tobacco_use'])): ?>
+            const tobaccoRadio = document.querySelector(`input[name="tobacco_use"][value="<?= $patient['tobacco_use'] ?>"]`);
+            if (tobaccoRadio) tobaccoRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['pregnant'])): ?>
+            const pregnantRadio = document.querySelector(`input[name="pregnant"][value="<?= $patient['pregnant'] ?>"]`);
+            if (pregnantRadio) pregnantRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['nursing'])): ?>
+            const nursingRadio = document.querySelector(`input[name="nursing"][value="<?= $patient['nursing'] ?>"]`);
+            if (nursingRadio) nursingRadio.checked = true;
+        <?php endif; ?>
+        
+        <?php if (!empty($patient['birth_control'])): ?>
+            const birthControlRadio = document.querySelector(`input[name="birth_control"][value="<?= $patient['birth_control'] ?>"]`);
+            if (birthControlRadio) birthControlRadio.checked = true;
+        <?php endif; ?>
+        
+        // Set medical conditions checkboxes
+        <?php if (isset($patient['medical_conditions']) && is_array($patient['medical_conditions'])): ?>
+            <?php foreach ($patient['medical_conditions'] as $condition): ?>
+                const conditionCheckbox = document.querySelector(`input[name="medical_conditions[]"][value="<?= esc($condition) ?>"]`);
+                if (conditionCheckbox) conditionCheckbox.checked = true;
+            <?php endforeach; ?>
+        <?php endif; ?>
+        
+        // Re-check conditional field visibility after populating data
+        toggleTreatmentCondition();
+        toggleIllnessDetails();
+        toggleHospitalizationDetails();
+    <?php endif; ?>
+    
+    // Add event listeners for medical conditions
+    const medicalConditionCheckboxes = document.querySelectorAll('input[name="medical_conditions[]"]');
+    medicalConditionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateMedicalConditions);
+    });
+});
+
+// Template functions for Diagnosis & Treatment
+function setDiagnosis(text) {
+    const diagnosisField = document.getElementById('diagnosis');
+    diagnosisField.value = text;
+    diagnosisField.focus();
+    // Add a small visual feedback
+    diagnosisField.style.borderColor = '#10B981';
+    setTimeout(() => {
+        diagnosisField.style.borderColor = '';
+    }, 1000);
+}
+
+function setTreatment(text) {
+    const treatmentField = document.getElementById('treatment');
+    treatmentField.value = text;
+    treatmentField.focus();
+    // Add a small visual feedback
+    treatmentField.style.borderColor = '#10B981';
+    setTimeout(() => {
+        treatmentField.style.borderColor = '';
+    }, 1000);
+}
+
+function clearDiagnosis() {
+    const diagnosisField = document.getElementById('diagnosis');
+    diagnosisField.value = '';
+    diagnosisField.focus();
+    // Add a small visual feedback
+    diagnosisField.style.borderColor = '#EF4444';
+    setTimeout(() => {
+        diagnosisField.style.borderColor = '';
+    }, 1000);
+}
+
+function clearTreatment() {
+    const treatmentField = document.getElementById('treatment');
+    treatmentField.value = '';
+    treatmentField.focus();
+    // Add a small visual feedback
+    treatmentField.style.borderColor = '#EF4444';
+    setTimeout(() => {
+        treatmentField.style.borderColor = '';
+    }, 1000);
+}
+</script>
 
         </main>
     </div>
