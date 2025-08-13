@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.0
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost:8889
--- Generation Time: Jul 22, 2025 at 06:47 AM
--- Server version: 5.7.39
--- PHP Version: 7.4.33
+-- Host: 127.0.0.1
+-- Generation Time: Aug 13, 2025 at 03:44 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `dentalv4`
+-- Database: `perfectsmile_db`
 --
 
 -- --------------------------------------------------------
@@ -36,51 +36,37 @@ CREATE TABLE `appointments` (
   `status` varchar(50) DEFAULT NULL,
   `appointment_type` enum('scheduled','walkin') DEFAULT 'scheduled',
   `approval_status` enum('pending','approved','declined','auto_approved') DEFAULT 'pending',
-  `decline_reason` text,
-  `remarks` text,
+  `decline_reason` text DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   `checked_in_at` datetime DEFAULT NULL COMMENT 'When patient checked in',
   `checked_in_by` int(11) DEFAULT NULL COMMENT 'Staff who checked in the patient',
-  `self_checkin` tinyint(1) DEFAULT '0' COMMENT 'Whether patient checked in themselves',
+  `self_checkin` tinyint(1) DEFAULT 0 COMMENT 'Whether patient checked in themselves',
   `started_at` datetime DEFAULT NULL COMMENT 'When treatment started',
   `called_by` int(11) DEFAULT NULL COMMENT 'Dentist who called the patient',
   `treatment_status` varchar(50) DEFAULT NULL COMMENT 'Current treatment status',
-  `treatment_notes` text COMMENT 'Treatment progress notes',
+  `treatment_notes` text DEFAULT NULL COMMENT 'Treatment progress notes',
   `payment_status` enum('pending','paid','partial','waived') DEFAULT 'pending' COMMENT 'Payment status',
   `payment_method` varchar(50) DEFAULT NULL COMMENT 'Payment method used',
   `payment_amount` decimal(10,2) DEFAULT NULL COMMENT 'Amount paid',
   `payment_date` datetime DEFAULT NULL COMMENT 'When payment was made',
   `payment_received_by` int(11) DEFAULT NULL COMMENT 'Staff who received payment',
-  `payment_notes` text COMMENT 'Payment notes'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `payment_notes` text DEFAULT NULL COMMENT 'Payment notes'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `appointments`
 --
 
 INSERT INTO `appointments` (`id`, `branch_id`, `dentist_id`, `user_id`, `appointment_datetime`, `status`, `appointment_type`, `approval_status`, `decline_reason`, `remarks`, `created_at`, `updated_at`, `checked_in_at`, `checked_in_by`, `self_checkin`, `started_at`, `called_by`, `treatment_status`, `treatment_notes`, `payment_status`, `payment_method`, `payment_amount`, `payment_date`, `payment_received_by`, `payment_notes`) VALUES
-(1, 1, 2, 3, '2025-07-01 12:30:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-07-20 05:27:08', '2025-07-20 05:27:08', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(2, 1, 9, 5, '2025-07-01 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-20 05:27:42', '2025-07-20 05:27:52', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(3, 1, 9, 3, '2025-07-01 13:01:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-20 05:29:11', '2025-07-20 07:36:22', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(4, 1, 2, 3, '2025-07-01 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-20 06:31:06', '2025-07-20 06:31:23', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(5, 1, NULL, 5, '2025-07-01 15:03:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-07-20 06:35:42', '2025-07-20 06:35:42', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(6, 1, 2, 5, '2025-07-20 20:30:00', 'confirmed', 'scheduled', 'approved', NULL, 'non', '2025-07-20 07:36:08', '2025-07-21 01:46:37', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(7, 1, NULL, 3, '2025-07-20 12:30:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-07-20 07:36:52', '2025-07-20 07:36:52', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(8, 1, 2, 3, '2025-07-20 10:00:00', 'completed', 'scheduled', 'approved', NULL, 'Test appointment for today', '2025-07-20 07:47:54', '2025-07-20 12:30:13', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(9, 1, 2, 5, '2025-07-20 17:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-20 09:12:01', '2025-07-20 09:16:34', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(10, 1, NULL, 5, '2025-07-21 10:15:00', 'no_show', 'walkin', 'auto_approved', NULL, 'Masakit nigipin', '2025-07-20 12:35:39', '2025-07-21 10:45:23', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(15, 1, 9, 3, '2025-07-21 12:30:00', 'no_show', 'scheduled', 'approved', NULL, '', '2025-07-21 01:48:41', '2025-07-21 08:03:12', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(16, 1, 2, 3, '2025-07-21 12:30:00', 'no_show', 'scheduled', 'approved', NULL, '', '2025-07-21 01:49:53', '2025-07-21 08:03:23', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(17, 1, 9, 3, '2025-07-21 12:30:00', 'no_show', 'scheduled', 'approved', NULL, '', '2025-07-21 01:55:06', '2025-07-21 08:03:26', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(18, 1, 9, 3, '2025-07-21 15:03:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:01:28', '2025-07-21 10:30:22', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(19, 1, 2, 3, '2025-07-22 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:04:41', '2025-07-21 02:05:06', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(20, 1, 9, 3, '2025-07-22 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:05:33', '2025-07-21 02:05:41', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(21, 1, 9, 5, '2025-07-21 08:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:07:55', '2025-07-21 04:22:42', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(22, 1, 9, 3, '2025-07-21 17:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-21 08:09:13', '2025-07-21 11:09:28', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(23, 1, 2, 5, '2025-07-23 15:30:00', 'confirmed', 'scheduled', 'approved', NULL, 'lkjkjkkjl', '2025-07-21 11:09:46', '2025-07-21 11:09:54', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(24, 1, 2, 5, '2025-07-21 19:30:00', 'completed', 'scheduled', 'approved', NULL, 'k', '2025-07-21 11:10:29', '2025-07-21 11:37:10', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(25, 1, 9, 5, '2025-07-21 21:30:00', 'ongoing', 'scheduled', 'approved', NULL, '', '2025-07-21 11:37:31', '2025-07-21 11:37:50', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL);
+(29, 1, 2, 10, '2025-08-12 08:01:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-12 09:00:08', '2025-08-12 09:02:44', '2025-08-12 09:01:01', 1, 0, '2025-08-12 09:01:24', 1, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(30, 1, 2, 3, '2025-08-12 08:01:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-12 09:00:24', '2025-08-12 10:26:04', '2025-08-12 09:01:07', 1, 0, '2025-08-12 10:12:18', 1, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(31, 1, 9, 5, '2025-08-12 08:01:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-12 09:00:37', '2025-08-12 10:43:54', '2025-08-12 09:01:12', 1, 0, '2025-08-12 10:26:31', 1, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(32, 1, 2, 10, '2025-08-12 10:12:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-12 12:10:39', '2025-08-12 12:16:03', '2025-08-12 12:15:57', 1, 0, '2025-08-12 12:16:00', 1, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(33, 1, 2, 3, '2025-08-12 14:00:00', 'scheduled', 'scheduled', 'approved', NULL, NULL, '2025-08-12 21:13:34', '2025-08-12 21:13:34', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(34, 1, 2, 5, '2025-08-12 14:30:00', 'completed', 'scheduled', 'approved', NULL, NULL, '2025-08-12 21:13:34', '2025-08-12 13:17:22', '2025-08-12 13:15:30', 1, 0, '2025-08-12 13:15:46', 1, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(35, 1, 9, 10, '2025-08-12 15:00:00', 'scheduled', 'scheduled', 'approved', NULL, NULL, '2025-08-12 21:13:34', '2025-08-12 21:13:34', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -92,7 +78,7 @@ CREATE TABLE `appointment_service` (
   `id` int(11) NOT NULL,
   `service_id` int(11) NOT NULL,
   `appointment_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -106,7 +92,7 @@ CREATE TABLE `availability` (
   `day_of_week` varchar(20) DEFAULT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -117,9 +103,9 @@ CREATE TABLE `availability` (
 CREATE TABLE `branches` (
   `id` int(11) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
-  `address` text,
+  `address` text DEFAULT NULL,
   `contact_number` varchar(50) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `branches`
@@ -143,7 +129,7 @@ CREATE TABLE `branch_user` (
   `user_id` int(11) NOT NULL,
   `branch_id` int(11) NOT NULL,
   `position` varchar(100) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -158,29 +144,23 @@ CREATE TABLE `dental_chart` (
   `tooth_type` enum('permanent','primary') NOT NULL DEFAULT 'permanent',
   `condition` varchar(255) DEFAULT NULL COMMENT 'Dental condition (cavity, filling, crown, etc.)',
   `status` enum('healthy','needs_treatment','treated','missing','none') NOT NULL DEFAULT 'healthy',
-  `notes` text COMMENT 'Additional notes about the tooth',
+  `notes` text DEFAULT NULL COMMENT 'Additional notes about the tooth',
   `recommended_service_id` int(11) UNSIGNED DEFAULT NULL COMMENT 'Recommended service for treatment',
   `priority` enum('low','medium','high') NOT NULL DEFAULT 'medium',
   `estimated_cost` decimal(10,2) DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `dental_chart`
 --
 
 INSERT INTO `dental_chart` (`id`, `dental_record_id`, `tooth_number`, `tooth_type`, `condition`, `status`, `notes`, `recommended_service_id`, `priority`, `estimated_cost`, `created_at`, `updated_at`) VALUES
-(1, 3, 1, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-21 10:30:22', '2025-07-21 10:30:22'),
-(2, 4, 1, 'permanent', 'healthy', '', 'wala naman', NULL, 'medium', NULL, '2025-07-21 11:09:28', '2025-07-21 11:09:28'),
-(3, 4, 2, 'permanent', 'healthy', '', 'wala', NULL, 'low', NULL, '2025-07-21 11:09:28', '2025-07-21 11:09:28'),
-(4, 4, 3, 'permanent', 'extraction_needed', '', 'non', NULL, 'low', NULL, '2025-07-21 11:09:28', '2025-07-21 11:09:28'),
-(5, 5, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(6, 5, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(7, 5, 3, 'permanent', 'healthy', '', '', NULL, 'medium', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(8, 5, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(9, 5, 18, 'permanent', 'cavity', '', '', NULL, 'medium', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(10, 5, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10');
+(21, 9, 8, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-12 09:02:44', '2025-08-12 09:02:44'),
+(22, 9, 26, 'permanent', 'missing', '', '', NULL, 'medium', NULL, '2025-08-12 09:02:44', '2025-08-12 09:02:44'),
+(23, 11, 9, 'permanent', 'cavity', '', '', NULL, 'medium', NULL, '2025-08-12 13:17:22', '2025-08-12 13:17:22'),
+(24, 11, 11, 'permanent', 'missing', '', '', NULL, 'low', NULL, '2025-08-12 13:17:22', '2025-08-12 13:17:22');
 
 -- --------------------------------------------------------
 
@@ -193,24 +173,23 @@ CREATE TABLE `dental_record` (
   `user_id` int(11) NOT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `record_date` date DEFAULT NULL,
-  `diagnosis` text,
-  `treatment` text,
-  `notes` text,
+  `diagnosis` text DEFAULT NULL,
+  `treatment` text DEFAULT NULL,
+  `notes` text DEFAULT NULL,
   `xray_image_url` varchar(255) DEFAULT NULL,
   `next_appointment_date` date DEFAULT NULL,
+  `next_appointment_id` int(11) DEFAULT NULL,
   `dentist_id` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `dental_record`
 --
 
-INSERT INTO `dental_record` (`id`, `user_id`, `appointment_id`, `record_date`, `diagnosis`, `treatment`, `notes`, `xray_image_url`, `next_appointment_date`, `dentist_id`) VALUES
-(1, 5, NULL, '2025-07-20', 'dddddddddddmdfoidvidfnoi', 'ddddddddwefmdfewflmkwefklmwfeklm', 'lllllm;mk;m;mkm;mk;', NULL, NULL, 1),
-(2, 5, NULL, '2025-07-21', '2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee', '2nd2nd timeee2nd timeee2nd timeee2nd timeee', 'time2nd timeee2nd timeee2nd timeee', NULL, NULL, 1),
-(3, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, 1),
-(4, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, 1),
-(5, 5, NULL, '2025-07-21', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', NULL, NULL, 1);
+INSERT INTO `dental_record` (`id`, `user_id`, `appointment_id`, `record_date`, `diagnosis`, `treatment`, `notes`, `xray_image_url`, `next_appointment_date`, `next_appointment_id`, `dentist_id`) VALUES
+(9, 10, NULL, '2025-08-12', 'ccccccccccccc', 'cccccccccccccccc', 'ccccccccccccccccc', NULL, NULL, NULL, 1),
+(10, 5, 31, '2025-08-12', 'Plaque and tartar buildup - professional cleaning performed.', 'Professional cleaning completed. Use sensitive toothpaste as recommended.', 'testing', NULL, NULL, NULL, 1),
+(11, 5, 34, '2025-08-12', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -224,7 +203,7 @@ CREATE TABLE `invoices` (
   `total_amount` decimal(10,2) DEFAULT NULL,
   `discount` decimal(10,2) DEFAULT NULL,
   `payment_status` varchar(50) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -240,7 +219,7 @@ CREATE TABLE `migrations` (
   `namespace` varchar(255) NOT NULL,
   `time` int(11) NOT NULL,
   `batch` int(11) UNSIGNED NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `migrations`
@@ -265,7 +244,7 @@ CREATE TABLE `patient_guardian` (
   `patient_id` int(11) NOT NULL,
   `guardian_name` varchar(255) DEFAULT NULL,
   `relationship` varchar(100) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -279,9 +258,9 @@ CREATE TABLE `prescriptions` (
   `patient_id` int(11) NOT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `issue_date` date NOT NULL,
-  `notes` text,
+  `notes` text DEFAULT NULL,
   `signature_url` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -296,8 +275,8 @@ CREATE TABLE `prescription_items` (
   `dosage` varchar(50) DEFAULT NULL,
   `frequency` varchar(50) DEFAULT NULL,
   `duration` varchar(50) DEFAULT NULL,
-  `instructions` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `instructions` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -309,9 +288,9 @@ CREATE TABLE `procedures` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `procedure_name` varchar(255) DEFAULT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `procedure_date` date DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -323,7 +302,7 @@ CREATE TABLE `procedure_service` (
   `id` int(11) NOT NULL,
   `procedure_id` int(11) NOT NULL,
   `service_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
 
@@ -334,21 +313,21 @@ CREATE TABLE `procedure_service` (
 CREATE TABLE `services` (
   `id` int(11) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `services`
 --
 
 INSERT INTO `services` (`id`, `name`, `description`, `price`) VALUES
-(1, 'Dental Checkup', 'Comprehensive dental examination and cleaning', '75.00'),
-(2, 'Teeth Whitening', 'Professional teeth whitening treatment', '150.00'),
-(3, 'Cavity Filling', 'Dental filling for cavities', '120.00'),
-(4, 'Root Canal', 'Root canal treatment', '800.00'),
-(5, 'Dental Crown', 'Dental crown placement', '600.00'),
-(6, 'Tooth Extraction', 'Simple tooth extraction', '200.00');
+(1, 'Dental Checkup', 'Comprehensive dental examination and cleaning', 75.00),
+(2, 'Teeth Whitening', 'Professional teeth whitening treatment', 150.00),
+(3, 'Cavity Filling', 'Dental filling for cavities', 120.00),
+(4, 'Root Canal', 'Root canal treatment', 800.00),
+(5, 'Dental Crown', 'Dental crown placement', 600.00),
+(6, 'Tooth Extraction', 'Simple tooth extraction', 200.00);
 
 -- --------------------------------------------------------
 
@@ -371,20 +350,46 @@ CREATE TABLE `user` (
   `nationality` varchar(100) DEFAULT NULL,
   `date_of_birth` date DEFAULT NULL,
   `age` int(11) DEFAULT NULL,
-  `status` enum('active','inactive') NOT NULL DEFAULT 'active'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `previous_dentist` varchar(255) DEFAULT NULL,
+  `last_dental_visit` date DEFAULT NULL,
+  `physician_name` varchar(255) DEFAULT NULL,
+  `physician_specialty` varchar(255) DEFAULT NULL,
+  `physician_phone` varchar(20) DEFAULT NULL,
+  `physician_address` text DEFAULT NULL,
+  `good_health` enum('yes','no') DEFAULT NULL,
+  `under_treatment` enum('yes','no') DEFAULT NULL,
+  `treatment_condition` text DEFAULT NULL,
+  `serious_illness` enum('yes','no') DEFAULT NULL,
+  `illness_details` text DEFAULT NULL,
+  `hospitalized` enum('yes','no') DEFAULT NULL,
+  `hospitalization_where` varchar(255) DEFAULT NULL,
+  `hospitalization_when` varchar(255) DEFAULT NULL,
+  `hospitalization_why` varchar(255) DEFAULT NULL,
+  `tobacco_use` enum('yes','no') DEFAULT NULL,
+  `blood_pressure` varchar(20) DEFAULT NULL,
+  `allergies` text DEFAULT NULL,
+  `pregnant` enum('yes','no','na') DEFAULT NULL,
+  `nursing` enum('yes','no','na') DEFAULT NULL,
+  `birth_control` enum('yes','no','na') DEFAULT NULL,
+  `medical_conditions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`medical_conditions`)),
+  `other_conditions` text DEFAULT NULL,
+  `medical_history_updated_at` datetime DEFAULT NULL,
+  `special_notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
 -- Dumping data for table `user`
 --
 
-INSERT INTO `user` (`id`, `user_type`, `name`, `address`, `email`, `gender`, `password`, `phone`, `created_at`, `updated_at`, `occupation`, `nationality`, `date_of_birth`, `age`, `status`) VALUES
-(1, 'admin', 'Admin User', '123 Admin Street', 'admin@perfectsmile.com', 'male', '$2y$12$Tau0ciyH4Ny3A/P0I.qEbO5i63Ja4AtTPBd4OblwwAnoQLCYokErS', '1234567890', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
-(2, 'dentist', 'Dr. John Smith', '456 Doctor Avenue', 'doctor@perfectsmile.com', 'male', '$2y$12$yW6MCZ6JB37X5t6.E8Rv8u/gBlbviukPlLEqwPJKCM8.IBGqk0Yo2', '1234567891', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
-(3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$12$ZxKlA7jaipJ2XAgP8QD.purDu.L8qfMq./pqj3yqGSYOw.bf0Z5MW', '1234567892', '2025-06-28 16:02:14', '2025-07-18 01:09:37', 'hh', 'oo', '2025-07-08', 9, 'inactive'),
-(4, 'staff', 'Staff Member', '321 Staff Lane', 'staff@perfectsmile.com', 'female', '$2y$12$5ngcd.kPZCtoUX.2U/QvTO4mun3W35rBPGTM6bbdc16pKEnkPbj.2', '1234567893', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
-(5, 'patient', 'Brandon Brandon Brandon', 'Brandon@gmail.com', 'Brandon@gmail.com', 'Male', '$2y$12$3225/eB6Cz2MGgN3eHsp6.26RK/q0nmDVEvBkvGubuBiyWpCNG3Sm', '89078007077', '2025-07-08 13:39:16', '2025-07-10 10:45:58', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'active'),
-(9, 'dentist', 'Dr. Sarah Johnson', '789 Dental Clinic Street', 'sarah.johnson@perfectsmile.com', 'female', '$2y$12$vt2WvOuuW3Z7PWHisFv6c.w72lX0kiAbeR8mjCKdqFnKw6jdqkwWW', '1234567894', '2025-07-18 03:28:18', '2025-07-18 03:28:18', 'Dentist', 'Filipino', '1988-08-20', 35, 'active');
+INSERT INTO `user` (`id`, `user_type`, `name`, `address`, `email`, `gender`, `password`, `phone`, `created_at`, `updated_at`, `occupation`, `nationality`, `date_of_birth`, `age`, `status`, `previous_dentist`, `last_dental_visit`, `physician_name`, `physician_specialty`, `physician_phone`, `physician_address`, `good_health`, `under_treatment`, `treatment_condition`, `serious_illness`, `illness_details`, `hospitalized`, `hospitalization_where`, `hospitalization_when`, `hospitalization_why`, `tobacco_use`, `blood_pressure`, `allergies`, `pregnant`, `nursing`, `birth_control`, `medical_conditions`, `other_conditions`, `medical_history_updated_at`, `special_notes`) VALUES
+(1, 'admin', 'Admin User', '123 Admin Street', 'admin@perfectsmile.com', 'male', '$2y$12$Tau0ciyH4Ny3A/P0I.qEbO5i63Ja4AtTPBd4OblwwAnoQLCYokErS', '1234567890', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 'dentist', 'Dr. John Smith', '456 Doctor Avenue', 'doctor@perfectsmile.com', 'male', '$2y$12$yW6MCZ6JB37X5t6.E8Rv8u/gBlbviukPlLEqwPJKCM8.IBGqk0Yo2', '1234567891', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$10$gYQGT7kMKzHsOW5x9lwhweA8SiIVGaVWtpqsY/7zSzk6d.mVZBbIy', '1234567892', '2025-06-28 16:02:14', '2025-08-12 05:35:43', 'hh', 'oo', '2025-07-08', 9, 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 'staff', 'Staff Member', '321 Staff Lane', 'staff@perfectsmile.com', 'female', '$2y$12$5ngcd.kPZCtoUX.2U/QvTO4mun3W35rBPGTM6bbdc16pKEnkPbj.2', '1234567893', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 'patient', 'Brandon Brandon Brandon', 'Brandon@gmail.com', 'Brandon@gmail.com', 'Male', '$2y$12$3225/eB6Cz2MGgN3eHsp6.26RK/q0nmDVEvBkvGubuBiyWpCNG3Sm', '89078007077', '2025-07-08 13:39:16', '2025-08-12 13:17:22', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'active', NULL, NULL, NULL, NULL, NULL, NULL, 'yes', 'no', NULL, 'no', NULL, 'no', NULL, NULL, NULL, 'no', NULL, NULL, 'no', 'no', 'no', '[\"high_blood_pressure\"]', NULL, '2025-08-12 13:17:22', NULL),
+(9, 'dentist', 'Dr. Sarah Johnson', '789 Dental Clinic Street', 'sarah.johnson@perfectsmile.com', 'female', '$2y$12$vt2WvOuuW3Z7PWHisFv6c.w72lX0kiAbeR8mjCKdqFnKw6jdqkwWW', '1234567894', '2025-07-18 03:28:18', '2025-07-18 03:28:18', 'Dentist', 'Filipino', '1988-08-20', 35, 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 'patient', 'Marc Aron Gamban', 'san jose baybayon sugong', 'MarcArong@gmail.com', 'Male', NULL, '09948804318', '2025-08-12 05:35:22', '2025-08-12 05:35:22', 'student', 'filipino', '2001-08-08', 24, 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 --
 -- Indexes for dumped tables
@@ -516,7 +521,7 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `appointment_service`
@@ -546,13 +551,13 @@ ALTER TABLE `branch_user`
 -- AUTO_INCREMENT for table `dental_chart`
 --
 ALTER TABLE `dental_chart`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `dental_record`
 --
 ALTER TABLE `dental_record`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `invoices`
@@ -606,7 +611,7 @@ ALTER TABLE `services`
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- Constraints for dumped tables
