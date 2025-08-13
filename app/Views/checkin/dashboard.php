@@ -24,6 +24,7 @@
                     <div class="p-6 text-white">
                         <h1 class="text-3xl font-bold flex items-center">
                             <i class="fas fa-sign-in-alt mr-4"></i>
+                            Patient Check-in
                         </h1>
                         <p class="mt-2 opacity-90">Manage patient arrivals and check-ins for today</p>
                     </div>
@@ -143,10 +144,8 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <?php if ($appointment['status'] === 'confirmed'): ?>
-                                                        <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline checkin-form">
-                                                            <?= csrf_field() ?>
-                                                            <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
-                                                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Check in <?= esc($appointment['patient_name']) ?>?')">
+                                                        <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline">
+                                                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                                                 <i class="fas fa-sign-in-alt mr-2"></i>
                                                                 Check In
                                                             </button>
@@ -281,17 +280,12 @@ function scheduleRefresh() {
 // Start the refresh timer
 scheduleRefresh();
 
-// Handle form submissions to prevent auto-refresh during submission
-document.querySelectorAll('.checkin-form').forEach(function(form) {
+// Confirmation for check-in
+document.querySelectorAll('form').forEach(function(form) {
     form.addEventListener('submit', function(e) {
-        console.log('Check-in form submitted!');
-        formSubmissionInProgress = true;
-        
-        const button = form.querySelector('button[type="submit"]');
-        button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
-        
-        // Allow form to submit naturally
+        if (!confirm('Check in this patient?')) {
+            e.preventDefault();
+        }
     });
 });
 

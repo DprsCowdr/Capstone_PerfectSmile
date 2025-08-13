@@ -45,11 +45,19 @@ class Dentist extends BaseController
                                                 ->orderBy('appointments.appointment_datetime', 'ASC')
                                                 ->findAll();
         
+        // Get total patients count for this dentist
+        $userModel = new \App\Models\UserModel();
+        $totalPatients = $appointmentModel->select('appointments.user_id')
+                                         ->where('appointments.dentist_id', $user['id'])
+                                         ->groupBy('appointments.user_id')
+                                         ->countAllResults();
+        
         return view('dentist/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
             'todayAppointments' => $todayAppointments,
-            'upcomingAppointments' => $upcomingAppointments
+            'upcomingAppointments' => $upcomingAppointments,
+            'totalPatients' => $totalPatients
         ]);
     }
     
@@ -76,9 +84,21 @@ class Dentist extends BaseController
                                         ->orderBy('appointments.appointment_datetime', 'DESC')
                                         ->findAll();
         
+        // Get additional data needed by the appointment template
+        $userModel = new \App\Models\UserModel();
+        $branchModel = new \App\Models\BranchModel();
+        
+        $patients = $userModel->where('user_type', 'patient')->findAll();
+        $branches = $branchModel->findAll();
+        $dentists = $userModel->where('user_type', 'doctor')->findAll();
+        
         return view('dentist/appointments', [
             'user' => $user,
-            'appointments' => $appointments
+            'appointments' => $appointments,
+            'patients' => $patients,
+            'branches' => $branches,
+            'dentists' => $dentists,
+            'availability' => []
         ]);
     }
     
@@ -606,5 +626,220 @@ class Dentist extends BaseController
             'searchTerm' => $searchTerm,
             'user' => Auth::getCurrentUser()
         ]);
+    }
+
+    // ============== APPOINTMENT MANAGEMENT METHODS (Admin-like functionality) ==============
+    
+    public function createAppointment()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        $data = [
+            'user_id' => $this->request->getPost('user_id'),
+            'dentist_id' => $this->request->getPost('dentist_id'),
+            'branch_id' => $this->request->getPost('branch_id'),
+            'appointment_datetime' => $this->request->getPost('appointment_datetime'),
+            'service' => $this->request->getPost('service'),
+            'notes' => $this->request->getPost('notes'),
+            'status' => 'confirmed', // Dentist can directly confirm
+            'approval_status' => 'approved',
+            'created_by' => Auth::getCurrentUser()['id']
+        ];
+
+        if ($appointmentModel->insert($data)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Appointment created successfully']);
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to create appointment']);
+        }
+    }
+
+    public function updateAppointment($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        $data = [
+            'appointment_datetime' => $this->request->getPost('appointment_datetime'),
+            'service' => $this->request->getPost('service'),
+            'notes' => $this->request->getPost('notes'),
+            'status' => $this->request->getPost('status')
+        ];
+
+        if ($appointmentModel->update($id, $data)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Appointment updated successfully']);
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to update appointment']);
+        }
+    }
+
+    public function deleteAppointment($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        if ($appointmentModel->delete($id)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Appointment deleted successfully']);
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to delete appointment']);
+        }
+    }
+
+    public function getAvailableDentists()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
+        
+        return $this->response->setJSON(['success' => true, 'dentists' => $dentists]);
+    }
+
+    public function checkAppointmentConflicts()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $datetime = $this->request->getPost('appointment_datetime');
+        $dentistId = $this->request->getPost('dentist_id');
+        
+        $conflicts = $appointmentModel->where('appointment_datetime', $datetime)
+                                    ->where('dentist_id', $dentistId)
+                                    ->where('status !=', 'cancelled')
+                                    ->findAll();
+        
+        return $this->response->setJSON(['success' => true, 'conflicts' => count($conflicts) > 0]);
+    }
+
+    public function getAppointmentDetails($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+                                      ->join('user', 'user.id = appointments.user_id')
+                                      ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                      ->where('appointments.id', $id)
+                                      ->first();
+        
+        return $this->response->setJSON(['success' => true, 'appointment' => $appointment]);
+    }
+
+    // ============== PATIENT MANAGEMENT METHODS (Admin-like functionality) ==============
+    
+    public function addPatient()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return redirect()->to('/login');
+        }
+        
+        return view('dentist/add_patient', ['user' => Auth::getCurrentUser()]);
+    }
+
+    public function storePatient()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $userModel = new \App\Models\UserModel();
+        
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'email' => $this->request->getPost('email'),
+            'phone' => $this->request->getPost('phone'),
+            'user_type' => 'patient',
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($userModel->insert($data)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Patient added successfully']);
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to add patient']);
+        }
+    }
+
+    public function toggleStatus($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $patient = $userModel->find($id);
+        
+        if ($patient) {
+            $newStatus = $patient['status'] === 'active' ? 'inactive' : 'active';
+            if ($userModel->update($id, ['status' => $newStatus])) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Patient status updated successfully']);
+            }
+        }
+        
+        return $this->response->setJSON(['success' => false, 'message' => 'Failed to update patient status']);
+    }
+
+    public function getPatient($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $patient = $userModel->find($id);
+        
+        return $this->response->setJSON(['success' => true, 'patient' => $patient]);
+    }
+
+    public function updatePatient($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $userModel = new \App\Models\UserModel();
+        
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'email' => $this->request->getPost('email'),
+            'phone' => $this->request->getPost('phone')
+        ];
+
+        if ($userModel->update($id, $data)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Patient updated successfully']);
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to update patient']);
+        }
+    }
+
+    public function getPatientAppointments($id)
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointments = $appointmentModel->select('appointments.*, branches.name as branch_name')
+                                       ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                       ->where('appointments.user_id', $id)
+                                       ->orderBy('appointments.appointment_datetime', 'DESC')
+                                       ->findAll();
+        
+        return $this->response->setJSON(['success' => true, 'appointments' => $appointments]);
     }
 } 

@@ -209,9 +209,9 @@
                     <label class="text-black text-sm font-medium" for="gender">Gender</label>
                     <select id="gender" name="gender" required class="block w-full px-3 py-2 mt-1 text-black bg-white border border-gray-200 rounded-md focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 focus:outline-none focus:ring">
                         <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female"> Female</option>
-                        <option value="Other"> Other</option>
+                        <option value="Male">👨 Male</option>
+                        <option value="Female">👩 Female</option>
+                        <option value="Other">⚧ Other</option>
                     </select>
                 </div>
 
@@ -401,9 +401,9 @@
                 <label class="text-black text-sm font-medium" for="update-patient-gender">Gender</label>
                 <select id="update-patient-gender" name="gender" class="block w-full px-3 py-2 mt-1 text-black bg-white border border-gray-200 rounded-md focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 focus:outline-none focus:ring" required>
                     <option value="">Select Gender</option>
-                    <option value="Male">👨 Male</option>
-                    <option value="Female">👩 Female</option>
-                    <option value="Other">⚧ Other</option>
+                    <option value="male">👨 Male</option>
+                    <option value="female">👩 Female</option>
+                    <option value="other">⚧ Other</option>
                 </select>
             </div>
             

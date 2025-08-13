@@ -23,8 +23,8 @@ $routes->get('auth/register', 'Auth::register');
 $routes->post('auth/registerUser', 'Auth::registerUser');
 $routes->get('auth/logout', 'Auth::logout');
 
-// Dashboard routes
-// $routes->get('dashboard', 'Dashboard::index');
+// Dashboard routes - redirect to appropriate dashboard based on user type
+$routes->get('dashboard', 'Dashboard::index');
 
 // Admin routes (protected)
 // Debug route (remove in production)
@@ -63,6 +63,8 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/approve/(:num)', 'AdminController::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'AdminController::declineAppointment/$1');
     $routes->post('appointments/available-dentists', 'AdminController::getAvailableDentists');
+    $routes->post('appointments/check-conflicts', 'AdminController::checkAppointmentConflicts');
+    $routes->get('appointments/details/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->get('waitlist', 'AdminController::waitlist'); // → appointments/waitlist.php
     
     // Dental management routes (moved to DentalController)
@@ -78,6 +80,16 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('dental-records/store', 'DentalController::storeDentalRecord');
     $routes->post('dental-records/update/(:num)', 'DentalController::updateDentalRecord/$1');
     $routes->get('records', 'AdminController::records'); // → dental/all_records.php
+    $routes->delete('dental-records/delete/(:num)', 'AdminController::deleteRecord/$1'); // Delete dental record
+    
+    // Patient records popup routes
+    $routes->get('patient-info/(:num)', 'AdminController::getPatientInfo/$1');
+    $routes->post('patient-notes/(:num)', 'AdminController::updatePatientNotes/$1');
+    $routes->get('patient-dental-records/(:num)', 'AdminController::getPatientDentalRecords/$1');
+    $routes->get('patient-dental-chart/(:num)', 'AdminController::getPatientDentalChart/$1');
+    $routes->get('patient-appointments/(:num)', 'AdminController::getPatientAppointmentsModal/$1');
+    $routes->get('patient-treatments/(:num)', 'AdminController::getPatientTreatments/$1');
+    $routes->get('patient-medical-records/(:num)', 'AdminController::getPatientMedicalRecords/$1');
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
@@ -114,17 +126,33 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
 });
 
 // Dentist routes (protected)
-$routes->group('dentist', ['filter' => 'auth'], function($routes) {
+$routes->group('doctor', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Dentist::dashboard');
     $routes->get('appointments', 'Dentist::appointments');
     $routes->post('availability/set', 'Dentist::setAvailability');
     $routes->post('appointments/approve/(:num)', 'Dentist::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'Dentist::declineAppointment/$1');
     
+    // Additional appointment management routes (same as admin)
+    $routes->post('appointments/create', 'Dentist::createAppointment');
+    $routes->post('appointments/update/(:num)', 'Dentist::updateAppointment/$1');
+    $routes->post('appointments/delete/(:num)', 'Dentist::deleteAppointment/$1');
+    $routes->post('appointments/available-dentists', 'Dentist::getAvailableDentists');
+    $routes->post('appointments/check-conflicts', 'Dentist::checkAppointmentConflicts');
+    $routes->get('appointments/details/(:num)', 'Dentist::getAppointmentDetails/$1');
+    
     // Patients Module (accessible by dentist)
     $routes->get('patients', 'Dentist::patients');
     $routes->get('patients/search', 'Dentist::searchPatients');
     $routes->get('patients/(:num)', 'Dentist::patientDetails/$1');
+    
+    // Additional patient management routes (same as admin)
+    $routes->get('patients/add', 'Dentist::addPatient');
+    $routes->post('patients/store', 'Dentist::storePatient');
+    $routes->get('patients/toggle-status/(:num)', 'Dentist::toggleStatus/$1');
+    $routes->get('patients/get/(:num)', 'Dentist::getPatient/$1');
+    $routes->post('patients/update/(:num)', 'Dentist::updatePatient/$1');
+    $routes->get('patients/appointments/(:num)', 'Dentist::getPatientAppointments/$1');
     
     // Dental Records (Step 3: Checkup/Consultation)
     $routes->get('patient-records/(:num)', 'Dentist::patientRecords/$1');
@@ -146,13 +174,17 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
 // Patient Check-in routes (for staff/reception)
 $routes->group('checkin', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'PatientCheckin::index');
-    $routes->post('process/(:num)', 'PatientCheckin::process/$1');
+    $routes->post('process/(:num)', 'PatientCheckin::checkinPatient/$1');
 });
+
+// Temporary workaround: Remove auth filter from process route
+$routes->post('checkin/process/(:num)', 'PatientCheckin::checkinPatient/$1');
 
 // Treatment Queue routes (for dentists)
 $routes->group('queue', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'TreatmentQueue::index');
     $routes->post('call/(:num)', 'TreatmentQueue::callNext/$1');
+    $routes->post('complete/(:num)', 'TreatmentQueue::completeTreatment/$1');
     $routes->get('status', 'TreatmentQueue::getQueueStatus'); // AJAX
 });
 
@@ -167,4 +199,5 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('patients/update/(:num)', 'StaffController::updatePatient/$1');
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
+    $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
 });

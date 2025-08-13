@@ -1,0 +1,62 @@
+DEBUG - 2025-08-08 23:38:18 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:38:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:38:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:38:32 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:39:03 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:39:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:39:29 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:39:35 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:40:06 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:40:37 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:41:08 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:41:39 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:42:10 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:42:41 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:43:12 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:43:15 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:43:15 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:43:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:43:21 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:14 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:14 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:16 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:20 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:25 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:45 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-08-08 23:48:45 --> Creating scheduled appointment with data: {"branch_id":"1","user_id":"12","dentist_id":null,"appointment_date":"2025-08-31","appointment_time":"09:50","appointment_type":"scheduled","remarks":"ffffffffffffff","approval_status":"pending","status":"pending_approval"}
+INFO - 2025-08-08 23:48:45 --> Admin-created appointment pending without dentist
+DEBUG - 2025-08-08 23:48:45 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+INFO - 2025-08-08 23:48:54 --> Admin approving appointment ID: 40, Dentist ID: null
+INFO - 2025-08-08 23:48:54 --> Appointment before approval: {"id":"40","branch_id":"1","dentist_id":null,"user_id":"12","appointment_datetime":"2025-08-31 09:50:00","status":"pending_approval","appointment_type":"scheduled","approval_status":"pending","decline_reason":null,"remarks":"ffffffffffffff","created_at":"2025-08-08 23:48:45","updated_at":"2025-08-08 23:48:45","checked_in_at":null,"checked_in_by":null,"self_checkin":"0","started_at":null,"called_by":null,"treatment_status":null,"treatment_notes":null,"payment_status":"pending","payment_method":null,"payment_amount":null,"payment_date":null,"payment_received_by":null,"payment_notes":null,"appointment_date":"2025-08-31","appointment_time":"09:50"}
+INFO - 2025-08-08 23:48:54 --> Checking dentist availability for date: 2025-08-31, time: 09:50, branch: 1
+INFO - 2025-08-08 23:48:54 --> Found 2 active dentists: ["Dr. John Smith","Dr. Sarah Johnson"]
+INFO - 2025-08-08 23:48:54 --> Dentist Dr. John Smith (ID: 2) has 0 conflicting appointments at 2025-08-31 09:50:00
+INFO - 2025-08-08 23:48:54 --> Dentist Dr. Sarah Johnson (ID: 9) has 0 conflicting appointments at 2025-08-31 09:50:00
+INFO - 2025-08-08 23:48:54 --> Available dentists: ["Dr. John Smith","Dr. Sarah Johnson"]
+INFO - 2025-08-08 23:48:54 --> Auto-assigning dentist Dr. John Smith (ID: 2) to appointment 40
+INFO - 2025-08-08 23:48:54 --> Checking dentist availability for date: 2025-08-31, time: 09:50, branch: 1
+INFO - 2025-08-08 23:48:54 --> Found 2 active dentists: ["Dr. John Smith","Dr. Sarah Johnson"]
+INFO - 2025-08-08 23:48:54 --> Dentist Dr. John Smith (ID: 2) has 0 conflicting appointments at 2025-08-31 09:50:00
+INFO - 2025-08-08 23:48:54 --> Dentist Dr. Sarah Johnson (ID: 9) has 0 conflicting appointments at 2025-08-31 09:50:00
+INFO - 2025-08-08 23:48:54 --> Available dentists: ["Dr. John Smith","Dr. Sarah Johnson"]
+INFO - 2025-08-08 23:48:54 --> AppointmentModel::approveAppointment - ID: 40, Dentist ID: 2
+INFO - 2025-08-08 23:48:54 --> Setting dentist_id to 2 for appointment 40
+INFO - 2025-08-08 23:48:54 --> Update data for appointment 40: {"approval_status":"approved","status":"confirmed","updated_at":"2025-08-08 23:48:54","dentist_id":"2"}
+INFO - 2025-08-08 23:48:54 --> Appointment 40 approved successfully - Status: confirmed, Approval: approved
+INFO - 2025-08-08 23:48:54 --> Admin approved appointment: Patient ID 12, DateTime: 2025-08-31 09:50:00, Date: 2025-08-31, Time: 09:50
+INFO - 2025-08-08 23:48:54 --> Appointment approval result: {"success":true,"message":"Appointment approved successfully. Dentist Dr. John Smith was assigned."}
+DEBUG - 2025-08-08 23:48:54 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:48:57 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:51:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:51:30 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:51:35 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:52:09 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:52:19 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:52:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:52:33 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:52:52 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:59:34 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:59:49 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2025-08-08 23:59:50 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.

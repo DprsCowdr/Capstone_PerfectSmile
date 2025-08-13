@@ -22,7 +22,7 @@
         <div class="text-green-600 font-semibold text-sm sm:text-base">
           <!-- ✅ Full Access - You can create, edit, and delete appointments -->
         </div>
-      <?php elseif ($user['user_type'] === 'dentist'): ?>
+      <?php elseif ($user['user_type'] === 'doctor'): ?>
         <div class="text-blue-600 font-semibold text-sm sm:text-base">
           <!-- 🩺 Dentist Access - You can set your availability and view appointments -->
         </div>

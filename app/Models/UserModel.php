@@ -14,7 +14,7 @@ class UserModel extends Model
     protected $protectFields = true;
     protected $allowedFields = [
         'user_type', 'name', 'address', 'email', 'date_of_birth',
-        'gender', 'password', 'phone', 'created_at', 'updated_at', 'occupation', 'nationality', 'age', 'status'
+        'gender', 'password', 'phone', 'created_at', 'updated_at', 'occupation', 'nationality', 'age', 'status', 'special_notes'
     ];
 
     // Dates
@@ -28,8 +28,9 @@ class UserModel extends Model
         'name' => 'required|min_length[2]|max_length[100]',
         'email' => 'required|valid_email|is_unique[user.email,id,{id}]',
         'phone' => 'required|min_length[10]|max_length[15]',
-        'password' => 'required|min_length[6]',
-        'user_type' => 'required|in_list[admin,dentist,patient,staff,guest]',
+        'password' => 'permit_empty|min_length[6]',
+        'gender' => 'required|in_list[male,female,other]',
+        'user_type' => 'required|in_list[admin,doctor,patient,staff,guest]',
         'status' => 'permit_empty|in_list[active,inactive]'
     ];
 

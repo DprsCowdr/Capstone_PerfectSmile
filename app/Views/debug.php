@@ -40,7 +40,7 @@
 
     <div class="debug-box">
         <h3>Available Routes for Testing</h3>
-        <?php if (session()->get('user_type') === 'dentist'): ?>
+        <?php if (session()->get('user_type') === 'doctor'): ?>
             <ul>
                 <li><a href="<?= base_url('dentist/dashboard') ?>">🏠 Dentist Dashboard</a></li>
                 <li><a href="<?= base_url('dentist/dental-chart/1') ?>">🦷 Dental Chart (Appointment 1)</a></li>

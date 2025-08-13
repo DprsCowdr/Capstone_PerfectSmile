@@ -36,7 +36,7 @@ class Staff extends BaseController
         // Get user counts
         $userModel = new \App\Models\UserModel();
         $totalPatients = $userModel->where('user_type', 'patient')->countAllResults();
-        $totalDentists = $userModel->where('user_type', 'dentist')->countAllResults();
+        $totalDentists = $userModel->where('user_type', 'doctor')->countAllResults();
         
         // Get branch count
         $branchModel = new \App\Models\BranchModel();
@@ -48,6 +48,13 @@ class Staff extends BaseController
                                    ->limit(5)
                                    ->findAll();
         
+        // Get total appointments count
+        $totalAppointments = $appointmentModel->countAll();
+        
+        // Get this month's appointments
+        $currentMonth = date('Y-m');
+        $monthlyAppointments = $appointmentModel->where('DATE_FORMAT(appointment_datetime, "%Y-%m")', $currentMonth)->countAllResults();
+        
         return view('staff/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
@@ -55,6 +62,8 @@ class Staff extends BaseController
             'totalPatients' => $totalPatients,
             'totalDentists' => $totalDentists,
             'totalBranches' => $totalBranches,
+            'totalAppointments' => $totalAppointments,
+            'monthlyAppointments' => $monthlyAppointments,
             'recentPatients' => $recentPatients
         ]);
     }
@@ -97,7 +106,7 @@ class Staff extends BaseController
             'name'          => 'required',
             'address'       => 'required',
             'date_of_birth' => 'required',
-            'gender'        => 'required',
+            'gender'        => 'required|in_list[male,female,other]',
             'phone'         => 'required',
             'email'         => 'required|valid_email',
         ]);
@@ -198,7 +207,7 @@ class Staff extends BaseController
             'email' => 'required|valid_email',
             'phone' => 'required',
             'address' => 'required',
-            'gender' => 'required',
+            'gender' => 'required|in_list[male,female,other]',
             'date_of_birth' => 'required|valid_date',
         ]);
         
@@ -257,7 +266,7 @@ class Staff extends BaseController
         
         $patients = $userModel->where('user_type', 'patient')->findAll();
         $branches = $branchModel->findAll();
-        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+        $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
         
         return view('staff/appointments', [
             'user' => $user,
@@ -279,7 +288,7 @@ class Staff extends BaseController
         
         // Get form data
         $appointmentType = $this->request->getPost('appointment_type') ?? 'scheduled';
-        $dentistId = $this->request->getPost('dentist') ?: null;
+        $dentistId = $this->request->getPost('doctor') ?: null;
         
         $data = [
             'branch_id' => $this->request->getPost('branch'),
@@ -317,5 +326,103 @@ class Staff extends BaseController
             session()->setFlashdata('error', 'Failed to create appointment: ' . $e->getMessage());
             return redirect()->back();
         }
+    }
+
+    /**
+     * Check for appointment conflicts - Clean implementation
+     */
+    public function checkConflicts()
+    {
+        // Check authentication
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        // Get input data
+        $date = $this->request->getPost('appointment_date') ?? $this->request->getPost('date');
+        $time = $this->request->getPost('appointment_time') ?? $this->request->getPost('time');
+        $dentistId = $this->request->getPost('dentist_id');
+        $excludeId = $this->request->getPost('exclude_id');
+
+        // Validate required fields
+        if (!$date || !$time) {
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Date and time are required'
+            ]);
+        }
+
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            
+            // Simple conflict check - find appointments within 30-minute window
+            $conflicts = $this->findTimeConflicts($date, $time, $dentistId, $excludeId);
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'hasConflicts' => !empty($conflicts),
+                'conflicts' => $conflicts,
+                'message' => empty($conflicts) ? 'No conflicts found' : count($conflicts) . ' conflict(s) detected'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Staff conflict check error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Error checking conflicts: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Simple helper method to find time conflicts
+     */
+    private function findTimeConflicts($date, $time, $dentistId = null, $excludeId = null)
+    {
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        // Create time window (30 minutes before and after)
+        $requestedDateTime = $date . ' ' . $time . ':00';
+        $timestamp = strtotime($requestedDateTime);
+        $windowStart = date('Y-m-d H:i:s', $timestamp - (30 * 60));
+        $windowEnd = date('Y-m-d H:i:s', $timestamp + (30 * 60));
+        
+        // Find appointments in the time window
+        $query = $appointmentModel->select('appointments.*, user.name as patient_name')
+                                  ->join('user', 'user.id = appointments.user_id')
+                                  ->where('appointment_datetime >=', $windowStart)
+                                  ->where('appointment_datetime <=', $windowEnd)
+                                  ->whereIn('status', ['confirmed', 'scheduled', 'checked_in', 'ongoing']);
+        
+        if ($dentistId) {
+            $query->where('dentist_id', $dentistId);
+        }
+        
+        if ($excludeId) {
+            $query->where('appointments.id !=', $excludeId);
+        }
+        
+        $conflicts = $query->findAll();
+        
+        // Format conflicts for response
+        $formattedConflicts = [];
+        foreach ($conflicts as $conflict) {
+            $conflictTime = date('H:i', strtotime($conflict['appointment_datetime']));
+            $timeDiff = abs(strtotime($time) - strtotime($conflictTime)) / 60;
+            
+            $formattedConflicts[] = [
+                'patient_name' => $conflict['patient_name'],
+                'appointment_time' => $conflictTime,
+                'time_diff' => round($timeDiff),
+                'status' => $conflict['status']
+            ];
+        }
+        
+        return $formattedConflicts;
     }
 } 
