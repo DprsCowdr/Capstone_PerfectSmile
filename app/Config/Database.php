@@ -30,7 +30,7 @@ class Database extends Config
         'username'     => 'root',
         'password'     => 'root',
     // Updated to use correct working database name
-    'database'     => 'perfectsmile_database',
+    'database'     => 'perfectsmile_db',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
