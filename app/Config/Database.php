@@ -29,8 +29,10 @@ class Database extends Config
         'hostname'     => '127.0.0.1',
         'username'     => 'root',
         'password'     => 'root',
-    // Updated to use correct working database name
-    'database'     => 'perfectsmile_db',
+
+
+        'database'     => 'perfectsmile_db',
+
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
