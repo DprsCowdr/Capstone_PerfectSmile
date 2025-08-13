@@ -216,10 +216,6 @@ class RecordsManager {
         this.utilities.generateReport(patientId);
     }
 
-    editNotes(patientId) {
-        this.utilities.editNotes(patientId);
-    }
-
     // Record management
     async deleteRecord(recordId) {
         const confirmed = await this.utilities.confirmDelete();

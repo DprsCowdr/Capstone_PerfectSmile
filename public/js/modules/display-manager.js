@@ -211,11 +211,6 @@ class DisplayManager {
                     <div class="bg-white rounded-lg p-4" data-patient-notes>
                         <p class="text-gray-900">${patient.special_notes || 'No special notes recorded for this patient.'}</p>
                     </div>
-                    <div class="mt-4 flex justify-end">
-                        <button onclick="recordsManager.editNotes(${patient.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                            <i class="fas fa-edit mr-1"></i>Edit Notes
-                        </button>
-                    </div>
                 </div>
             </div>
         `;
@@ -478,15 +473,248 @@ class DisplayManager {
     // Placeholder methods for appointments, treatments, and medical records
     // These can be implemented based on your specific requirements
     generateAppointmentsHTML(appointmentData) {
-        return `<div class="bg-white p-6"><h3 class="text-lg font-bold mb-4">Appointments</h3><p>Implementation pending...</p></div>`;
+        console.log('📋 Generating appointments HTML with data:', appointmentData);
+        
+        if (!appointmentData || (!appointmentData.present_appointments && !appointmentData.past_appointments)) {
+            return `
+                <div class="bg-white p-6">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-calendar text-blue-600 mr-2"></i>Appointments
+                    </h3>
+                    <p class="text-gray-500">No appointments found for this patient.</p>
+                </div>
+            `;
+        }
+
+        const presentAppointments = appointmentData.present_appointments || [];
+        const pastAppointments = appointmentData.past_appointments || [];
+        const totalAppointments = appointmentData.total_appointments || 0;
+
+        return `
+            <div class="bg-white p-6">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-calendar text-blue-600 mr-2"></i>Appointments
+                    <span class="text-sm font-normal text-gray-500">(${totalAppointments} total)</span>
+                </h3>
+                
+                ${presentAppointments.length > 0 ? `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-green-700 mb-3">
+                            <i class="fas fa-clock text-green-600 mr-2"></i>Upcoming Appointments
+                        </h4>
+                        <div class="space-y-3">
+                            ${presentAppointments.map(appointment => `
+                                <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="font-medium text-gray-900">${appointment.service_name || 'General Consultation'}</div>
+                                            <div class="text-sm text-gray-600">
+                                                <i class="fas fa-calendar mr-1"></i>${this.utilities.formatDate(appointment.appointment_date)}
+                                                <i class="fas fa-clock ml-3 mr-1"></i>${appointment.appointment_time || 'Not specified'}
+                                            </div>
+                                            <div class="text-sm text-gray-600">
+                                                <i class="fas fa-user-md mr-1"></i>Dr. ${appointment.dentist_name || 'Not assigned'}
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                            ${appointment.status || 'Scheduled'}
+                                        </span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${pastAppointments.length > 0 ? `
+                    <div class="mb-4">
+                        <h4 class="text-md font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-history text-gray-600 mr-2"></i>Past Appointments
+                        </h4>
+                        <div class="space-y-3">
+                            ${pastAppointments.map(appointment => `
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="font-medium text-gray-900">${appointment.service_name || 'General Consultation'}</div>
+                                            <div class="text-sm text-gray-600">
+                                                <i class="fas fa-calendar mr-1"></i>${this.utilities.formatDate(appointment.appointment_date)}
+                                                <i class="fas fa-clock ml-3 mr-1"></i>${appointment.appointment_time || 'Not specified'}
+                                            </div>
+                                            <div class="text-sm text-gray-600">
+                                                <i class="fas fa-user-md mr-1"></i>Dr. ${appointment.dentist_name || 'Not assigned'}
+                                            </div>
+                                        </div>
+                                        <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                                            ${appointment.status || 'Completed'}
+                                        </span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
     }
 
     generateTreatmentsHTML(treatmentData) {
-        return `<div class="bg-white p-6"><h3 class="text-lg font-bold mb-4">Treatments</h3><p>Implementation pending...</p></div>`;
+        console.log('🦷 Generating treatments HTML with data:', treatmentData);
+        
+        if (!treatmentData || !treatmentData.treatments || treatmentData.treatments.length === 0) {
+            return `
+                <div class="bg-white p-6">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-procedures text-purple-600 mr-2"></i>Treatments
+                    </h3>
+                    <p class="text-gray-500">No treatments found for this patient.</p>
+                </div>
+            `;
+        }
+
+        const treatments = treatmentData.treatments;
+        const totalTreatments = treatmentData.total_treatments || treatments.length;
+
+        return `
+            <div class="bg-white p-6">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-procedures text-purple-600 mr-2"></i>Treatments
+                    <span class="text-sm font-normal text-gray-500">(${totalTreatments} total)</span>
+                </h3>
+                
+                <div class="space-y-4">
+                    ${treatments.map(treatment => `
+                        <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="font-medium text-gray-900">${treatment.treatment_name || 'Treatment'}</div>
+                                <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                                    ${treatment.status || 'Completed'}
+                                </span>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-2">
+                                <i class="fas fa-calendar mr-1"></i>Date: ${this.utilities.formatDate(treatment.treatment_date)}
+                                ${treatment.tooth_number ? `<i class="fas fa-tooth ml-3 mr-1"></i>Tooth #${treatment.tooth_number}` : ''}
+                            </div>
+                            ${treatment.description ? `
+                                <div class="text-sm text-gray-700 mb-2">
+                                    <i class="fas fa-file-text mr-1"></i>Description: ${treatment.description}
+                                </div>
+                            ` : ''}
+                            <div class="text-sm text-gray-600">
+                                <i class="fas fa-user-md mr-1"></i>Dr. ${treatment.dentist_name || 'Not specified'}
+                                ${treatment.cost ? `<i class="fas fa-dollar-sign ml-3 mr-1"></i>$${treatment.cost}` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
     }
 
     generateMedicalRecordsHTML(medicalData) {
-        return `<div class="bg-white p-6"><h3 class="text-lg font-bold mb-4">Medical Records</h3><p>Implementation pending...</p></div>`;
+        console.log('🏥 Generating medical records HTML with data:', medicalData);
+        
+        if (!medicalData || !medicalData.medical_records) {
+            return `
+                <div class="bg-white p-6">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-file-medical text-red-600 mr-2"></i>Medical Records
+                    </h3>
+                    <p class="text-gray-500">No medical records found for this patient.</p>
+                </div>
+            `;
+        }
+
+        const medicalRecords = medicalData.medical_records || [];
+        const patientInfo = medicalData.patient_info || {};
+        const diagnoses = medicalData.diagnoses || [];
+        const xrays = medicalData.xrays || [];
+
+        return `
+            <div class="bg-white p-6">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-file-medical text-red-600 mr-2"></i>Medical Records
+                </h3>
+                
+                ${patientInfo && Object.keys(patientInfo).length > 0 ? `
+                    <div class="mb-6 bg-blue-50 rounded-lg p-4">
+                        <h4 class="text-md font-semibold text-blue-700 mb-3">
+                            <i class="fas fa-user text-blue-600 mr-2"></i>Patient Information
+                        </h4>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            ${patientInfo.allergies ? `<div><strong>Allergies:</strong> ${patientInfo.allergies}</div>` : ''}
+                            ${patientInfo.medical_conditions ? `<div><strong>Medical Conditions:</strong> ${patientInfo.medical_conditions}</div>` : ''}
+                            ${patientInfo.medications ? `<div><strong>Medications:</strong> ${patientInfo.medications}</div>` : ''}
+                            ${patientInfo.emergency_contact ? `<div><strong>Emergency Contact:</strong> ${patientInfo.emergency_contact}</div>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${diagnoses.length > 0 ? `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-orange-700 mb-3">
+                            <i class="fas fa-stethoscope text-orange-600 mr-2"></i>Diagnoses
+                        </h4>
+                        <div class="space-y-2">
+                            ${diagnoses.map(diagnosis => `
+                                <div class="border border-orange-200 rounded-lg p-3 bg-orange-50">
+                                    <div class="font-medium text-gray-900">${diagnosis.diagnosis_name || 'Diagnosis'}</div>
+                                    <div class="text-sm text-gray-600">
+                                        <i class="fas fa-calendar mr-1"></i>Date: ${this.utilities.formatDate(diagnosis.diagnosis_date)}
+                                    </div>
+                                    ${diagnosis.description ? `
+                                        <div class="text-sm text-gray-700 mt-1">${diagnosis.description}</div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${xrays.length > 0 ? `
+                    <div class="mb-6">
+                        <h4 class="text-md font-semibold text-purple-700 mb-3">
+                            <i class="fas fa-x-ray text-purple-600 mr-2"></i>X-rays
+                        </h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            ${xrays.map(xray => `
+                                <div class="border border-purple-200 rounded-lg p-3 bg-purple-50">
+                                    <div class="font-medium text-gray-900">${xray.xray_type || 'X-ray'}</div>
+                                    <div class="text-sm text-gray-600">
+                                        <i class="fas fa-calendar mr-1"></i>${this.utilities.formatDate(xray.xray_date)}
+                                    </div>
+                                    ${xray.notes ? `
+                                        <div class="text-sm text-gray-700 mt-1">${xray.notes}</div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${medicalRecords.length > 0 ? `
+                    <div class="mb-4">
+                        <h4 class="text-md font-semibold text-green-700 mb-3">
+                            <i class="fas fa-notes-medical text-green-600 mr-2"></i>Medical Records
+                        </h4>
+                        <div class="space-y-3">
+                            ${medicalRecords.map(record => `
+                                <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                                    <div class="font-medium text-gray-900">${record.record_type || 'Medical Record'}</div>
+                                    <div class="text-sm text-gray-600 mb-2">
+                                        <i class="fas fa-calendar mr-1"></i>Date: ${this.utilities.formatDate(record.record_date)}
+                                        <i class="fas fa-user-md ml-3 mr-1"></i>Dr. ${record.doctor_name || 'Not specified'}
+                                    </div>
+                                    ${record.notes ? `
+                                        <div class="text-sm text-gray-700">${record.notes}</div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
     }
 
     // ==================== TOOTH DETAILS MODAL ====================
