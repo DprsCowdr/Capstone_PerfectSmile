@@ -731,4 +731,131 @@ class AdminController extends BaseAdminController
         }
         return $query;
     }
+
+    // ==================== PATIENT MODAL API ENDPOINTS ====================
+    public function getPatientInfo($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+
+        $userModel = new \App\Models\UserModel();
+        $patient = $userModel->find($id);
+        if (!$patient || ($patient['user_type'] ?? null) !== 'patient') {
+            return $this->response->setJSON(['error' => 'Patient not found'], 404);
+        }
+
+        $medicalFields = [
+            'previous_dentist','last_dental_visit','physician_name','physician_specialty',
+            'physician_phone','good_health','under_treatment','treatment_condition',
+            'serious_illness','illness_details','hospitalized','hospitalization_where',
+            'hospitalization_when','hospitalization_why','tobacco_use','blood_pressure',
+            'allergies','pregnant','nursing','birth_control','medical_conditions',
+            'other_conditions','special_notes'
+        ];
+        $medical = [];
+        foreach ($medicalFields as $f) {
+            $medical[$f] = $patient[$f] ?? null;
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'patient' => [
+                'id' => $patient['id'],
+                'name' => $patient['name'],
+                'email' => $patient['email'],
+                'phone' => $patient['phone'],
+                'gender' => $patient['gender'],
+                'address' => $patient['address'],
+                'age' => $patient['age'],
+            ],
+            'medical' => $medical
+        ]);
+    }
+
+    public function updatePatientNotes($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+        $notes = $this->request->getPost('special_notes');
+        $userModel = new \App\Models\UserModel();
+        if (!$userModel->find($id)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Patient not found'], 404);
+        }
+        $userModel->update($id, ['special_notes' => $notes]);
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    public function getPatientDentalRecords($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        $model = new \App\Models\DentalRecordModel();
+        $records = $model->select('dental_record.*, dentist.name as dentist_name')
+            ->join('user as dentist', 'dentist.id = dental_record.dentist_id', 'left')
+            ->where('dental_record.user_id', $id)
+            ->orderBy('record_date', 'DESC')
+            ->findAll();
+        return $this->response->setJSON(['success' => true, 'records' => $records]);
+    }
+
+    public function getPatientDentalChart($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        $db = \Config\Database::connect();
+        $rows = $db->table('dental_chart dc')
+            ->select('dc.*, dr.record_date')
+            ->join('dental_record dr', 'dr.id = dc.dental_record_id')
+            ->where('dr.user_id', $id)
+            ->orderBy('dr.record_date', 'DESC')
+            ->get()->getResultArray();
+        return $this->response->setJSON(['success' => true, 'chart' => $rows]);
+    }
+
+    public function getPatientAppointmentsModal($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        // Attempt to reuse existing service method if available
+        $appointments = method_exists($this->appointmentService, 'getPatientAppointmentsData')
+            ? ($this->appointmentService->getPatientAppointmentsData($id) ?? [])
+            : ($this->appointmentService->getPatientAppointments($id)['appointments'] ?? []);
+        return $this->response->setJSON(['success' => true, 'appointments' => $appointments]);
+    }
+
+    public function getPatientTreatments($id)
+    {
+        // Placeholder until treatment tracking implemented
+        return $this->response->setJSON(['success' => true, 'treatments' => []]);
+    }
+
+    public function getPatientMedicalRecords($id)
+    {
+        $userModel = new \App\Models\UserModel();
+        $p = $userModel->find($id);
+        if (!$p) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Not found'], 404);
+        }
+        return $this->response->setJSON([
+            'success' => true,
+            'medical' => [
+                'previous_dentist' => $p['previous_dentist'] ?? null,
+                'last_dental_visit' => $p['last_dental_visit'] ?? null,
+                'blood_pressure' => $p['blood_pressure'] ?? null,
+                'allergies' => $p['allergies'] ?? null,
+                'medical_conditions' => $p['medical_conditions'] ?? null,
+                'special_notes' => $p['special_notes'] ?? null
+            ]
+        ]);
+    }
 }

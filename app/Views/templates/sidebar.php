@@ -352,26 +352,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const navLinks = sidebar.querySelectorAll('a[data-nav-link]');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            // Don't process if it's a hash link or disabled
-            if (link.href.includes('#') || link.classList.contains('loading')) {
-                return;
+            const rawHref = link.getAttribute('href');
+            // Handle placeholder/hash links so they DON'T jump to top
+            if (!rawHref || rawHref === '#') {
+                e.preventDefault(); // stop default scroll-to-top
+                return; // keep scroll position intact
             }
-            
-            // Save scroll position before navigation
+            // Ignore if already loading
+            if (link.classList.contains('loading')) return;
+
+            // Save scroll position before full navigation
             saveSidebarScrollPosition();
-            
-            // Add loading state
+
+            // Add loading state feedback
             link.classList.add('loading');
-            
-            // Close sidebar on mobile with delay
-            if (window.innerWidth < 1024) { // lg breakpoint
-                setTimeout(closeSidebarFn, 150);
+
+            // Close sidebar on mobile after brief delay
+            if (window.innerWidth < 1024) {
+                setTimeout(closeSidebarFn, 120);
             }
-            
-            // Remove loading state after navigation (fallback)
+
+            // Safety: remove loading class if navigation is blocked (e.g., prevented elsewhere)
             setTimeout(() => {
                 link.classList.remove('loading');
-            }, 2000);
+            }, 1800);
         });
         
         // Add visual feedback on hover
