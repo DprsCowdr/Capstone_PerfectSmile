@@ -447,6 +447,7 @@ class AdminController extends BaseAdminController
         return view('admin/users/add', [
             'user' => $user,
             'branches' => $branches
+            //done
         ]);
     }
 
@@ -503,7 +504,7 @@ class AdminController extends BaseAdminController
             // Set default position based on user type if position is empty
             if (empty($position)) {
                 switch ($formData['user_type']) {
-                    case 'doctor':
+                    case 'dentist':
                         $position = 'Dentist';
                         break;
                     case 'admin':
@@ -600,7 +601,7 @@ class AdminController extends BaseAdminController
             // Set default position based on user type if position is empty
             if (empty($position)) {
                 switch ($formData['user_type']) {
-                    case 'doctor':
+                    case 'dentist':
                         $position = 'Dentist';
                         break;
                     case 'admin':
