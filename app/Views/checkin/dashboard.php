@@ -24,6 +24,7 @@
                     <div class="p-6 text-white">
                         <h1 class="text-3xl font-bold flex items-center">
                             <i class="fas fa-sign-in-alt mr-4"></i>
+                            Patient Check-in
                         </h1>
                         <p class="mt-2 opacity-90">Manage patient arrivals and check-ins for today</p>
                     </div>
@@ -143,10 +144,11 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <?php if ($appointment['status'] === 'confirmed'): ?>
-                                                        <button type="button" onclick="checkinPatient(<?= $appointment['id'] ?>)" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                                            <i class="fas fa-sign-in-alt mr-2"></i>
-                                                            Check In
-                                                        </button>
+                                                        <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline">
+                                                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                                                <i class="fas fa-sign-in-alt mr-2"></i>
+                                                                Check In
+                                                            </button>
                                                         </form>
                                                     <?php elseif ($appointment['status'] === 'checked_in'): ?>
                                                         <span class="text-green-600 text-sm">
@@ -156,6 +158,14 @@
                                                                 <br><small class="text-gray-500">at <?= date('g:i A', strtotime($appointment['checked_in_at'])) ?></small>
                                                             <?php endif; ?>
                                                         </span>
+                                                        <br>
+                                                        <form method="POST" action="<?= base_url('queue/call/' . $appointment['id']) ?>" class="inline mt-2">
+                                                            <?= csrf_field() ?>
+                                                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="return confirm('Send to treatment queue?')">
+                                                                <i class="fas fa-user-md mr-2"></i>
+                                                                Send to Treatment
+                                                            </button>
+                                                        </form>
                                                     <?php elseif ($appointment['status'] === 'ongoing'): ?>
                                                         <span class="text-yellow-600 text-sm">
                                                             <i class="fas fa-user-md mr-1"></i>
@@ -204,8 +214,10 @@
                                         </div>
                                         <div>
                                             <?php if ($appointment['status'] === 'confirmed'): ?>
-                                                <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline">
-                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                                <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline checkin-form">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
+                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Check in <?= esc($appointment['patient_name']) ?>?')">
                                                         <i class="fas fa-sign-in-alt mr-2"></i>
                                                         Check In
                                                     </button>
@@ -218,6 +230,13 @@
                                                         <br><small class="text-gray-500">at <?= date('g:i A', strtotime($appointment['checked_in_at'])) ?></small>
                                                     <?php endif; ?>
                                                 </span>
+                                                <form method="POST" action="<?= base_url('queue/call/' . $appointment['id']) ?>" class="inline mt-2">
+                                                    <?= csrf_field() ?>
+                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="return confirm('Send to treatment queue?')">
+                                                        <i class="fas fa-user-md mr-2"></i>
+                                                        Send to Treatment
+                                                    </button>
+                                                </form>
                                             <?php elseif ($appointment['status'] === 'ongoing'): ?>
                                                 <span class="text-yellow-600 text-sm">
                                                     <i class="fas fa-user-md mr-1"></i>
@@ -242,69 +261,38 @@
 </div>
 
 <script>
-// Auto-refresh page every 30 seconds to update real-time status
-setTimeout(function() {
-    window.location.reload();
-}, 30000);
+let formSubmissionInProgress = false;
 
-// Function to check in a patient via AJAX
-function checkinPatient(appointmentId) {
-    if (!confirm('Check in this patient?')) {
-        return;
-    }
-    
-    console.log('Checking in patient with appointment ID:', appointmentId);
-    
-    // Show loading state
-    const button = event.target.closest('button');
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
-    button.disabled = true;
-    
-    fetch(`/checkin/process/${appointmentId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (response.ok) {
-            // Success - reload the page to see updated status
-            alert('Patient checked in successfully!');
+// Auto-refresh page every 30 seconds to update real-time status
+// But only if no form submission is in progress
+function scheduleRefresh() {
+    setTimeout(function() {
+        if (!formSubmissionInProgress) {
+            console.log('Auto-refreshing page...');
             window.location.reload();
         } else {
-            throw new Error('Failed to check in patient');
+            console.log('Form submission in progress, delaying refresh...');
+            scheduleRefresh(); // Try again later
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to check in patient. Please try again.');
-        
-        // Restore button
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
+    }, 30000);
 }
 
-// Old confirmation for form-based check-in (keeping as backup)
-document.querySelectorAll('form[action*="checkin/process"]').forEach(function(form) {
+// Start the refresh timer
+scheduleRefresh();
+
+// Confirmation for check-in
+document.querySelectorAll('form').forEach(function(form) {
     form.addEventListener('submit', function(e) {
-        console.log('Check-in form submitted');
         if (!confirm('Check in this patient?')) {
-            console.log('Check-in cancelled by user');
             e.preventDefault();
-        } else {
-            console.log('Check-in confirmed by user');
         }
     });
 });
-</script>
 
-        </main>
-    </div>
-</div>
+// Debug: Log when page finishes loading
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, found', document.querySelectorAll('.checkin-form').length, 'check-in forms');
+});
+</script>
 
 <?= view('templates/footer') ?>

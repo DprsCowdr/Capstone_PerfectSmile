@@ -209,9 +209,9 @@
                     <label class="text-black text-sm font-medium" for="gender">Gender</label>
                     <select id="gender" name="gender" required class="block w-full px-3 py-2 mt-1 text-black bg-white border border-gray-200 rounded-md focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 focus:outline-none focus:ring">
                         <option value="">Select Gender</option>
-                        <option value="male">👨 Male</option>
-                        <option value="female">👩 Female</option>
-                        <option value="other">⚧ Other</option>
+                        <option value="Male">👨 Male</option>
+                        <option value="Female">👩 Female</option>
+                        <option value="Other">⚧ Other</option>
                     </select>
                 </div>
 
@@ -243,7 +243,7 @@
             </div>
 
             <div class="flex justify-end mt-4">
-                <button type="submit" class="px-6 py-2 leading-5 text-white transition-colors duration-300 transform bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:bg-blue-700 font-medium">Add Patient</button>
+                <button type="submit" onclick="debugFormData()" class="px-6 py-2 leading-5 text-white transition-colors duration-300 transform bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:bg-blue-700 font-medium">Add Patient</button>
             </div>
         </form>
     </div>
@@ -473,10 +473,23 @@ document.addEventListener('DOMContentLoaded', function() {
             firstDayOfWeek: 1
         },
         onChange: function(selectedDates, dateStr, instance) {
+            console.log('Date changed:', dateStr);
             // Calculate and display age when date changes
             const age = calculateAge(dateStr);
-            document.getElementById('calculated_age').value = age;
-            document.getElementById('age').value = age.replace(' years', ''); // Store just the number
+            console.log('Calculated age:', age);
+            
+            // Make sure elements exist before setting values
+            const calculatedAgeInput = document.getElementById('calculated_age');
+            const ageInput = document.getElementById('age');
+            
+            if (calculatedAgeInput) {
+                calculatedAgeInput.value = age;
+            }
+            if (ageInput) {
+                const ageNumber = age.replace(' years', '').replace('Invalid date', '0');
+                ageInput.value = ageNumber; // Store just the number
+                console.log('Age input set to:', ageNumber);
+            }
         }
     });
 
@@ -897,4 +910,19 @@ document.addEventListener('DOMContentLoaded', function () {
         lastTouchEnd = now;
     }, false);
 });
+
+// Debug function to check form data before submission
+function debugFormData() {
+    console.log('Form submission debug:');
+    console.log('Name:', document.getElementById('name').value);
+    console.log('Email:', document.getElementById('email').value);
+    console.log('Phone:', document.getElementById('phone').value);
+    console.log('Gender:', document.getElementById('gender').value);
+    console.log('Date of Birth:', document.getElementById('date_of_birth').value);
+    console.log('Age:', document.getElementById('age').value);
+    console.log('Calculated Age:', document.getElementById('calculated_age').value);
+    console.log('Occupation:', document.getElementById('occupation').value);
+    console.log('Nationality:', document.getElementById('nationality').value);
+    console.log('Address:', document.getElementById('address').value);
+}
 </script> 

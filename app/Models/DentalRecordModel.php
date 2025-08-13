@@ -14,12 +14,15 @@ class DentalRecordModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'user_id',
+        'patient_id',
+        'appointment_id',
         'record_date',
         'diagnosis',
         'treatment',
         'notes',
         'xray_image_url',
         'next_appointment_date',
+        'next_appointment_id',
         'dentist_id'
     ];
 
@@ -60,6 +63,40 @@ class DentalRecordModel extends Model
                    ->where('dental_record.user_id', $patientId)
                    ->orderBy('record_date', 'DESC')
                    ->findAll();
+    }
+
+    /**
+     * Get dental records with complete patient and medical history
+     */
+    public function getRecordsWithPatientInfo($limit = null, $offset = 0)
+    {
+        $builder = $this->select('
+                dental_record.*, 
+                user.name as patient_name, 
+                user.email as patient_email,
+                user.phone as patient_phone,
+                user.previous_dentist,
+                user.last_dental_visit,
+                user.medical_conditions,
+                user.allergies,
+                user.blood_pressure,
+                user.tobacco_use,
+                user.medical_history_updated_at,
+                dentist.name as dentist_name, 
+                appointments.appointment_datetime,
+                next_appt.appointment_datetime as next_appointment_datetime
+            ')
+            ->join('user', 'user.id = dental_record.user_id')
+            ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
+            ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
+            ->join('appointments as next_appt', 'next_appt.id = dental_record.next_appointment_id', 'left')
+            ->orderBy('dental_record.record_date', 'DESC');
+            
+        if ($limit) {
+            $builder->limit($limit, $offset);
+        }
+        
+        return $builder->findAll();
     }
 
     /**

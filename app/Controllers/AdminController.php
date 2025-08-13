@@ -77,6 +77,22 @@ class AdminController extends BaseAdminController
         return $this->togglePatientStatusLogic($id, '/admin/patients');
     }
 
+    // ==================== PATIENT ACCOUNT ACTIVATION ====================
+    public function patientActivation()
+    {
+        return $this->getPatientActivationView('admin/patients/activation');
+    }
+
+    public function activatePatientAccount($id)
+    {
+        return $this->activatePatientAccountLogic($id, '/admin/patients/activation');
+    }
+
+    public function deactivatePatientAccount($id)
+    {
+        return $this->deactivatePatientAccountLogic($id, '/admin/patients/activation');
+    }
+
     public function createAccount($id)
     {
         $user = $this->getAuthenticatedUser();
@@ -258,7 +274,71 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-        return view('admin/dental/all_records', ['user' => $user]);
+
+        // Load models
+        $dentalRecordModel = new \App\Models\DentalRecordModel();
+        $userModel = new \App\Models\UserModel();
+        
+        // Get all dental records with complete patient and medical history information
+        $records = $dentalRecordModel->getRecordsWithPatientInfo(50, 0);
+
+        // Calculate statistics
+        $totalRecords = $dentalRecordModel->countAll();
+        
+        // Count active patients (patients with records in last 6 months)
+        $activePatients = $dentalRecordModel->select('DISTINCT user_id')
+                                          ->where('record_date >=', date('Y-m-d', strtotime('-6 months')))
+                                          ->countAllResults();
+        
+        // Count records with X-rays
+        $withXrays = $dentalRecordModel->where('xray_image_url IS NOT NULL')
+                                     ->where('xray_image_url !=', '')
+                                     ->countAllResults();
+        
+        // Count pending follow-ups (records with next_appointment_date in future)
+        $pendingFollowups = $dentalRecordModel->where('next_appointment_date >=', date('Y-m-d'))
+                                            ->countAllResults();
+
+        $data = [
+            'user' => $user,
+            'records' => $records,
+            'stats' => [
+                'total_records' => $totalRecords,
+                'active_patients' => $activePatients,
+                'with_xrays' => $withXrays,
+                'pending_followups' => $pendingFollowups
+            ]
+        ];
+
+        return view('admin/dental/all_records', $data);
+    }
+
+    public function deleteRecord($recordId)
+    {
+        $user = $this->checkAdminAuth();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        try {
+            $dentalRecordModel = new \App\Models\DentalRecordModel();
+            
+            // Check if record exists
+            $record = $dentalRecordModel->find($recordId);
+            if (!$record) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Record not found']);
+            }
+
+            // Delete the record
+            if ($dentalRecordModel->delete($recordId)) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Record deleted successfully']);
+            } else {
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to delete record']);
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Error deleting dental record: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'An error occurred while deleting the record']);
+        }
     }
 
     public function waitlist()
@@ -385,6 +465,7 @@ class AdminController extends BaseAdminController
             'name' => 'required|min_length[2]',
             'email' => 'required|valid_email|is_unique[user.email,id,{id}]',
             'phone' => 'required|min_length[10]',
+            'gender' => 'permit_empty|in_list[Male,Female,Other,male,female,other]',
             'user_type' => 'required|in_list[admin,staff,dentist]',
             'password' => 'required|min_length[6]',
             'branches' => 'required'
@@ -404,10 +485,12 @@ class AdminController extends BaseAdminController
             'phone' => $formData['phone'],
             'user_type' => $formData['user_type'],
             'password' => password_hash($formData['password'], PASSWORD_DEFAULT),
-            'gender' => $formData['gender'] ?? 'male',
+            'gender' => $formData['gender'] ?? null,
             'status' => 'active',
             'occupation' => $formData['occupation'] ?? null,
-            'nationality' => $formData['nationality'] ?? null
+            'nationality' => $formData['nationality'] ?? null,
+            'date_of_birth' => !empty($formData['date_of_birth']) ? $formData['date_of_birth'] : null,
+            'age' => !empty($formData['age']) ? (int)$formData['age'] : null
         ];
 
         $userId = $userModel->insert($userData);
@@ -647,50 +730,5 @@ class AdminController extends BaseAdminController
             $query->where($branchColumn, $selectedBranchId);
         }
         return $query;
-    }
-
-    /**
-     * Check for appointment conflicts - Clean implementation
-     */
-    public function checkAppointmentConflicts()
-    {
-        // Verify authentication
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
-        }
-
-        // Get input data
-        $date = $this->request->getPost('appointment_date') ?? $this->request->getPost('date');
-        $time = $this->request->getPost('appointment_time') ?? $this->request->getPost('time');
-        $dentistId = $this->request->getPost('dentist_id');
-        $excludeId = $this->request->getPost('exclude_id');
-
-        // Validate required fields
-        if (!$date || !$time) {
-            return $this->response->setJSON([
-                'success' => false, 
-                'message' => 'Date and time are required'
-            ]);
-        }
-
-        try {
-            $appointmentModel = new \App\Models\AppointmentModel();
-            $conflicts = $appointmentModel->checkTimeConflicts($date, $time, $dentistId, $excludeId);
-            
-            return $this->response->setJSON([
-                'success' => true,
-                'has_conflicts' => !empty($conflicts),
-                'conflicts' => $conflicts,
-                'message' => empty($conflicts) ? 'No conflicts found' : count($conflicts) . ' conflict(s) detected'
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Admin conflict check error: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false, 
-                'message' => 'Error checking conflicts: ' . $e->getMessage()
-            ]);
-        }
     }
 }

@@ -72,28 +72,7 @@ class PatientCheckin extends BaseController
         
         // Try to get current user, but don't fail if not available
         $user = Auth::getCurrentUser();
-        log_message('info', "Auth::getCurrentUser result: " . json_encode($user));
-        
-        // If no user from Auth class, try to get from session directly
-        if (!$user && session()->get('isLoggedIn')) {
-            $user = [
-                'id' => session()->get('user_id'),
-                'name' => session()->get('name'),
-                'user_type' => session()->get('user_type')
-            ];
-            log_message('info', "Using session user data: " . json_encode($user));
-        }
-        
-        // Check if we have any user data and they're staff/admin
         if (!$user || !in_array($user['user_type'], ['staff', 'admin'])) {
-            log_message('error', "Unauthorized access to checkinPatient. User: " . json_encode($user));
-            
-            // Handle AJAX requests
-            if ($this->request->isAJAX()) {
-                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'Authentication required - please log in as staff or admin']);
-            }
-            
-            session()->setFlashdata('error', 'Authentication required - please log in as staff or admin');
             return redirect()->to('/login');
         }
 
@@ -101,13 +80,6 @@ class PatientCheckin extends BaseController
 
         $appointment = $this->appointmentModel->find($appointmentId);
         if (!$appointment) {
-            log_message('error', "Appointment not found: " . $appointmentId);
-            
-            // Handle AJAX requests
-            if ($this->request->isAJAX()) {
-                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Appointment not found']);
-            }
-            
             session()->setFlashdata('error', 'Appointment not found');
             return redirect()->to('/checkin');
         }
@@ -128,44 +100,29 @@ class PatientCheckin extends BaseController
         }
 
         // Update appointment status to checked_in
-        $updateData = [
+        $result = $this->appointmentModel->update($appointmentId, [
             'status' => 'checked_in',
             'checked_in_at' => date('Y-m-d H:i:s'),
             'checked_in_by' => $user['id']
-        ];
-        
-        log_message('info', "Updating appointment " . $appointmentId . " with data: " . json_encode($updateData));
-        
-        $result = $this->appointmentModel->update($appointmentId, $updateData);
-
-        log_message('info', "Update result: " . ($result ? 'SUCCESS' : 'FAILED'));
-        
-        if (!$result) {
-            // Log validation errors if any
-            $errors = $this->appointmentModel->errors();
-            if (!empty($errors)) {
-                log_message('error', "Validation errors: " . json_encode($errors));
-            }
-        }
+        ]);
 
         if ($result) {
-            session()->setFlashdata('success', 'Patient checked in successfully! They will now appear in the treatment queue.');
-            log_message('info', "Patient checked in successfully. Appointment ID: " . $appointmentId);
-            
-            // Handle AJAX requests
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => true, 'message' => 'Patient checked in successfully']);
-            }
+            session()->setFlashdata('success', 'Patient checked in successfully');
         } else {
             session()->setFlashdata('error', 'Failed to check in patient');
-            log_message('error', "Failed to check in patient. Appointment ID: " . $appointmentId);
-            
-            // Handle AJAX requests
-            if ($this->request->isAJAX()) {
-                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Failed to check in patient']);
-            }
         }
 
         return redirect()->to('/checkin');
+    }
+    
+    /**
+     * Process check-in request (alias for checkinPatient to match routes)
+     */
+    public function process($appointmentId)
+    {
+        // Log that this method was called
+        log_message('debug', "Process method called for appointment ID: {$appointmentId}");
+        
+        return $this->checkinPatient($appointmentId);
     }
 }
