@@ -33,13 +33,13 @@
                 <th class="px-4 py-4 text-left">Fee</th>
                 <th class="px-4 py-4 text-left">Treatment Area</th>
                 <th class="px-4 py-4 text-left">Status</th>
-                <!-- No Actions column -->
+                <th class="px-4 py-4 text-left">Actions</th>
             </tr>
         </thead>
         <tbody>
             <?php if (!empty($procedures)): ?>
                 <?php foreach ($procedures as $procedure): ?>
-                <tr class="border-b last:border-b-0 hover:bg-indigo-50 transition cursor-pointer" onclick="window.location='<?= base_url('admin/procedures/show/' . $procedure['id']) ?>'">
+                <tr class="border-b last:border-b-0 hover:bg-indigo-50 transition cursor-pointer" onclick="openProcedureModal(<?= $procedure['id'] ?>)">
                     <td class="min-w-[180px] px-8 py-5">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center font-bold text-lg text-indigo-400">
@@ -97,7 +97,7 @@
 <div class="lg:hidden space-y-4 mb-8">
     <?php if (!empty($procedures)): ?>
         <?php foreach ($procedures as $procedure): ?>
-    <div class="bg-white rounded-2xl shadow-xl p-4 border border-gray-100 cursor-pointer" onclick="window.location='<?= base_url('admin/procedures/show/' . $procedure['id']) ?>'">
+    <div class="bg-white rounded-2xl shadow-xl p-4 border border-gray-100 cursor-pointer" onclick="openProcedureModal(<?= $procedure['id'] ?>)">
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3">
                     <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center font-bold text-lg text-indigo-400">
@@ -161,6 +161,7 @@
     <?php endif; ?>
 </div>
 
+<!-- Scripts -->
 <script>
 function deleteProcedure(id) {
     if (confirm('Are you sure you want to delete this procedure?')) {
@@ -185,4 +186,85 @@ function deleteProcedure(id) {
         });
     }
 }
+
+// Modal setup (only once)
+if (!document.getElementById('procedureModal')) {
+    const modalHtml = `
+    <div id="procedureModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-40">
+        <div class="modal-panel bg-white rounded-xl shadow-xl max-w-sm w-full p-0 relative animate-fade-in" style="min-width:320px;max-width:95vw;">
+            <button id="closeProcedureModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+            <div id="procedureModalContent"></div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function openProcedureModal(id) {
+    const modal = document.getElementById('procedureModal');
+    const content = document.getElementById('procedureModalContent');
+    content.innerHTML = '<div class="flex items-center justify-center h-32"><i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i></div>';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const panel = modal.querySelector('.modal-panel');
+    if (panel) {
+        panel.style.maxWidth = '420px';
+        panel.style.width = '95vw';
+        panel.style.padding = '0';
+    }
+
+        fetch('<?= base_url('admin/procedures/show/') ?>' + id + '?modal=1')
+            .then(res => res.text())
+            .then(html => {
+                content.innerHTML = html;
+                // Re-initialize edit button after modal content is loaded
+                initProcedureEditBtn();
+            })
+            .catch(() => {
+                content.innerHTML = '<div class="text-center py-8 text-red-600">Failed to load procedure details.</div>';
+            });
+}
+
+// Modal close
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'closeProcedureModal') {
+        const modal = document.getElementById('procedureModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+});
+
+// Edit form toggler
+function initProcedureEditBtn() {
+    const editBtn = document.getElementById("editBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const form = document.getElementById("procedureForm");
+
+    if (!editBtn) {
+        console.log("[EditBtn] Edit button not found in DOM");
+    } else {
+        console.log("[EditBtn] Edit button found");
+        editBtn.addEventListener("click", function () {
+            if (!form) {
+                console.log("[EditBtn] Form not found when clicking edit");
+                return;
+            }
+            // Enable all inputs
+            form.querySelectorAll("input, select").forEach(el => {
+                el.removeAttribute("readonly");
+                el.removeAttribute("disabled");
+            });
+            console.log("[EditBtn] All form fields enabled for editing");
+
+            // Toggle buttons
+            editBtn.classList.add("hidden");
+            saveBtn.classList.remove("hidden");
+            console.log("[EditBtn] Edit button hidden, Save button shown");
+        });
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    initProcedureEditBtn();
+});
 </script>
