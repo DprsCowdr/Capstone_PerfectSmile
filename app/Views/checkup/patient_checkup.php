@@ -41,17 +41,7 @@
                     <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Patient Checkup</h1>
                     <p class="mt-1 text-sm text-gray-500">Complete dental examination and record</p>
                 </div>
-                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-                    <a href="/checkup" class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-center">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                    </a>
-                    <a href="/admin/dental-charts/<?= $appointment['id'] ?>" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-center">
-                        <i class="fas fa-tooth mr-2"></i>Go to Chart
-                    </a>
-                    <a href="/auth/logout" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-center">
-                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                    </a>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -1108,6 +1098,61 @@ document.addEventListener('DOMContentLoaded', function() {
     medicalConditionCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateMedicalConditions);
     });
+
+    // On submit, make sure all visible fields (outside the <form>) are synced into the hidden inputs inside the form
+    const form = document.querySelector('form[action*="/checkup/save/"]');
+    if (form) {
+        form.addEventListener('submit', function() {
+            // Always refresh medical conditions hidden fields
+            updateMedicalConditions();
+
+            // Helper to sync text/textarea inputs
+            const syncField = (name) => {
+                const hidden = document.querySelector(`input[type="hidden"][name="${name}"]`);
+                const input = document.querySelector(`[name="${name}"]`);
+                if (hidden && input) hidden.value = input.value ?? '';
+            };
+
+            // Helper to sync radio groups
+            const syncRadio = (name) => {
+                const checked = document.querySelector(`input[name="${name}"]:checked`);
+                const hidden = document.querySelector(`input[type="hidden"][name="${name}"]`);
+                if (hidden) hidden.value = checked ? checked.value : '';
+            };
+
+            // Dental history
+            syncField('previous_dentist');
+            syncField('last_dental_visit');
+
+            // Physician details
+            syncField('physician_name');
+            syncField('physician_specialty');
+            syncField('physician_phone');
+            syncField('physician_address');
+
+            // General health
+            syncRadio('good_health');
+            syncRadio('under_treatment');
+            syncField('treatment_condition');
+            syncRadio('serious_illness');
+            syncField('illness_details');
+            syncRadio('hospitalized');
+            syncField('hospitalization_where');
+            syncField('hospitalization_when');
+            syncField('hospitalization_why');
+            syncRadio('tobacco_use');
+            syncField('blood_pressure');
+            syncField('allergies');
+
+            // Women-only
+            syncRadio('pregnant');
+            syncRadio('nursing');
+            syncRadio('birth_control');
+
+            // Other
+            syncField('other_conditions');
+        });
+    }
 });
 
 // Template functions for Diagnosis & Treatment

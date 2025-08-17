@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use App\Models\PatientMedicalHistoryModel;
 
 class PatientModel extends Model
 {
@@ -11,13 +12,12 @@ class PatientModel extends Model
     
     protected $allowedFields = array(
         'name', 'email', 'phone', 'gender', 'address', 'date_of_birth',
-        'previous_dentist', 'last_dental_visit', 'physician_name', 'physician_specialty',
-        'physician_phone', 'physician_address', 'good_health', 'under_treatment',
-        'treatment_condition', 'serious_illness', 'illness_details', 'hospitalized',
-        'hospitalization_where', 'hospitalization_when', 'hospitalization_why',
-        'tobacco_use', 'blood_pressure', 'allergies', 'pregnant', 'nursing',
-        'birth_control', 'medical_conditions', 'other_conditions', 'special_notes',
-        'medical_history_updated_at'
+        'previous_dentist', 'last_dental_visit', 'physician_name',
+        // Consolidated fields
+        'current_treatment', 'hospitalization_details',
+        // Kept details
+        'illness_details', 'allergies', 'other_conditions',
+        'special_notes', 'medical_history_updated_at'
     );
     
     protected $useTimestamps = true;
@@ -27,15 +27,22 @@ class PatientModel extends Model
     /**
      * Update patient medical history
      */
-    public function updateMedicalHistory($patientId, $medicalData)
+    public function updateMedicalHistory($userId, $medicalData)
     {
-        $medicalData['medical_history_updated_at'] = date('Y-m-d H:i:s');
-        
+        // Normalize JSON field
         if (isset($medicalData['medical_conditions']) && is_array($medicalData['medical_conditions'])) {
-            $medicalData['medical_conditions'] = json_encode($medicalData['medical_conditions']);
+            $medicalData['medical_conditions'] = json_encode(array_values($medicalData['medical_conditions']));
         }
 
-        return $this->update($patientId, $medicalData);
+        $mh = new PatientMedicalHistoryModel();
+        $existing = $mh->where('user_id', $userId)->first();
+
+        if ($existing) {
+            return (bool) $mh->update($existing['id'], $medicalData);
+        }
+
+        $medicalData['user_id'] = $userId;
+        return (bool) $mh->insert($medicalData);
     }
 
     /**
@@ -44,11 +51,46 @@ class PatientModel extends Model
     public function getPatientWithMedicalHistory($patientId)
     {
         $patient = $this->find($patientId);
-        
-        if ($patient && !empty($patient['medical_conditions'])) {
-            $patient['medical_conditions'] = json_decode($patient['medical_conditions'], true);
+        if (!$patient) {
+            return null;
         }
-        
+
+        // Fetch raw row to avoid automatic JSON casting issues
+        $db = \Config\Database::connect();
+        $history = $db->table('patient_medical_history')
+            ->where('user_id', $patientId)
+            ->get()
+            ->getRowArray();
+        if ($history) {
+            // Normalize medical_conditions into an array
+            if (array_key_exists('medical_conditions', $history)) {
+                $mc = $history['medical_conditions'];
+                if (is_string($mc) && $mc !== '') {
+                    try {
+                        $decoded = json_decode($mc, true, 512, JSON_THROW_ON_ERROR);
+                        // If decoded is a string (e.g., "\"foo\""), wrap into array
+                        if (is_string($decoded)) {
+                            $history['medical_conditions'] = [$decoded];
+                        } elseif (is_array($decoded)) {
+                            $history['medical_conditions'] = $decoded;
+                        } else {
+                            $history['medical_conditions'] = [];
+                        }
+                    } catch (\Throwable $e) {
+                        // Fallback: if comma-separated or plain string
+                        $history['medical_conditions'] = strpos($mc, ',') !== false
+                            ? array_map('trim', explode(',', $mc))
+                            : ($mc !== '' ? [$mc] : []);
+                    }
+                } elseif (is_array($mc)) {
+                    // already array
+                } else {
+                    $history['medical_conditions'] = [];
+                }
+            }
+            $patient = array_merge($patient, $history);
+        }
+
         return $patient;
     }
 

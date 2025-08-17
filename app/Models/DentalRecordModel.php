@@ -70,32 +70,18 @@ class DentalRecordModel extends Model
      */
     public function getRecordsWithPatientInfo($limit = null, $offset = 0)
     {
-        $builder = $this->select('
-                dental_record.*, 
-                user.name as patient_name, 
-                user.email as patient_email,
-                user.phone as patient_phone,
-                user.previous_dentist,
-                user.last_dental_visit,
-                user.medical_conditions,
-                user.allergies,
-                user.blood_pressure,
-                user.tobacco_use,
-                user.medical_history_updated_at,
-                dentist.name as dentist_name, 
-                appointments.appointment_datetime,
-                next_appt.appointment_datetime as next_appointment_datetime
-            ')
+        // The schema in some environments doesn't include next_appointment_id on dental_record.
+        // Avoid joining on that missing column; return the next_appointment_date stored on the record instead.
+        $builder = $this->select('dental_record.*, user.name as patient_name, user.email as patient_email, user.phone as patient_phone, dentist.name as dentist_name, appointments.appointment_datetime, dental_record.next_appointment_date')
             ->join('user', 'user.id = dental_record.user_id')
             ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
             ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
-            ->join('appointments as next_appt', 'next_appt.id = dental_record.next_appointment_id', 'left')
             ->orderBy('dental_record.record_date', 'DESC');
-            
+
         if ($limit) {
             $builder->limit($limit, $offset);
         }
-        
+
         return $builder->findAll();
     }
 
@@ -126,12 +112,12 @@ class DentalRecordModel extends Model
      */
     public function getRecordWithChart($recordId)
     {
-        $record = $this->select('dental_record.*, user.name as patient_name, dentist.name as dentist_name, appointments.appointment_datetime, next_appt.appointment_datetime as next_appointment_datetime')
-                      ->join('user', 'user.id = dental_record.user_id')
-                      ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
-                      ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
-                      ->join('appointments as next_appt', 'next_appt.id = dental_record.next_appointment_id', 'left')
-                      ->find($recordId);
+    // Avoid joining on next_appointment_id which may not exist; return next_appointment_date instead.
+    $record = $this->select('dental_record.*, user.name as patient_name, dentist.name as dentist_name, appointments.appointment_datetime, dental_record.next_appointment_date')
+              ->join('user', 'user.id = dental_record.user_id')
+              ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
+              ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
+              ->find($recordId);
 
         if ($record) {
             $dentalChartModel = new \App\Models\DentalChartModel();

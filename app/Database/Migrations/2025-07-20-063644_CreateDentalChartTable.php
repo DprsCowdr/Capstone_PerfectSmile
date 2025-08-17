@@ -8,6 +8,15 @@ class CreateDentalChartTable extends Migration
 {
     public function up()
     {
+        // Skip if table already exists
+        try {
+            $tables = method_exists($this->db, 'listTables') ? $this->db->listTables() : [];
+            if (is_array($tables) && in_array('dental_chart', $tables, true)) {
+                return;
+            }
+        } catch (\Throwable $e) {
+            // If we can't check, proceed and rely on try/catch below
+        }
         $this->forge->addField([
             'id' => [
                 'type' => 'INT',
@@ -77,15 +86,24 @@ class CreateDentalChartTable extends Migration
         $this->forge->addKey('dental_record_id');
         $this->forge->addKey('tooth_number');
         
-        $this->forge->createTable('dental_chart');
+    $this->forge->createTable('dental_chart');
         
-        // Add foreign key constraints
-        $this->db->query('ALTER TABLE dental_chart ADD CONSTRAINT fk_dental_chart_record FOREIGN KEY (dental_record_id) REFERENCES dental_record (id) ON DELETE CASCADE ON UPDATE CASCADE');
-        $this->db->query('ALTER TABLE dental_chart ADD CONSTRAINT fk_dental_chart_service FOREIGN KEY (recommended_service_id) REFERENCES services (id) ON DELETE SET NULL ON UPDATE CASCADE');
+        // Add foreign key constraints (best-effort)
+        try {
+            $this->db->query('ALTER TABLE dental_chart ADD CONSTRAINT fk_dental_chart_record FOREIGN KEY (dental_record_id) REFERENCES dental_record (id) ON DELETE CASCADE ON UPDATE CASCADE');
+        } catch (\Throwable $e) {
+            // ignore
+        }
+        try {
+            $this->db->query('ALTER TABLE dental_chart ADD CONSTRAINT fk_dental_chart_service FOREIGN KEY (recommended_service_id) REFERENCES services (id) ON DELETE SET NULL ON UPDATE CASCADE');
+        } catch (\Throwable $e) {
+            // ignore
+        }
     }
 
     public function down()
     {
-        $this->forge->dropTable('dental_chart');
+    // Drop with IF EXISTS to avoid errors if it's already gone
+    $this->forge->dropTable('dental_chart', true);
     }
 }

@@ -21,7 +21,7 @@ class DentalController extends BaseAdminController
     // ==================== DENTAL RECORDS ====================
     
     /**
-     * View all dental records
+     * View all dental records grouped by patient
      */
     public function dentalRecords()
     {
@@ -34,12 +34,44 @@ class DentalController extends BaseAdminController
         $appointmentModel = new \App\Models\AppointmentModel();
         
         // Get all dental records with patient and dentist information
-        $records = $dentalRecordModel->select('dental_record.*, patient.name as patient_name, patient.email as patient_email, dentist.name as dentist_name, appointments.appointment_datetime')
-                                   ->join('user as patient', 'patient.id = dental_record.user_id')
-                                   ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
-                                   ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
-                                   ->orderBy('record_date', 'DESC')
-                                   ->findAll();
+        $allRecords = $dentalRecordModel->select('dental_record.*, patient.name as patient_name, patient.email as patient_email, patient.phone as patient_phone, dentist.name as dentist_name, appointments.appointment_datetime')
+                                       ->join('user as patient', 'patient.id = dental_record.user_id')
+                                       ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
+                                       ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
+                                       ->orderBy('record_date', 'DESC')
+                                       ->findAll();
+
+        // Group records by patient
+        $patientRecords = [];
+        foreach ($allRecords as $record) {
+            $patientId = $record['user_id'];
+            
+            if (!isset($patientRecords[$patientId])) {
+                $patientRecords[$patientId] = [
+                    'patient_id' => $patientId,
+                    'patient_name' => $record['patient_name'],
+                    'patient_email' => $record['patient_email'],
+                    'patient_phone' => $record['patient_phone'],
+                    'total_records' => 0,
+                    'latest_record_date' => null,
+                    'records' => []
+                ];
+            }
+            
+            $patientRecords[$patientId]['records'][] = $record;
+            $patientRecords[$patientId]['total_records']++;
+            
+            // Track latest record date
+            if (!$patientRecords[$patientId]['latest_record_date'] || 
+                $record['record_date'] > $patientRecords[$patientId]['latest_record_date']) {
+                $patientRecords[$patientId]['latest_record_date'] = $record['record_date'];
+            }
+        }
+
+        // Sort patients by latest record date (most recent first)
+        uasort($patientRecords, function($a, $b) {
+            return strtotime($b['latest_record_date']) - strtotime($a['latest_record_date']);
+        });
 
         // Get appointments without dental records (only approved appointments)
         $appointmentsWithoutRecords = $appointmentModel->select('appointments.*, patient.name as patient_name, dentist.name as dentist_name, branches.name as branch_name')
@@ -56,9 +88,17 @@ class DentalController extends BaseAdminController
 
         return view('admin/dental/records', [
             'user' => $user,
-            'records' => $records,
+            'patientRecords' => $patientRecords,
             'appointmentsWithoutRecords' => $appointmentsWithoutRecords
         ]);
+    }
+
+    /**
+     * Alias method for route compatibility
+     */
+    public function records()
+    {
+        return $this->dentalRecords();
     }
 
     /**

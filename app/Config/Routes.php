@@ -72,6 +72,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('dental-records/create/(:num)', 'DentalController::createRecord/$1'); // → dental/create_record.php
     $routes->post('dental-records/store-basic', 'DentalController::storeBasicDentalRecord');
     $routes->get('dental-records/(:num)', 'DentalController::viewRecord/$1'); // → dental/view_record.php
+    $routes->get('dental/record/(:num)', 'DentalController::viewRecord/$1'); // Alternative route for admin/dental/record/ID
     $routes->get('dental-charts', 'DentalController::charts'); // → dental/charts.php
     $routes->get('dental-charts/(:num)', 'DentalController::viewChart/$1'); // → dental/view_chart.php
     $routes->get('dental-charts/create/(:num)', 'DentalController::createChart/$1'); // → dental/create_chart.php
