@@ -494,14 +494,17 @@ class AdminController extends BaseAdminController
             'age' => !empty($formData['age']) ? (int)$formData['age'] : null
         ];
 
-        $userId = $userModel->insert($userData);
+        try {
+            $userId = $userModel->insert($userData, true); // second param TRUE returns inserted ID or throws
+        } catch (\Throwable $e) {
+            log_message('error', 'storeUser DB exception: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Database exception: ' . $e->getMessage());
+        }
 
         if ($userId) {
-            // Assign branches
             $branches = $formData['branches'] ?? [];
-            $position = $formData['position'] ?? 'Staff';
-            
-            // Set default position based on user type if position is empty
+            $position = $formData['position'] ?? '';
+
             if (empty($position)) {
                 switch ($formData['user_type']) {
                     case 'dentist':
@@ -515,19 +518,37 @@ class AdminController extends BaseAdminController
                         break;
                 }
             }
-            
+
+            // Assign branches with error capture
             foreach ($branches as $branchId) {
-                $branchUserModel->insert([
+                if (!$branchUserModel->insert([
                     'user_id' => $userId,
                     'branch_id' => $branchId,
                     'position' => $position
-                ]);
+                ])) {
+                    log_message('error', 'Branch assignment failed for user ' . $userId . ' branch ' . $branchId . ' errors: ' . json_encode($branchUserModel->errors()));
+                }
             }
 
             return redirect()->to('/admin/users')->with('success', 'User created successfully.');
         }
 
-        return redirect()->back()->withInput()->with('error', 'Failed to create user.');
+        // Gather model errors & DB error
+        $modelErrors = $userModel->errors();
+        $dbError = $userModel->db()->error();
+        $errorParts = [];
+        if (!empty($modelErrors)) {
+            $errorParts[] = 'Validation: ' . implode('; ', array_filter($modelErrors));
+        }
+        if (!empty($dbError['code'])) {
+            $errorParts[] = 'DB[' . $dbError['code'] . ']: ' . $dbError['message'];
+        }
+        if (empty($errorParts)) {
+            $errorParts[] = 'Unknown insert failure.';
+        }
+        $detail = implode(' | ', $errorParts);
+        log_message('error', 'User insert failed: ' . $detail . ' Data: ' . json_encode($userData));
+        return redirect()->back()->withInput()->with('error', 'Failed to create user. ' . $detail);
     }
 
     public function editUser($id)
