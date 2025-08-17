@@ -91,10 +91,18 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
-    $routes->get('procedures', 'AdminController::procedures'); // → management/procedures.php
     $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
     $routes->get('branches', 'AdminController::branches'); // → management/branches.php
     $routes->get('settings', 'AdminController::settings'); // → management/settings.php
+    
+    // Procedure management routes
+    $routes->get('procedures', 'Admin\ProcedureController::index');
+    $routes->get('procedures/create', 'Admin\ProcedureController::create');
+    $routes->post('procedures/store', 'Admin\ProcedureController::store');
+    $routes->get('procedures/show/(:num)', 'Admin\ProcedureController::show/$1'); // Uses combined view/edit page
+    $routes->get('procedures/edit/(:num)', 'Admin\ProcedureController::edit/$1'); // Uses combined view/edit page
+    $routes->post('procedures/update/(:num)', 'Admin\ProcedureController::update/$1');
+    $routes->delete('procedures/delete/(:num)', 'Admin\ProcedureController::delete/$1');
     
     // Users management routes
     $routes->get('users', 'AdminController::users'); // → users/index.php
@@ -106,7 +114,6 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('users/delete/(:num)', 'AdminController::deleteUser/$1');
     
     // Billing routes
-    $routes->get('invoice', 'AdminController::invoice'); // → billing/invoice.php
 });
 
 // Checkup routes (accessible by admin and doctor)

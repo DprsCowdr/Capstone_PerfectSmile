@@ -10,17 +10,22 @@ class ProcedureModel extends Model
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
-    protected $useSoftDeletes   = false;
+    protected $useSoftDeletes   = true;
     protected $protectFields    = true;
     protected $allowedFields    = [
         'user_id',
         'procedure_name',
+        'title',
         'description',
-        'procedure_date'
+        'category',
+        'fee',
+        'treatment_area',
+        'procedure_date',
+        'status'
     ];
 
     // Dates
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
     protected $dateFormat    = 'datetime';
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
@@ -97,5 +102,16 @@ class ProcedureModel extends Model
 
         $db->transComplete();
         return $db->transStatus() ? $procedureId : false;
+    }
+        /**
+     * Update a procedure record securely
+     */
+    public function updateProcedure($id, $data)
+    {
+        $db = \Config\Database::connect();
+        $db->transStart();
+        $this->where('id', $id)->set($data)->update();
+        $db->transComplete();
+        return $db->transStatus();
     }
 }
