@@ -284,6 +284,8 @@ class AppointmentModel extends Model
     public function getTodayAppointments($dentistId = null)
     {
         $today = date('Y-m-d');
+        log_message('info', "Getting today's appointments for date: {$today}, dentist: " . ($dentistId ?: 'all'));
+        
         $query = $this->select('appointments.*, 
                                user.name as patient_name, 
                                user.email as patient_email, 
@@ -301,6 +303,16 @@ class AppointmentModel extends Model
         }
         
         $results = $query->findAll();
+        log_message('info', "Found " . count($results) . " appointments for today");
+        
+        if (count($results) === 0) {
+            // Debug: Check what appointments exist with different criteria
+            $debugQuery = $this->select('id, appointment_datetime, status, approval_status, dentist_id')
+                               ->where('DATE(appointments.appointment_datetime)', $today)
+                               ->findAll();
+            log_message('info', "Debug - All appointments for today (any status): " . json_encode($debugQuery));
+        }
+        
         return array_map([$this, 'splitDateTime'], $results);
     }
 

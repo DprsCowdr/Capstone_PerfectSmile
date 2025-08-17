@@ -16,7 +16,7 @@ class PatientModel extends Model
         'treatment_condition', 'serious_illness', 'illness_details', 'hospitalized',
         'hospitalization_where', 'hospitalization_when', 'hospitalization_why',
         'tobacco_use', 'blood_pressure', 'allergies', 'pregnant', 'nursing',
-        'birth_control', 'medical_conditions', 'other_conditions', 'medical_history_updated_at'
+        'birth_control', 'other_conditions', 'medical_history_updated_at'
     );
     
     protected $useTimestamps = true;

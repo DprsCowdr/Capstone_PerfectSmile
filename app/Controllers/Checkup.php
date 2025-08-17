@@ -199,17 +199,21 @@ class Checkup extends BaseController
 
         try {
             $db = \Config\Database::connect();
-            $db->transStart();
+            
+            // Use manual transaction for better error handling
+            $db->query('START TRANSACTION');
+            log_message('info', 'Transaction started manually');
 
             // Get or create patient record (user record with medical history)
             $patient = $this->patientModel->getPatientWithMedicalHistory($appointment['user_id']);
             $patientId = $appointment['user_id']; // Use existing user_id as patient_id
 
-            // Collect medical history data from the form
+            // Collect medical history data from the form - stored in patient_medical_history
             $medicalHistoryData = [
                 'previous_dentist' => $this->request->getPost('previous_dentist'),
                 'last_dental_visit' => $this->request->getPost('last_dental_visit'),
                 'physician_name' => $this->request->getPost('physician_name'),
+                // Detailed fields maintained in dedicated table
                 'physician_specialty' => $this->request->getPost('physician_specialty'),
                 'physician_phone' => $this->request->getPost('physician_phone'),
                 'physician_address' => $this->request->getPost('physician_address'),
@@ -228,8 +232,13 @@ class Checkup extends BaseController
                 'pregnant' => $this->request->getPost('pregnant'),
                 'nursing' => $this->request->getPost('nursing'),
                 'birth_control' => $this->request->getPost('birth_control'),
+                // Multi-select JSON array
                 'medical_conditions' => $this->request->getPost('medical_conditions') ?: [],
                 'other_conditions' => $this->request->getPost('other_conditions'),
+                // Notes
+                'current_treatment' => $this->request->getPost('current_treatment'),
+                'hospitalization_details' => $this->request->getPost('hospitalization_details'),
+                'special_notes' => $this->request->getPost('notes_special') ?: null,
             ];
 
             // Remove empty values to avoid unnecessary database updates
@@ -278,7 +287,9 @@ class Checkup extends BaseController
                 log_message('info', "Checkup save - Chart save result: " . ($chartSaveResult ? 'success' : 'failed'));
                 
                 if (!$chartSaveResult) {
+                    $dbError = $db->error();
                     log_message('error', "Failed to save dental chart for record ID: {$recordId}");
+                    log_message('error', "DB Error (chart insertBatch): " . json_encode($dbError));
                 }
             } else {
                 log_message('info', "Checkup save - No chart data received or invalid format");
@@ -304,21 +315,38 @@ class Checkup extends BaseController
                 
                 if ($newAppointmentId) {
                     // Update the dental record with the new appointment ID
-                    $this->dentalRecordModel->update($recordId, [
+                    log_message('info', "Attempting to update record {$recordId} with next_appointment_id: {$newAppointmentId}");
+                    
+                    $updateResult = $this->dentalRecordModel->update($recordId, [
                         'next_appointment_id' => $newAppointmentId
                     ]);
+                    
+                    if ($updateResult === false) {
+                        $dbError = $db->error();
+                        log_message('error', "Failed to update dental_record with next_appointment_id for record ID: {$recordId}");
+                        log_message('error', "DB Error (update dental_record): " . json_encode($dbError));
+                        log_message('error', "Last executed query: " . $db->getLastQuery());
+                    } else {
+                        log_message('info', "Successfully updated record {$recordId} with next_appointment_id: {$newAppointmentId}");
+                    }
                     log_message('info', "Created follow-up appointment ID: {$newAppointmentId}");
                 }
             }
 
             // Complete the appointment
-            $this->appointmentModel->completeCheckup($appointmentId);
-
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                throw new \Exception('Database transaction failed.');
+            log_message('info', "Attempting to complete checkup for appointment ID: {$appointmentId}");
+            $completeResult = $this->appointmentModel->completeCheckup($appointmentId);
+            if ($completeResult === false) {
+                $dbError = $db->error();
+                log_message('error', "Failed to complete checkup for appointment ID: {$appointmentId}");
+                log_message('error', "DB Error (completeCheckup): " . json_encode($dbError));
+            } else {
+                log_message('info', "Successfully completed checkup for appointment ID: {$appointmentId}");
             }
+
+            // Commit transaction manually
+            $db->query('COMMIT');
+            log_message('info', 'Transaction committed successfully');
 
             $successMessage = 'Checkup completed and all data saved successfully.';
             if ($nextAppointmentDate && $nextAppointmentTime) {
@@ -329,6 +357,9 @@ class Checkup extends BaseController
             return redirect()->to('/checkup')->with('success', $successMessage);
 
         } catch (\Exception $e) {
+            // Rollback transaction on error
+            $db->query('ROLLBACK');
+            log_message('error', "Transaction rolled back due to error: " . $e->getMessage());
             log_message('error', "Error saving checkup data: " . $e->getMessage());
             return redirect()->back()->withInput()->with('error', 'Failed to save checkup data: ' . $e->getMessage());
         }

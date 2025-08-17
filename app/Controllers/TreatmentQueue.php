@@ -28,7 +28,7 @@ class TreatmentQueue extends BaseController
         }
 
         // Get checked-in patients waiting for treatment
-        $waitingQuery = $this->appointmentModel
+        $waitingPatients = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, user.phone as patient_phone, 
                      TIMESTAMPDIFF(MINUTE, checked_in_at, NOW()) as waiting_time')
             ->join('user', 'user.id = appointments.user_id')
@@ -39,7 +39,7 @@ class TreatmentQueue extends BaseController
             ->findAll();
 
         // Get ongoing treatments
-        $ongoingQuery = $this->appointmentModel
+        $ongoingTreatments = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, 
                      TIMESTAMPDIFF(MINUTE, started_at, NOW()) as treatment_duration')
             ->join('user', 'user.id = appointments.user_id')
