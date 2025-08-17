@@ -28,8 +28,11 @@ class Database extends Config
         'DSN'          => '',
         'hostname'     => '127.0.0.1',
         'username'     => 'root',
-        'password'     => '',
+        'password'     => 'root',
+
+
         'database'     => 'perfectsmile_db',
+
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,

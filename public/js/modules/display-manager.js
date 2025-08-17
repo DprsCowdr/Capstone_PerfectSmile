@@ -17,221 +17,143 @@ class DisplayManager {
 
     generatePatientInfoHTML(patient) {
         return `
-            <div class="bg-white">
-                <!-- Patient Header -->
+            <div class="bg-white text-[13px] leading-relaxed">
                 ${this.generatePatientHeader(patient)}
-
-                <!-- Personal Information Section -->
-                ${this.generatePersonalInfoSection(patient)}
-
-                <!-- Medical History Section -->
-                ${this.generateMedicalHistorySection(patient)}
-
-                <!-- Dental History Section -->
-                ${this.generateDentalHistorySection(patient)}
-
-                <!-- Recent Records Summary -->
-                ${this.generateRecentRecordsSummary(patient)}
-
-                <!-- Notes Section -->
-                ${this.generateNotesSection(patient)}
-            </div>
-        `;
+                <div class="space-y-8">
+                    ${this.generatePersonalInfoSection(patient)}
+                    ${this.generateMedicalHistorySection(patient)}
+                    ${this.generateDentalHistorySection(patient)}
+                    ${this.generateRecentRecordsSummary(patient)}
+                    ${this.generateNotesSection(patient)}
+                </div>
+            </div>`;
     }
 
     generatePatientHeader(patient) {
         return `
-            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg mb-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mr-6">
-                            <i class="fas fa-user fa-3x text-blue-600"></i>
+            <div class="mb-6 border border-gray-200 rounded-md p-4 bg-gray-50">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                            <i class="fas fa-user text-xl"></i>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-800">${patient.name}</h2>
-                            <p class="text-gray-600 text-lg">Patient ID: ${patient.id}</p>
-                            <div class="flex items-center mt-2">
-                                <span class="px-3 py-1 text-sm font-semibold rounded-full ${
-                                    patient.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }">${patient.status || 'Active'}</span>
-                                <span class="ml-3 px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full">
-                                    <i class="fas fa-calendar mr-1"></i>
-                                    Patient since ${patient.created_at ? new Date(patient.created_at).getFullYear() : 'N/A'}
-                                </span>
+                            <h2 class="text-base font-semibold text-gray-800 tracking-tight">${patient.name}</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Patient ID: ${patient.id}</p>
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <span class="px-2 py-0.5 text-[11px] font-medium rounded-full ${patient.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${patient.status || 'Active'}</span>
+                                <span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-blue-100 text-blue-700"><i class="fas fa-calendar mr-1"></i>${patient.created_at ? new Date(patient.created_at).getFullYear() : 'N/A'}</span>
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mr-2 transition-colors">
-                            <i class="fas fa-print mr-2"></i>Print Records
-                        </button>
-                        <button onclick="recordsManager.exportPatientData(${patient.id})" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
-                            <i class="fas fa-download mr-2"></i>Export PDF
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.print()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium rounded-md">Print</button>
+                        <button onclick="recordsManager.exportPatientData(${patient.id})" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-medium rounded-md border border-blue-200">Export</button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
     generatePersonalInfoSection(patient) {
         return `
-            <div class="mb-8">
-                <div class="flex items-center mb-4">
-                    <i class="fas fa-user-circle text-blue-600 text-xl mr-3"></i>
-                    <h3 class="text-xl font-bold text-gray-800">Personal Information</h3>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Full Name', patient.name)}
-                            ${this.generateInfoField('Date of Birth', patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A')}
-                            ${this.generateInfoField('Age', patient.age ? `${patient.age} years old` : 'N/A')}
-                        </div>
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Email Address', patient.email)}
-                            ${this.generateInfoField('Phone Number', patient.phone)}
-                            ${this.generateInfoField('Gender', patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'N/A')}
-                        </div>
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Occupation', patient.occupation)}
-                            ${this.generateInfoField('Emergency Contact', patient.emergency_contact)}
-                            ${this.generateInfoField('Insurance Provider', patient.insurance_provider)}
-                        </div>
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-id-card text-blue-500"></i>Personal</h3>
+                <div class="border border-gray-200 rounded-md p-4 bg-white">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        ${this.generateInfoField('Full Name', patient.name)}
+                        ${this.generateInfoField('Date of Birth', patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A')}
+                        ${this.generateInfoField('Age', patient.age ? `${patient.age} yrs` : 'N/A')}
+                        ${this.generateInfoField('Email', patient.email)}
+                        ${this.generateInfoField('Phone', patient.phone)}
+                        ${this.generateInfoField('Gender', patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : 'N/A')}
+                        ${this.generateInfoField('Occupation', patient.occupation)}
+                        ${this.generateInfoField('Emergency Contact', patient.emergency_contact)}
+                        ${this.generateInfoField('Insurance', patient.insurance_provider)}
                     </div>
-                    <div class="mt-6">
+                    <div class="mt-4 pt-4 border-t border-gray-100">
                         ${this.generateInfoField('Address', patient.address, 'block')}
                     </div>
                 </div>
-            </div>
-        `;
+            </section>`;
     }
 
     generateMedicalHistorySection(patient) {
         return `
-            <div class="mb-8">
-                <div class="flex items-center mb-4">
-                    <i class="fas fa-file-medical text-red-600 text-xl mr-3"></i>
-                    <h3 class="text-xl font-bold text-gray-800">Medical History</h3>
-                </div>
-                <div class="bg-red-50 rounded-lg p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Primary Physician', patient.physician_name || 'Not specified')}
-                            ${this.generateInfoField('Physician Specialty', patient.physician_specialty || 'Not specified')}
-                            ${this.generateInfoField('Physician Contact', patient.physician_phone || 'Not provided')}
-                            ${this.generateInfoField('Blood Pressure', patient.blood_pressure || 'Not recorded')}
-                        </div>
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Allergies', patient.allergies || 'None reported')}
-                            ${this.generateInfoField('Current Medications', patient.medications || 'None reported')}
-                            ${this.generateInfoField('Tobacco Use', patient.tobacco_use === 'yes' ? 'Yes' : patient.tobacco_use === 'no' ? 'No' : 'Not specified')}
-                            ${this.generateInfoField('General Health Status', patient.good_health === 'yes' ? 'Good Health' : patient.good_health === 'no' ? 'Health Issues Reported' : 'Not specified')}
-                        </div>
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-heartbeat text-blue-500"></i>Medical</h3>
+                <div class="border border-gray-200 rounded-md p-4 bg-white">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${this.generateInfoField('Physician', patient.physician_name || 'N/A')}
+                        ${this.generateInfoField('Specialty', patient.physician_specialty || 'N/A')}
+                        ${this.generateInfoField('Physician Phone', patient.physician_phone || 'N/A')}
+                        ${this.generateInfoField('Blood Pressure', patient.blood_pressure || 'N/A')}
+                        ${this.generateInfoField('Allergies', patient.allergies || 'None')}
+                        ${this.generateInfoField('Medications', patient.medications || 'None')}
+                        ${this.generateInfoField('Tobacco', patient.tobacco_use === 'yes' ? 'Yes' : patient.tobacco_use === 'no' ? 'No' : 'N/A')}
+                        ${this.generateInfoField('General Health', patient.good_health === 'yes' ? 'Good' : patient.good_health === 'no' ? 'Issues' : 'N/A')}
                     </div>
-                    ${patient.medical_conditions ? `
-                    <div class="mt-6">
-                        <label class="block text-sm font-medium text-gray-600 mb-2">Medical Conditions</label>
-                        <div class="bg-white rounded-lg p-4">
-                            <p class="text-gray-900">${patient.medical_conditions}</p>
-                        </div>
-                    </div>
-                    ` : ''}
+                    ${patient.medical_conditions ? `<div class='mt-4 pt-4 border-t border-gray-100'>${this.generateInfoField('Medical Conditions', patient.medical_conditions, 'block')}</div>` : ''}
                 </div>
-            </div>
-        `;
+            </section>`;
     }
 
     generateDentalHistorySection(patient) {
         return `
-            <div class="mb-8">
-                <div class="flex items-center mb-4">
-                    <i class="fas fa-tooth text-blue-600 text-xl mr-3"></i>
-                    <h3 class="text-xl font-bold text-gray-800">Dental History</h3>
-                </div>
-                <div class="bg-blue-50 rounded-lg p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Previous Dentist', patient.previous_dentist || 'Not specified')}
-                            ${this.generateInfoField('Last Dental Visit', patient.last_dental_visit ? new Date(patient.last_dental_visit).toLocaleDateString() : 'Not specified')}
-                            ${this.generateInfoField('Dental Concerns', patient.dental_concerns || 'None reported')}
-                        </div>
-                        <div class="space-y-4">
-                            ${this.generateInfoField('Brushing Frequency', patient.brushing_frequency || 'Not specified')}
-                            ${this.generateInfoField('Flossing Frequency', patient.flossing_frequency || 'Not specified')}
-                            ${this.generateInfoField('Dental Pain/Sensitivity', patient.dental_pain === 'yes' ? 'Yes' : patient.dental_pain === 'no' ? 'No' : 'Not specified')}
-                        </div>
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-tooth text-blue-500"></i>Dental</h3>
+                <div class="border border-gray-200 rounded-md p-4 bg-white">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        ${this.generateInfoField('Previous Dentist', patient.previous_dentist || 'N/A')}
+                        ${this.generateInfoField('Last Visit', patient.last_dental_visit ? new Date(patient.last_dental_visit).toLocaleDateString() : 'N/A')}
+                        ${this.generateInfoField('Concerns', patient.dental_concerns || 'None')}
+                        ${this.generateInfoField('Brushing', patient.brushing_frequency || 'N/A')}
+                        ${this.generateInfoField('Flossing', patient.flossing_frequency || 'N/A')}
+                        ${this.generateInfoField('Pain/Sensitivity', patient.dental_pain === 'yes' ? 'Yes' : patient.dental_pain === 'no' ? 'No' : 'N/A')}
                     </div>
                 </div>
-            </div>
-        `;
+            </section>`;
     }
 
     generateRecentRecordsSummary(patient) {
         return `
-            <div class="mb-8">
-                <div class="flex items-center mb-4">
-                    <i class="fas fa-clipboard-list text-green-600 text-xl mr-3"></i>
-                    <h3 class="text-xl font-bold text-gray-800">Recent Visits Summary</h3>
-                </div>
-                <div class="bg-green-50 rounded-lg p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="text-center">
-                            <div class="text-3xl font-bold text-green-600">${patient.total_visits || '0'}</div>
-                            <div class="text-sm text-gray-600">Total Visits</div>
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-500"></i>Visits</h3>
+                <div class="border border-gray-200 rounded-md p-4 bg-white">
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-base font-semibold text-gray-800">${patient.total_visits || '0'}</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Total</div>
                         </div>
-                        <div class="text-center">
-                            <div class="text-3xl font-bold text-blue-600">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'N/A'}</div>
-                            <div class="text-sm text-gray-600">Last Visit</div>
+                        <div>
+                            <div class="text-base font-semibold text-gray-800">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'N/A'}</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Last</div>
                         </div>
-                        <div class="text-center">
-                            <div class="text-3xl font-bold text-purple-600">${patient.next_appointment_date ? new Date(patient.next_appointment_date).toLocaleDateString() : 'N/A'}</div>
-                            <div class="text-sm text-gray-600">Next Appointment</div>
+                        <div>
+                            <div class="text-base font-semibold text-gray-800">${patient.next_appointment_date ? new Date(patient.next_appointment_date).toLocaleDateString() : 'N/A'}</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Next</div>
                         </div>
                     </div>
-                    ${patient.last_diagnosis ? `
-                    <div class="mt-6 bg-white rounded-lg p-4">
-                        <label class="block text-sm font-medium text-gray-600 mb-2">Last Diagnosis</label>
-                        <p class="text-gray-900">${patient.last_diagnosis}</p>
-                    </div>
-                    ` : ''}
+                    ${patient.last_diagnosis ? `<div class='mt-4 pt-4 border-t border-gray-100'>${this.generateInfoField('Last Diagnosis', patient.last_diagnosis, 'block')}</div>` : ''}
                 </div>
-            </div>
-        `;
+            </section>`;
     }
 
     generateNotesSection(patient) {
         return `
-            <div class="mb-6">
-                <div class="flex items-center mb-4">
-                    <i class="fas fa-sticky-note text-indigo-600 text-xl mr-3"></i>
-                    <h3 class="text-xl font-bold text-gray-800">Patient Notes & Special Instructions</h3>
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-note-sticky text-blue-500"></i>Notes</h3>
+                <div class="border border-gray-200 rounded-md p-4 bg-white" data-patient-notes>
+                    <p class="text-gray-700">${patient.special_notes || 'No special notes recorded.'}</p>
                 </div>
-                <div class="bg-indigo-50 rounded-lg p-6">
-                    <div class="bg-white rounded-lg p-4" data-patient-notes>
-                        <p class="text-gray-900">${patient.special_notes || 'No special notes recorded for this patient.'}</p>
-                    </div>
-                </div>
-            </div>
-        `;
+            </section>`;
     }
 
     generateInfoField(label, value, type = 'inline') {
+        const val = value || 'N/A';
         if (type === 'block') {
-            return `
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">${label}</label>
-                    <p class="text-gray-900">${value || 'N/A'}</p>
-                </div>
-            `;
+            return `<div><p class="text-[11px] uppercase tracking-wide text-gray-500 mb-1">${label}</p><p class="text-[13px] text-gray-800">${val}</p></div>`;
         }
-        
-        return `
-            <div>
-                <label class="block text-sm font-medium text-gray-600 mb-1">${label}</label>
-                <p class="text-gray-900 font-semibold">${value || 'N/A'}</p>
-            </div>
-        `;
+        return `<div><p class="text-[11px] uppercase tracking-wide text-gray-500 mb-1">${label}</p><p class="text-[13px] font-medium text-gray-800">${val}</p></div>`;
     }
 
     // ==================== DENTAL RECORDS DISPLAY ====================

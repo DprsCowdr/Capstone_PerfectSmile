@@ -439,6 +439,7 @@ class AdminController extends BaseAdminController
         return view('admin/users/add', [
             'user' => $user,
             'branches' => $branches
+            //done
         ]);
     }
 
@@ -485,14 +486,17 @@ class AdminController extends BaseAdminController
             'age' => !empty($formData['age']) ? (int)$formData['age'] : null
         ];
 
-        $userId = $userModel->insert($userData);
+        try {
+            $userId = $userModel->insert($userData, true); // second param TRUE returns inserted ID or throws
+        } catch (\Throwable $e) {
+            log_message('error', 'storeUser DB exception: ' . $e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Database exception: ' . $e->getMessage());
+        }
 
         if ($userId) {
-            // Assign branches
             $branches = $formData['branches'] ?? [];
-            $position = $formData['position'] ?? 'Staff';
-            
-            // Set default position based on user type if position is empty
+            $position = $formData['position'] ?? '';
+
             if (empty($position)) {
                 switch ($formData['user_type']) {
                     case 'dentist':
@@ -506,19 +510,37 @@ class AdminController extends BaseAdminController
                         break;
                 }
             }
-            
+
+            // Assign branches with error capture
             foreach ($branches as $branchId) {
-                $branchUserModel->insert([
+                if (!$branchUserModel->insert([
                     'user_id' => $userId,
                     'branch_id' => $branchId,
                     'position' => $position
-                ]);
+                ])) {
+                    log_message('error', 'Branch assignment failed for user ' . $userId . ' branch ' . $branchId . ' errors: ' . json_encode($branchUserModel->errors()));
+                }
             }
 
             return redirect()->to('/admin/users')->with('success', 'User created successfully.');
         }
 
-        return redirect()->back()->withInput()->with('error', 'Failed to create user.');
+        // Gather model errors & DB error
+        $modelErrors = $userModel->errors();
+        $dbError = $userModel->db()->error();
+        $errorParts = [];
+        if (!empty($modelErrors)) {
+            $errorParts[] = 'Validation: ' . implode('; ', array_filter($modelErrors));
+        }
+        if (!empty($dbError['code'])) {
+            $errorParts[] = 'DB[' . $dbError['code'] . ']: ' . $dbError['message'];
+        }
+        if (empty($errorParts)) {
+            $errorParts[] = 'Unknown insert failure.';
+        }
+        $detail = implode(' | ', $errorParts);
+        log_message('error', 'User insert failed: ' . $detail . ' Data: ' . json_encode($userData));
+        return redirect()->back()->withInput()->with('error', 'Failed to create user. ' . $detail);
     }
 
     public function editUser($id)
@@ -724,467 +746,130 @@ class AdminController extends BaseAdminController
         return $query;
     }
 
-    // ==================== PATIENT RECORDS POPUP ====================
-    
-    /**
-     * Get comprehensive patient information for popup including medical history, dental summary, etc.
-     */
-    public function getPatientInfo($patientId)
+    // ==================== PATIENT MODAL API ENDPOINTS ====================
+    public function getPatientInfo($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
 
-        try {
-            $userModel = new \App\Models\UserModel();
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
-            $appointmentModel = new \App\Models\AppointmentModel();
-            
-            // Get basic patient info
-            $patient = $userModel->where('id', $patientId)
-                                ->where('user_type', 'patient')
-                                ->first();
+        $userModel = new \App\Models\UserModel();
+        $patient = $userModel->find($id);
+        if (!$patient || ($patient['user_type'] ?? null) !== 'patient') {
+            return $this->response->setJSON(['error' => 'Patient not found'], 404);
+        }
 
-            if (!$patient) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Patient not found']);
-            }
+        $medicalFields = [
+            'previous_dentist','last_dental_visit','physician_name','physician_specialty',
+            'physician_phone','good_health','under_treatment','treatment_condition',
+            'serious_illness','illness_details','hospitalized','hospitalization_where',
+            'hospitalization_when','hospitalization_why','tobacco_use','blood_pressure',
+            'allergies','pregnant','nursing','birth_control','medical_conditions',
+            'other_conditions','special_notes'
+        ];
+        $medical = [];
+        foreach ($medicalFields as $f) {
+            $medical[$f] = $patient[$f] ?? null;
+        }
 
-            // Get dental records summary
-            $dentalRecords = $dentalRecordModel->select('dental_record.*, user.name as dentist_name')
-                                             ->join('user', 'user.id = dental_record.dentist_id', 'left')
-                                             ->where('dental_record.user_id', $patientId)
-                                             ->orderBy('dental_record.record_date', 'DESC')
-                                             ->limit(5)
-                                             ->findAll();
-
-            // Get appointment statistics
-            $totalVisits = $appointmentModel->where('user_id', $patientId)
-                                          ->where('status', 'completed')
-                                          ->countAllResults();
-
-            $lastVisit = $appointmentModel->where('user_id', $patientId)
-                                        ->where('status', 'completed')
-                                        ->orderBy('appointment_datetime', 'DESC')
-                                        ->first();
-
-            $nextAppointment = $appointmentModel->where('user_id', $patientId)
-                                              ->where('status', 'scheduled')
-                                              ->where('appointment_datetime >=', date('Y-m-d H:i:s'))
-                                              ->orderBy('appointment_datetime', 'ASC')
-                                              ->first();
-
-            // Get last diagnosis from most recent dental record
-            $lastDiagnosis = '';
-            if (!empty($dentalRecords)) {
-                $lastDiagnosis = $dentalRecords[0]['diagnosis'] ?? '';
-            }
-
-            // Format comprehensive patient data (using only available fields)
-            $patientData = [
-                // Basic Information (from user table)
+        return $this->response->setJSON([
+            'success' => true,
+            'patient' => [
                 'id' => $patient['id'],
                 'name' => $patient['name'],
                 'email' => $patient['email'],
                 'phone' => $patient['phone'],
-                'address' => $patient['address'],
-                'date_of_birth' => $patient['date_of_birth'],
                 'gender' => $patient['gender'],
+                'address' => $patient['address'],
                 'age' => $patient['age'],
-                'occupation' => $patient['occupation'],
-                'nationality' => $patient['nationality'],
-                'status' => $patient['status'],
-                'created_at' => $patient['created_at'],
-
-                // Visit Statistics
-                'total_visits' => $totalVisits,
-                'last_visit_date' => $lastVisit['appointment_datetime'] ?? null,
-                'next_appointment_date' => $nextAppointment['appointment_datetime'] ?? null,
-                'last_diagnosis' => $lastDiagnosis,
-
-                // Special Notes (from user table)
-                'special_notes' => $patient['special_notes'] ?? null,
-            ];
-
-            return $this->response->setJSON([
-                'success' => true,
-                'patient' => $patientData,
-                'recent_records' => $dentalRecords
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error fetching comprehensive patient info: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error fetching patient information: ' . $e->getMessage()]);
-        }
+            ],
+            'medical' => $medical
+        ]);
     }
 
-    /**
-     * Get patient dental records
-     */
-    public function getPatientDentalRecords($patientId)
+    public function updatePatientNotes($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'], 401);
         }
-
-        try {
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
-            
-            $records = $dentalRecordModel->select('dental_record.*, dentist.name as dentist_name')
-                                       ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
-                                       ->where('dental_record.user_id', $patientId)
-                                       ->orderBy('record_date', 'DESC')
-                                       ->findAll();
-
-            return $this->response->setJSON([
-                'success' => true,
-                'records' => $records
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error fetching dental records: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error fetching dental records: ' . $e->getMessage()]);
+        $notes = $this->request->getPost('special_notes');
+        $userModel = new \App\Models\UserModel();
+        if (!$userModel->find($id)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Patient not found'], 404);
         }
+        $userModel->update($id, ['special_notes' => $notes]);
+        return $this->response->setJSON(['success' => true]);
     }
 
-    /**
-     * Get patient dental chart with complete tooth information
-     */
-    public function getPatientDentalChart($patientId)
+    public function getPatientDentalRecords($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
-
-        try {
-            $dentalChartModel = new \App\Models\DentalChartModel();
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
-            $serviceModel = new \App\Models\ServiceModel();
-            
-            // Get dental chart data with related record and service information
-            $chartData = $dentalChartModel->select('dental_chart.*,
-                                                  dental_record.record_date,
-                                                  dental_record.diagnosis,
-                                                  dentist.name as dentist_name,
-                                                  services.name as recommended_service,
-                                                  services.price as service_price')
-                                        ->join('dental_record', 'dental_record.id = dental_chart.dental_record_id', 'left')
-                                        ->join('user as dentist', 'dentist.id = dental_record.dentist_id', 'left')
-                                        ->join('services', 'services.id = dental_chart.recommended_service_id', 'left')
-                                        ->where('dental_record.user_id', $patientId)
-                                        ->orderBy('dental_chart.tooth_number', 'ASC')
-                                        ->orderBy('dental_record.record_date', 'DESC')
-                                        ->findAll();
-
-            // Group by tooth number for better organization
-            $teethData = [];
-            foreach ($chartData as $chart) {
-                $toothNumber = $chart['tooth_number'];
-                if (!isset($teethData[$toothNumber])) {
-                    $teethData[$toothNumber] = [];
-                }
-                $teethData[$toothNumber][] = $chart;
-            }
-
-            return $this->response->setJSON([
-                'success' => true,
-                'chart' => $chartData,
-                'teeth_data' => $teethData
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error fetching dental chart: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error fetching dental chart: ' . $e->getMessage()]);
-        }
+        $model = new \App\Models\DentalRecordModel();
+        $records = $model->select('dental_record.*, dentist.name as dentist_name')
+            ->join('user as dentist', 'dentist.id = dental_record.dentist_id', 'left')
+            ->where('dental_record.user_id', $id)
+            ->orderBy('record_date', 'DESC')
+            ->findAll();
+        return $this->response->setJSON(['success' => true, 'records' => $records]);
     }
 
-    /**
-     * Get patient appointments for modal with present and past appointments separated
-     */
-    public function getPatientAppointmentsModal($patientId)
+    public function getPatientDentalChart($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
-
-        try {
-            $appointmentModel = new \App\Models\AppointmentModel();
-            $appointmentServiceModel = new \App\Models\AppointmentServiceModel();
-            
-            // Get all appointments with services and costs
-            $appointments = $appointmentModel->select('appointments.*, 
-                                                     dentist.name as dentist_name,
-                                                     branches.name as branch_name,
-                                                     GROUP_CONCAT(services.name SEPARATOR ", ") as services,
-                                                     SUM(services.price) as total_cost')
-                                           ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
-                                           ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                           ->join('appointment_service', 'appointment_service.appointment_id = appointments.id', 'left')
-                                           ->join('services', 'services.id = appointment_service.service_id', 'left')
-                                           ->where('appointments.user_id', $patientId)
-                                           ->groupBy('appointments.id')
-                                           ->orderBy('appointment_datetime', 'DESC')
-                                           ->findAll();
-
-            // Separate present/future and past appointments
-            $currentDateTime = new \DateTime();
-            $presentAppointments = [];
-            $pastAppointments = [];
-
-            foreach ($appointments as $appointment) {
-                $appointmentDateTime = new \DateTime($appointment['appointment_datetime']);
-                if ($appointmentDateTime >= $currentDateTime) {
-                    $presentAppointments[] = $appointment;
-                } else {
-                    $pastAppointments[] = $appointment;
-                }
-            }
-
-            return $this->response->setJSON([
-                'success' => true,
-                'present_appointments' => $presentAppointments,
-                'past_appointments' => $pastAppointments,
-                'total_appointments' => count($appointments)
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error fetching appointments: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error fetching appointments: ' . $e->getMessage()]);
-        }
+        $db = \Config\Database::connect();
+        $rows = $db->table('dental_chart dc')
+            ->select('dc.*, dr.record_date')
+            ->join('dental_record dr', 'dr.id = dc.dental_record_id')
+            ->where('dr.user_id', $id)
+            ->orderBy('dr.record_date', 'DESC')
+            ->get()->getResultArray();
+        return $this->response->setJSON(['success' => true, 'chart' => $rows]);
     }
 
-    /**
-     * Get patient treatment records with doctor, procedures, amounts, and status
-     */
-    public function getPatientTreatments($patientId)
+    public function getPatientAppointmentsModal($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
-
-        try {
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
-            $procedureModel = new \App\Models\ProcedureModel();
-            $appointmentModel = new \App\Models\AppointmentModel();
-            
-            // Get comprehensive treatment information from multiple sources
-            $treatments = [];
-            
-            // 1. Get treatments from dental records
-            $dentalTreatments = $dentalRecordModel->select('dental_record.id,
-                                                          dental_record.record_date,
-                                                          dental_record.treatment,
-                                                          dental_record.diagnosis,
-                                                          dental_record.notes,
-                                                          dental_record.next_appointment_date,
-                                                          dentist.name as doctor_name,
-                                                          "dental_record" as source_type')
-                                                ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
-                                                ->where('dental_record.user_id', $patientId)
-                                                ->where('dental_record.treatment IS NOT NULL')
-                                                ->where('dental_record.treatment !=', '')
-                                                ->orderBy('record_date', 'DESC')
-                                                ->findAll();
-            
-            // 2. Get procedures done
-            $procedures = $procedureModel->select('procedures.id,
-                                                 procedures.procedure_date as record_date,
-                                                 procedures.procedure_name as treatment,
-                                                 procedures.description as diagnosis,
-                                                 "" as notes,
-                                                 "" as next_appointment_date,
-                                                 user.name as doctor_name,
-                                                 "procedure" as source_type')
-                                       ->join('user', 'user.id = procedures.user_id', 'left')
-                                       ->where('procedures.user_id', $patientId)
-                                       ->orderBy('procedure_date', 'DESC')
-                                       ->findAll();
-            
-            // 3. Get completed appointments with services and costs
-            $completedAppointments = $appointmentModel->select('appointments.id,
-                                                              appointments.appointment_datetime as record_date,
-                                                              GROUP_CONCAT(services.name SEPARATOR ", ") as treatment,
-                                                              appointments.appointment_type as diagnosis,
-                                                              appointments.remarks as notes,
-                                                              "" as next_appointment_date,
-                                                              dentist.name as doctor_name,
-                                                              SUM(services.price) as amount,
-                                                              appointments.status,
-                                                              "appointment" as source_type')
-                                                    ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
-                                                    ->join('appointment_service', 'appointment_service.appointment_id = appointments.id', 'left')
-                                                    ->join('services', 'services.id = appointment_service.service_id', 'left')
-                                                    ->where('appointments.user_id', $patientId)
-                                                    ->where('appointments.status', 'completed')
-                                                    ->groupBy('appointments.id')
-                                                    ->orderBy('appointment_datetime', 'DESC')
-                                                    ->findAll();
-            
-            // Combine all treatments and add status and amount information
-            $allTreatments = [];
-            
-            // Process dental records
-            foreach ($dentalTreatments as $treatment) {
-                $treatment['amount'] = 0; // Default amount, could be enhanced with billing data
-                $treatment['status'] = $treatment['next_appointment_date'] ? 'ongoing' : 'completed';
-                $allTreatments[] = $treatment;
-            }
-            
-            // Process procedures
-            foreach ($procedures as $procedure) {
-                $procedure['amount'] = 0; // Default amount
-                $procedure['status'] = 'completed';
-                $allTreatments[] = $procedure;
-            }
-            
-            // Process completed appointments
-            foreach ($completedAppointments as $appointment) {
-                $appointment['amount'] = $appointment['amount'] ?? 0;
-                $allTreatments[] = $appointment;
-            }
-            
-            // Sort all treatments by date
-            usort($allTreatments, function($a, $b) {
-                return strtotime($b['record_date']) - strtotime($a['record_date']);
-            });
-
-            return $this->response->setJSON([
-                'success' => true,
-                'treatments' => $allTreatments,
-                'total_treatments' => count($allTreatments)
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error fetching treatments: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error fetching treatments: ' . $e->getMessage()]);
-        }
+        // Attempt to reuse existing service method if available
+        $appointments = method_exists($this->appointmentService, 'getPatientAppointmentsData')
+            ? ($this->appointmentService->getPatientAppointmentsData($id) ?? [])
+            : ($this->appointmentService->getPatientAppointments($id)['appointments'] ?? []);
+        return $this->response->setJSON(['success' => true, 'appointments' => $appointments]);
     }
 
-    /**
-     * Get comprehensive patient medical records
-     */
-    public function getPatientMedicalRecords($patientId)
+    public function getPatientTreatments($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
-        }
-
-        try {
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
-            $userModel = new \App\Models\UserModel();
-            
-            // Get patient basic medical information
-            $patient = $userModel->find($patientId);
-            
-            // Get comprehensive medical records from dental records
-            $medicalRecords = $dentalRecordModel->select('dental_record.id,
-                                                        dental_record.record_date,
-                                                        dental_record.diagnosis,
-                                                        dental_record.treatment,
-                                                        dental_record.notes,
-                                                        dental_record.xray_image_url,
-                                                        dentist.name as recorded_by,
-                                                        dentist.user_type as recorder_role')
-                                              ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
-                                              ->where('dental_record.user_id', $patientId)
-                                              ->orderBy('record_date', 'DESC')
-                                              ->findAll();
-
-            // Organize medical data
-            $medicalHistory = [];
-            $diagnoses = [];
-            $xrays = [];
-            
-            foreach ($medicalRecords as $record) {
-                // Group diagnoses
-                if (!empty($record['diagnosis'])) {
-                    $diagnoses[] = [
-                        'date' => $record['record_date'],
-                        'diagnosis' => $record['diagnosis'],
-                        'treatment' => $record['treatment'],
-                        'doctor' => $record['recorded_by']
-                    ];
-                }
-                
-                // Group X-rays
-                if (!empty($record['xray_image_url'])) {
-                    $xrays[] = [
-                        'date' => $record['record_date'],
-                        'image_url' => $record['xray_image_url'],
-                        'notes' => $record['notes'],
-                        'doctor' => $record['recorded_by']
-                    ];
-                }
-                
-                $medicalHistory[] = $record;
-            }
-
-            return $this->response->setJSON([
-                'success' => true,
-                'medical_records' => $medicalHistory,
-                'patient_info' => [
-                    'name' => $patient['name'],
-                    'age' => $patient['age'],
-                    'gender' => $patient['gender'],
-                    'date_of_birth' => $patient['date_of_birth']
-                ],
-                'diagnoses' => $diagnoses,
-                'xrays' => $xrays,
-                'summary' => [
-                    'total_records' => count($medicalHistory),
-                    'total_diagnoses' => count($diagnoses),
-                    'total_xrays' => count($xrays)
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error fetching medical records: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error fetching medical records: ' . $e->getMessage()]);
-        }
+        // Placeholder until treatment tracking implemented
+        return $this->response->setJSON(['success' => true, 'treatments' => []]);
     }
 
-    /**
-     * Update patient special notes
-     */
-    public function updatePatientNotes($patientId)
+    public function getPatientMedicalRecords($id)
     {
-        $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
-            return $user;
+        $userModel = new \App\Models\UserModel();
+        $p = $userModel->find($id);
+        if (!$p) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Not found'], 404);
         }
-
-        try {
-            $userModel = new \App\Models\UserModel();
-            $input = $this->request->getJSON(true);
-            
-            if (!isset($input['notes'])) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Notes are required']);
-            }
-
-            // Update the user table with special notes
-            $existingUser = $userModel->where('id', $patientId)
-                                     ->where('user_type', 'patient')
-                                     ->first();
-            
-            if ($existingUser) {
-                $userModel->update($patientId, ['special_notes' => $input['notes']]);
-            } else {
-                return $this->response->setJSON(['success' => false, 'message' => 'Patient not found']);
-            }
-
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Patient notes updated successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error updating patient notes: ' . $e->getMessage());
-            return $this->response->setJSON(['success' => false, 'message' => 'Error updating notes: ' . $e->getMessage()]);
-        }
+        return $this->response->setJSON([
+            'success' => true,
+            'medical' => [
+                'previous_dentist' => $p['previous_dentist'] ?? null,
+                'last_dental_visit' => $p['last_dental_visit'] ?? null,
+                'blood_pressure' => $p['blood_pressure'] ?? null,
+                'allergies' => $p['allergies'] ?? null,
+                'medical_conditions' => $p['medical_conditions'] ?? null,
+                'special_notes' => $p['special_notes'] ?? null
+            ]
+        ]);
     }
 }

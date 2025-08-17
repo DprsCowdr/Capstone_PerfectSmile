@@ -13,7 +13,8 @@ class ModalController {
 
     init() {
         this.modal = document.getElementById('patientRecordsModal');
-        this.modalDialog = this.modal?.querySelector('.resizable-modal');
+        // Support legacy (resizable-modal) and new minimalist (modal-panel) markup
+        this.modalDialog = this.modal?.querySelector('.resizable-modal') || this.modal?.querySelector('.modal-panel');
         this.modalContent = document.getElementById('modalContent');
     }
 
@@ -41,37 +42,29 @@ class ModalController {
     // ==================== MODAL OPERATIONS ====================
 
     openModal() {
-        if (!this.modal || !this.modalDialog) return;
-
-        // Show modal with fade in
+        if (!this.modal) return;
+        // Re-query in case DOM changed
+        if (!this.modalDialog) {
+            this.modalDialog = this.modal.querySelector('.resizable-modal') || this.modal.querySelector('.modal-panel');
+        }
+        if (!this.modalDialog) return;
         this.modal.classList.remove('hidden');
-        
-        // Trigger smooth entrance animation
+        this.modal.classList.add('flex');
         requestAnimationFrame(() => {
             this.modalDialog.style.opacity = '1';
             this.modalDialog.style.transform = 'scale(1)';
         });
-        
-        // Initialize resize functionality after modal is shown
-        setTimeout(() => {
-            this.initializeResize();
-            this.addCenteringHelper();
-        }, 100);
     }
 
     closeModal() {
         if (!this.modal || !this.modalDialog) return;
-
-        // Smooth exit animation
         this.modalDialog.style.opacity = '0';
         this.modalDialog.style.transform = 'scale(0.95)';
-        
-        // Hide modal after animation
         setTimeout(() => {
             this.modal.classList.add('hidden');
+            this.modal.classList.remove('flex');
             this.clearContent();
-            this.resetSize();
-        }, 300);
+        }, 200);
     }
 
     clearContent() {
@@ -146,20 +139,7 @@ class ModalController {
     // ==================== RESIZE FUNCTIONALITY ====================
     
     initializeResize() {
-        if (!this.modalDialog) return;
-
-        const header = document.querySelector('.modal-header-resizable');
-        const fullscreenBtn = document.getElementById('fullscreenToggle');
-        
-        // Make modal draggable
-        if (header) {
-            this.makeDraggable(this.modalDialog, header);
-        }
-        
-        // Handle fullscreen toggle
-        if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-        }
+        // No-op in minimalist version (kept for backward compatibility)
     }
     
     makeDraggable(element, handle) {
@@ -211,118 +191,13 @@ class ModalController {
         });
     }
     
-    toggleFullscreen() {
-        if (!this.modalDialog) return;
-
-        const modalContainer = document.querySelector('.modal-container');
-        const fullscreenBtn = document.getElementById('fullscreenToggle');
-        
-        if (!fullscreenBtn || !modalContainer) return;
-        
-        if (this.modalDialog.classList.contains('fullscreen')) {
-            // Exit fullscreen - restore to centered position
-            this.modalDialog.classList.remove('fullscreen');
-            
-            // Reset all positioning styles to use CSS defaults
-            this.modalDialog.style.position = '';
-            this.modalDialog.style.top = '';
-            this.modalDialog.style.left = '';
-            this.modalDialog.style.width = '90%';
-            this.modalDialog.style.height = '85vh';
-            this.modalDialog.style.maxWidth = '1200px';
-            this.modalDialog.style.minWidth = '800px';
-            this.modalDialog.style.transform = '';
-            this.modalDialog.style.zIndex = '';
-            
-            // Ensure container is back to flex centering
-            modalContainer.style.display = 'flex';
-            modalContainer.style.alignItems = 'center';
-            modalContainer.style.justifyContent = 'center';
-            
-            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-            fullscreenBtn.title = 'Fullscreen';
-        } else {
-            // Enter fullscreen
-            this.modalDialog.classList.add('fullscreen');
-            
-            // Set fixed positioning for fullscreen
-            this.modalDialog.style.position = 'fixed';
-            this.modalDialog.style.top = '0';
-            this.modalDialog.style.left = '0';
-            this.modalDialog.style.width = '100vw';
-            this.modalDialog.style.height = '100vh';
-            this.modalDialog.style.maxWidth = 'none';
-            this.modalDialog.style.minWidth = 'none';
-            this.modalDialog.style.transform = 'none';
-            this.modalDialog.style.zIndex = '9999';
-            
-            // Disable flex centering for fullscreen
-            modalContainer.style.display = 'block';
-            
-            fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
-            fullscreenBtn.title = 'Exit Fullscreen';
-        }
-    }
+    toggleFullscreen() { /* removed in minimalist version */ }
     
-    centerModal() {
-        if (!this.modalDialog) return;
+    centerModal() { /* not needed */ }
 
-        const modalContainer = document.querySelector('.modal-container');
-        
-        // Reset to centered position
-        this.modalDialog.style.position = '';
-        this.modalDialog.style.top = '';
-        this.modalDialog.style.left = '';
-        this.modalDialog.style.transform = '';
-        this.modalDialog.style.margin = '';
-        
-        // Re-enable flex centering
-        if (modalContainer) {
-            modalContainer.style.display = 'flex';
-            modalContainer.style.alignItems = 'center';
-            modalContainer.style.justifyContent = 'center';
-        }
-    }
-
-    addCenteringHelper() {
-        // Add double-click to center modal
-        const header = document.querySelector('.modal-header-resizable');
-        
-        if (header && this.modalDialog) {
-            header.addEventListener('dblclick', () => {
-                if (!this.modalDialog.classList.contains('fullscreen')) {
-                    this.centerModal();
-                }
-            });
-        }
-    }
+    addCenteringHelper() { /* not needed */ }
     
-    resetSize() {
-        if (!this.modalDialog) return;
-
-        const modalContainer = document.querySelector('.modal-container');
-        
-        this.modalDialog.classList.remove('fullscreen');
-        
-        // Reset all positioning to use CSS defaults (centered)
-        this.modalDialog.style.position = '';
-        this.modalDialog.style.top = '';
-        this.modalDialog.style.left = '';
-        this.modalDialog.style.width = '90%';
-        this.modalDialog.style.height = '85vh';
-        this.modalDialog.style.maxWidth = '1200px';
-        this.modalDialog.style.minWidth = '800px';
-        this.modalDialog.style.transform = '';
-        this.modalDialog.style.opacity = '1';
-        this.modalDialog.style.zIndex = '';
-        
-        // Ensure container uses flex centering
-        if (modalContainer) {
-            modalContainer.style.display = 'flex';
-            modalContainer.style.alignItems = 'center';
-            modalContainer.style.justifyContent = 'center';
-        }
-    }
+    resetSize() { /* not needed */ }
 }
 
 // Export for use

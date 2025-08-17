@@ -95,21 +95,21 @@ class PatientCheckup {
     }
     
     initAutoSave() {
-        // Auto-save form data every 30 seconds
-        this.autoSaveTimer = setInterval(() => {
-            this.saveFormData();
-        }, 30000);
+        // DISABLED: Auto-save interferes with database data loading
+        // Only load from database, not localStorage
         
-        // Load previously saved data
-        this.loadAutoSavedData();
+        // Clear any existing saved data to prevent conflicts
+        this.clearAutoSavedData();
         
-        // Clear saved data when form is submitted
+        // Clear saved data when form is submitted (keep this for cleanup)
         const form = document.querySelector('form');
         if (form) {
             form.addEventListener('submit', () => {
                 this.clearAutoSavedData();
             });
         }
+        
+        console.log('Auto-save disabled - dental chart will only load from database');
     }
     
     setupEventListeners() {
@@ -523,6 +523,10 @@ class PatientCheckup {
     }
     
     saveFormData() {
+        // DISABLED: Auto-save feature disabled to prevent localStorage interference 
+        // with database data loading
+        return;
+        
         const form = document.querySelector('form');
         if (form) {
             const formData = new FormData(form);
@@ -532,6 +536,10 @@ class PatientCheckup {
     }
     
     loadAutoSavedData() {
+        // DISABLED: Do not load from localStorage to avoid overriding database data
+        // The form should only display data from the database via PHP rendering
+        return;
+        
         const savedData = localStorage.getItem('checkupFormData');
         if (savedData) {
             try {

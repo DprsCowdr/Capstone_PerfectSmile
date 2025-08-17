@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:8889
--- Generation Time: Jul 22, 2025 at 06:47 AM
+-- Generation Time: Aug 09, 2025 at 11:38 AM
 -- Server version: 5.7.39
--- PHP Version: 7.4.33
+-- PHP Version: 8.2.0
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `dentalv4`
+-- Database: `perfectsmile_db`
 --
 
 -- --------------------------------------------------------
@@ -60,27 +60,9 @@ CREATE TABLE `appointments` (
 --
 
 INSERT INTO `appointments` (`id`, `branch_id`, `dentist_id`, `user_id`, `appointment_datetime`, `status`, `appointment_type`, `approval_status`, `decline_reason`, `remarks`, `created_at`, `updated_at`, `checked_in_at`, `checked_in_by`, `self_checkin`, `started_at`, `called_by`, `treatment_status`, `treatment_notes`, `payment_status`, `payment_method`, `payment_amount`, `payment_date`, `payment_received_by`, `payment_notes`) VALUES
-(1, 1, 2, 3, '2025-07-01 12:30:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-07-20 05:27:08', '2025-07-20 05:27:08', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(2, 1, 9, 5, '2025-07-01 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-20 05:27:42', '2025-07-20 05:27:52', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(3, 1, 9, 3, '2025-07-01 13:01:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-20 05:29:11', '2025-07-20 07:36:22', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(4, 1, 2, 3, '2025-07-01 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-20 06:31:06', '2025-07-20 06:31:23', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(5, 1, NULL, 5, '2025-07-01 15:03:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-07-20 06:35:42', '2025-07-20 06:35:42', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(6, 1, 2, 5, '2025-07-20 20:30:00', 'confirmed', 'scheduled', 'approved', NULL, 'non', '2025-07-20 07:36:08', '2025-07-21 01:46:37', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(7, 1, NULL, 3, '2025-07-20 12:30:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-07-20 07:36:52', '2025-07-20 07:36:52', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(8, 1, 2, 3, '2025-07-20 10:00:00', 'completed', 'scheduled', 'approved', NULL, 'Test appointment for today', '2025-07-20 07:47:54', '2025-07-20 12:30:13', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(9, 1, 2, 5, '2025-07-20 17:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-20 09:12:01', '2025-07-20 09:16:34', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(10, 1, NULL, 5, '2025-07-21 10:15:00', 'no_show', 'walkin', 'auto_approved', NULL, 'Masakit nigipin', '2025-07-20 12:35:39', '2025-07-21 10:45:23', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(15, 1, 9, 3, '2025-07-21 12:30:00', 'no_show', 'scheduled', 'approved', NULL, '', '2025-07-21 01:48:41', '2025-07-21 08:03:12', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(16, 1, 2, 3, '2025-07-21 12:30:00', 'no_show', 'scheduled', 'approved', NULL, '', '2025-07-21 01:49:53', '2025-07-21 08:03:23', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(17, 1, 9, 3, '2025-07-21 12:30:00', 'no_show', 'scheduled', 'approved', NULL, '', '2025-07-21 01:55:06', '2025-07-21 08:03:26', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(18, 1, 9, 3, '2025-07-21 15:03:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:01:28', '2025-07-21 10:30:22', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(19, 1, 2, 3, '2025-07-22 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:04:41', '2025-07-21 02:05:06', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(20, 1, 9, 3, '2025-07-22 12:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:05:33', '2025-07-21 02:05:41', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(21, 1, 9, 5, '2025-07-21 08:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-21 02:07:55', '2025-07-21 04:22:42', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(22, 1, 9, 3, '2025-07-21 17:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-07-21 08:09:13', '2025-07-21 11:09:28', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(23, 1, 2, 5, '2025-07-23 15:30:00', 'confirmed', 'scheduled', 'approved', NULL, 'lkjkjkkjl', '2025-07-21 11:09:46', '2025-07-21 11:09:54', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(24, 1, 2, 5, '2025-07-21 19:30:00', 'completed', 'scheduled', 'approved', NULL, 'k', '2025-07-21 11:10:29', '2025-07-21 11:37:10', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(25, 1, 9, 5, '2025-07-21 21:30:00', 'ongoing', 'scheduled', 'approved', NULL, '', '2025-07-21 11:37:31', '2025-07-21 11:37:50', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL);
+(45, 1, 16, 15, '2025-08-09 08:19:00', 'completed', 'scheduled', 'approved', NULL, 'nnnnnnnnnnnnnnnnn', '2025-08-09 03:14:39', '2025-08-09 03:19:20', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(46, 1, 16, 15, '2025-08-09 13:30:00', 'pending_approval', 'scheduled', 'pending', NULL, 'jjjjjjjjjj', '2025-08-09 05:29:30', '2025-08-09 05:29:30', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
+(47, 1, 16, 15, '2025-08-09 09:00:00', 'checked_in', 'scheduled', 'approved', NULL, 'mmmmmmmmmmmm', '2025-08-09 05:30:22', '2025-08-09 05:30:38', '2025-08-09 05:30:38', 1, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -126,11 +108,8 @@ CREATE TABLE `branches` (
 --
 
 INSERT INTO `branches` (`id`, `name`, `address`, `contact_number`) VALUES
-(1, 'Perfect Smile - Main Branch', '123 Main Street, Downtown, City Center', '+1 (555) 123-4567'),
-(2, 'Perfect Smile - North Branch', '456 North Avenue, North District', '+1 (555) 234-5678'),
-(3, 'Perfect Smile - South Branch', '789 South Boulevard, South District', '+1 (555) 345-6789'),
-(4, 'Perfect Smile - East Branch', '321 East Road, East District', '+1 (555) 456-7890'),
-(5, 'Perfect Smile - West Branch', '654 West Street, West District', '+1 (555) 567-8901');
+(1, 'Perfect Smile - Nabua Branch', 'Nabua,Camarines Sur', '+1 (555) 123-4567'),
+(2, 'Perfect Smile - Iriga Branch', 'Iriga City,Camarines Sur', '+1 (555) 234-5678');
 
 -- --------------------------------------------------------
 
@@ -144,6 +123,14 @@ CREATE TABLE `branch_user` (
   `branch_id` int(11) NOT NULL,
   `position` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `branch_user`
+--
+
+INSERT INTO `branch_user` (`id`, `user_id`, `branch_id`, `position`) VALUES
+(1, 10, 1, 'Administrator'),
+(4, 16, 1, 'nabua@perfectsmile.com');
 
 -- --------------------------------------------------------
 
@@ -180,7 +167,71 @@ INSERT INTO `dental_chart` (`id`, `dental_record_id`, `tooth_number`, `tooth_typ
 (7, 5, 3, 'permanent', 'healthy', '', '', NULL, 'medium', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
 (8, 5, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
 (9, 5, 18, 'permanent', 'cavity', '', '', NULL, 'medium', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(10, 5, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10');
+(10, 5, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
+(11, 6, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
+(12, 6, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
+(13, 6, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
+(14, 6, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
+(15, 6, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
+(16, 6, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
+(17, 7, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
+(18, 7, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
+(19, 7, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
+(20, 7, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
+(21, 7, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
+(22, 7, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
+(23, 8, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(24, 8, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(25, 8, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(26, 8, 16, 'permanent', 'root_canal', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(27, 8, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(28, 8, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(29, 8, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(30, 8, 32, 'permanent', 'root_canal', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
+(31, 9, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
+(32, 9, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
+(33, 9, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
+(34, 9, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
+(35, 9, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
+(36, 9, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
+(37, 10, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(38, 10, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(39, 10, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(40, 10, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(41, 10, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(42, 10, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(43, 10, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(44, 10, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
+(45, 11, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(46, 11, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(47, 11, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(48, 11, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(49, 11, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(50, 11, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(51, 11, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(52, 11, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
+(53, 12, 1, 'permanent', 'missing', 'none', 'idk', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(54, 12, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(55, 12, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(56, 12, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(57, 12, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(58, 12, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(59, 12, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(60, 12, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
+(61, 13, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(62, 13, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(63, 13, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(64, 13, 5, 'permanent', 'missing', 'none', 'wala', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(65, 13, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(66, 13, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(67, 13, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(68, 13, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(69, 13, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
+(70, 14, 1, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:27:05', '2025-07-27 14:27:05'),
+(71, 14, 2, 'permanent', 'missing', '', 'wala', NULL, 'low', NULL, '2025-07-27 14:27:05', '2025-07-27 14:27:05'),
+(72, 15, 1, 'permanent', 'crown', 'none', '', NULL, 'low', NULL, '2025-07-27 14:54:43', '2025-07-27 14:54:43'),
+(73, 15, 2, 'permanent', 'filled', '', 'wala', NULL, 'low', NULL, '2025-07-27 14:54:43', '2025-07-27 14:54:43'),
+(74, 15, 3, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:54:43', '2025-07-27 14:54:43');
 
 -- --------------------------------------------------------
 
@@ -210,7 +261,18 @@ INSERT INTO `dental_record` (`id`, `user_id`, `appointment_id`, `record_date`, `
 (2, 5, NULL, '2025-07-21', '2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee', '2nd2nd timeee2nd timeee2nd timeee2nd timeee', 'time2nd timeee2nd timeee2nd timeee', NULL, NULL, 1),
 (3, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, 1),
 (4, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, 1),
-(5, 5, NULL, '2025-07-21', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', NULL, NULL, 1);
+(5, 5, NULL, '2025-07-21', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', NULL, NULL, 1),
+(6, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, '2025-07-22', 1),
+(7, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, '2025-07-22', 1),
+(8, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, NULL, 1),
+(9, 5, NULL, '2025-07-22', 'kookkokokookok', 'kokookookokok', 'kokookko', NULL, NULL, 1),
+(10, 5, NULL, '2025-07-23', 'https://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.htmlhttps://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.html', 'https://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.html', 'https://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.html', NULL, NULL, 1),
+(11, 5, NULL, '2025-07-27', 'kjljkllkjkl', 'kl;kl;kll;k', ';kl;kkl;kl;', NULL, NULL, 1),
+(12, 5, NULL, '2025-07-27', 'testing 3d 101', '3d testing 101', 'wld naman 1411242412', NULL, NULL, 1),
+(13, 5, NULL, '2025-07-27', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', NULL, NULL, 1),
+(14, 3, NULL, '2025-07-27', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', NULL, NULL, 1),
+(15, 3, NULL, '2025-07-27', 'mlmm;;mlmlm;', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '', NULL, NULL, 1),
+(16, 15, NULL, '2025-08-09', 'missing tooth needs pustiso', 'missing tooth needs pustiso', 'wala namn', NULL, NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -380,11 +442,12 @@ CREATE TABLE `user` (
 
 INSERT INTO `user` (`id`, `user_type`, `name`, `address`, `email`, `gender`, `password`, `phone`, `created_at`, `updated_at`, `occupation`, `nationality`, `date_of_birth`, `age`, `status`) VALUES
 (1, 'admin', 'Admin User', '123 Admin Street', 'admin@perfectsmile.com', 'male', '$2y$12$Tau0ciyH4Ny3A/P0I.qEbO5i63Ja4AtTPBd4OblwwAnoQLCYokErS', '1234567890', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
-(2, 'dentist', 'Dr. John Smith', '456 Doctor Avenue', 'doctor@perfectsmile.com', 'male', '$2y$12$yW6MCZ6JB37X5t6.E8Rv8u/gBlbviukPlLEqwPJKCM8.IBGqk0Yo2', '1234567891', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
-(3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$12$ZxKlA7jaipJ2XAgP8QD.purDu.L8qfMq./pqj3yqGSYOw.bf0Z5MW', '1234567892', '2025-06-28 16:02:14', '2025-07-18 01:09:37', 'hh', 'oo', '2025-07-08', 9, 'inactive'),
-(4, 'staff', 'Staff Member', '321 Staff Lane', 'staff@perfectsmile.com', 'female', '$2y$12$5ngcd.kPZCtoUX.2U/QvTO4mun3W35rBPGTM6bbdc16pKEnkPbj.2', '1234567893', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
+(3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$12$IT16i/hQXaqPB4bgvBy23.isY3vix20H5snsASckANyzP3HcwpJ0e', '1234567892', '2025-06-28 16:02:14', '2025-08-08 11:10:37', 'hh', 'oo', '2025-07-08', 9, 'active'),
 (5, 'patient', 'Brandon Brandon Brandon', 'Brandon@gmail.com', 'Brandon@gmail.com', 'Male', '$2y$12$3225/eB6Cz2MGgN3eHsp6.26RK/q0nmDVEvBkvGubuBiyWpCNG3Sm', '89078007077', '2025-07-08 13:39:16', '2025-07-10 10:45:58', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'active'),
-(9, 'dentist', 'Dr. Sarah Johnson', '789 Dental Clinic Street', 'sarah.johnson@perfectsmile.com', 'female', '$2y$12$vt2WvOuuW3Z7PWHisFv6c.w72lX0kiAbeR8mjCKdqFnKw6jdqkwWW', '1234567894', '2025-07-18 03:28:18', '2025-07-18 03:28:18', 'Dentist', 'Filipino', '1988-08-20', 35, 'active');
+(10, 'admin', 'Brandon Dentist', NULL, 'don@gmail.com', 'male', '$2y$12$9BzUNUBkE5idKzb1qdz78ePPo8HsVRgCMm9ZJnjaZDIvRIqcnYW8S', '09150540702', '2025-08-07 05:30:50', '2025-08-07 07:25:15', 'na', 'na', NULL, NULL, 'active'),
+(15, 'patient', 'Eden Caritos', 'PIli Camsur', 'eden@gmail.com', 'Female', '$2y$12$iDQqqaHABtNBdRA3ZrC/EeqDZ/L5cPE4HzaKj84mufo/mLGS7qNgi', '099150540702', '2025-08-08 11:06:41', '2025-08-08 11:39:27', 'Nurse', 'Filipino', '2001-09-11', 23, 'active'),
+(16, 'dentist', 'Nabua Dentist', NULL, 'nabua@perfectsmile.com', 'Male', '$2y$12$saFau/p7z3Tu6x/vMg6Q4OkN8o34aUQTMj3Do.zwIVU0l/ii1QVw2', '09150540702', '2025-08-09 03:14:00', '2025-08-09 03:14:00', 'na', 'na', '2000-09-23', 24, 'active'),
+(17, 'patient', 'Johnbert', 'jjjjjj', 'jb2g@gmail.com', 'Male', NULL, '412812482148', '2025-08-09 05:43:01', '2025-08-09 05:43:01', 'jjj', 'jjj', '2003-08-07', 22, 'active');
 
 --
 -- Indexes for dumped tables
@@ -516,7 +579,7 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `appointment_service`
@@ -534,25 +597,25 @@ ALTER TABLE `availability`
 -- AUTO_INCREMENT for table `branches`
 --
 ALTER TABLE `branches`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `branch_user`
 --
 ALTER TABLE `branch_user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `dental_chart`
 --
 ALTER TABLE `dental_chart`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT for table `dental_record`
 --
 ALTER TABLE `dental_record`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `invoices`
@@ -606,7 +669,7 @@ ALTER TABLE `services`
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- Constraints for dumped tables

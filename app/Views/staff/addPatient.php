@@ -61,9 +61,9 @@
                                 <select name="gender" required
                                     class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors">
                                     <option value="">Select Gender</option>
-                                    <option value="Male" <?= old('gender') === 'Male' ? 'selected' : '' ?>>👨 Male</option>
-                                    <option value="Female" <?= old('gender') === 'Female' ? 'selected' : '' ?>>👩 Female</option>
-                                    <option value="Other" <?= old('gender') === 'Other' ? 'selected' : '' ?>>⚧ Other</option>
+                                    <option value="male" <?= old('gender') === 'male' ? 'selected' : '' ?>>👨 Male</option>
+                                    <option value="female" <?= old('gender') === 'female' ? 'selected' : '' ?>>👩 Female</option>
+                                    <option value="other" <?= old('gender') === 'other' ? 'selected' : '' ?>>⚧ Other</option>
                                 </select>
                             </div>
                             

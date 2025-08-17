@@ -18,7 +18,7 @@ class DashboardService
         return [
             'totalUsers' => $this->userModel->countAll(),
             'totalPatients' => $this->userModel->where('user_type', 'patient')->countAllResults(),
-            'totalDentists' => $this->userModel->where('user_type', 'dentist')->countAllResults(),
+            'totalDentists' => $this->userModel->where('user_type', 'doctor')->countAllResults(),
             'totalBranches' => $this->branchModel->countAll()
         ];
     }
@@ -28,7 +28,7 @@ class DashboardService
         return [
             'patients' => $this->userModel->where('user_type', 'patient')->findAll(),
             'branches' => $this->branchModel->findAll(),
-            'dentists' => $this->userModel->where('user_type', 'dentist')->where('status', 'active')->findAll(),
+            'dentists' => $this->userModel->where('user_type', 'doctor')->where('status', 'active')->findAll(),
             'availability' => [] // For future implementation
         ];
     }

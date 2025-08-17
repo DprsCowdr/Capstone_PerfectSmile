@@ -33,14 +33,9 @@ class TreatmentQueue extends BaseController
                      TIMESTAMPDIFF(MINUTE, checked_in_at, NOW()) as waiting_time')
             ->join('user', 'user.id = appointments.user_id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'checked_in');
-            
-        // Only filter by dentist if the current user is a dentist/doctor
-        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
-            $waitingPatients = $waitingPatients->where('appointments.dentist_id', $user['id']);
-        }
-        
-        $waitingPatients = $waitingPatients->orderBy('checked_in_at', 'ASC')
+            ->where('appointments.status', 'checked_in')
+            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
+            ->orderBy('checked_in_at', 'ASC')
             ->findAll();
 
         // Get ongoing treatments
@@ -49,14 +44,9 @@ class TreatmentQueue extends BaseController
                      TIMESTAMPDIFF(MINUTE, started_at, NOW()) as treatment_duration')
             ->join('user', 'user.id = appointments.user_id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'ongoing');
-            
-        // Only filter by dentist if the current user is a dentist/doctor
-        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
-            $ongoingTreatments = $ongoingTreatments->where('appointments.dentist_id', $user['id']);
-        }
-            
-        $ongoingTreatments = $ongoingTreatments->orderBy('started_at', 'ASC')
+            ->where('appointments.status', 'ongoing')
+            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
+            ->orderBy('started_at', 'ASC')
             ->findAll();
 
         return view('queue/dashboard', [

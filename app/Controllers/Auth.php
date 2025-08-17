@@ -19,9 +19,21 @@ class Auth extends BaseController
      */
     public function index()
     {
-        // If user is already logged in, redirect to dashboard
+        // If user is already logged in, redirect based on user type
         if (session()->get('isLoggedIn')) {
-            return redirect()->to('/dashboard');
+            $userType = session()->get('user_type');
+            switch ($userType) {
+                case 'admin':
+                    return redirect()->to('/admin/dashboard');
+                case 'doctor':
+                    return redirect()->to('/doctor/dashboard');
+                case 'patient':
+                    return redirect()->to('/patient/dashboard');
+                case 'staff':
+                    return redirect()->to('/staff/dashboard');
+                default:
+                    return redirect()->to('/admin/dashboard'); // Default to admin
+            }
         }
 
         return view('auth/login');
@@ -59,13 +71,13 @@ class Auth extends BaseController
                 case 'admin':
                     return redirect()->to('/admin/dashboard');
                 case 'doctor':
-                    return redirect()->to('/dentist/dashboard');
+                    return redirect()->to('/doctor/dashboard');
                 case 'patient':
                     return redirect()->to('/patient/dashboard');
                 case 'staff':
                     return redirect()->to('/staff/dashboard');
                 default:
-                    return redirect()->to('/dashboard');
+                    return redirect()->to('/admin/dashboard'); // Default to admin for unknown types
             }
         } else {
             session()->setFlashdata('error', 'Invalid email or password');

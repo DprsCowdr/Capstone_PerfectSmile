@@ -1,56 +1,20 @@
 <?= view('templates/header') ?>
-<div class="min-h-screen bg-[#F5ECFE] flex">
+<div class="min-h-screen bg-white flex">
     <?= view('templates/sidebar', ['user' => $user]) ?>
-    <div class="flex-1 flex flex-col min-h-screen">
-        <main class="flex-1 px-6 py-8">
-            <!-- Header -->
-            <div class="mb-8">
-                <h1 class="text-4xl font-extrabold text-purple-700 tracking-tight mb-2">
-                    📅 My Appointments
-                </h1>
-                <p class="text-gray-600">Manage your appointments and patient schedules</p>
-            </div>
-
-            <!-- Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <?php
-                $totalAppointments = count($appointments);
-                $pendingAppointments = array_filter($appointments, fn($apt) => $apt['approval_status'] === 'pending');
-                $confirmedAppointments = array_filter($appointments, fn($apt) => $apt['status'] === 'confirmed');
-                $completedAppointments = array_filter($appointments, fn($apt) => $apt['status'] === 'completed');
-                ?>
-                
-                <div class="bg-white rounded-xl p-6 shadow-lg">
-                    <div class="flex items-center">
-                        <div class="p-3 bg-blue-100 rounded-lg">
-                            <i class="fas fa-calendar text-blue-600 text-xl"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-gray-500 text-sm">Total</p>
-                            <p class="text-2xl font-bold text-gray-800"><?= $totalAppointments ?></p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl p-6 shadow-lg">
-                    <div class="flex items-center">
-                        <div class="p-3 bg-orange-100 rounded-lg">
-                            <i class="fas fa-clock text-orange-600 text-xl"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-gray-500 text-sm">Pending</p>
-                            <p class="text-2xl font-bold text-gray-800"><?= count($pendingAppointments) ?></p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl p-6 shadow-lg">
-                    <div class="flex items-center">
-                        <div class="p-3 bg-green-100 rounded-lg">
-                            <i class="fas fa-check text-green-600 text-xl"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-gray-500 text-sm">Confirmed</p>
+    <div class="flex-1 flex flex-col min-h-screen bg-white">
+        <main class="flex-1 px-6 py-8 bg-white">
+            <?= view('templates/appointmentTable', [
+                'appointments' => $appointments, 
+                'user' => $user,
+                'patients' => $patients ?? [],
+                'branches' => $branches ?? [],
+                'dentists' => $dentists ?? [],
+                'availability' => $availability ?? []
+            ]) ?>
+        </main>
+    </div>
+</div>
+<?= view('templates/footer') ?>
                             <p class="text-2xl font-bold text-gray-800"><?= count($confirmedAppointments) ?></p>
                         </div>
                     </div>

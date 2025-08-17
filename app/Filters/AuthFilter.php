@@ -25,18 +25,29 @@ class AuthFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
+        // Log request details
+        log_message('info', "AuthFilter: Checking auth for " . $request->getMethod() . " " . $request->getUri());
+        log_message('info', "AuthFilter: Session isLoggedIn = " . (session()->get('isLoggedIn') ? 'YES' : 'NO'));
+        log_message('info', "AuthFilter: Session data = " . json_encode(session()->get()));
+        
         // Check if user is logged in
         if (!session()->get('isLoggedIn')) {
+            log_message('warning', "AuthFilter: User not logged in, redirecting to login");
             return redirect()->to('/login');
         }
+
+        log_message('info', "AuthFilter: User is authenticated");
 
         // Optional: Check user type for specific routes
         if (!empty($arguments)) {
             $userType = session()->get('user_type');
             if (!in_array($userType, $arguments)) {
+                log_message('warning', "AuthFilter: User type {$userType} not allowed for this route");
                 return redirect()->to('/dashboard');
             }
         }
+        
+        log_message('info', "AuthFilter: All checks passed");
     }
 
     /**

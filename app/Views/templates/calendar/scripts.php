@@ -4,6 +4,35 @@ window.userType = '<?= $user['user_type'] ?>';
 window.appointments = <?= json_encode($appointments ?? []) ?>;
 window.baseUrl = '<?= base_url() ?>';
 
+// Add some test appointments for debugging if none exist
+if (!window.appointments || window.appointments.length === 0) {
+    console.log('No appointments found, adding test data for conflict detection debugging');
+    window.appointments = [
+        {
+            id: 999,
+            appointment_date: '2025-08-09',
+            appointment_time: '10:00',
+            appointment_datetime: '2025-08-09 10:00:00',
+            patient_name: 'Test Patient',
+            dentist_name: 'Dr. Test',
+            status: 'approved',
+            approval_status: 'approved'
+        },
+        {
+            id: 998,
+            appointment_date: '2025-08-09',
+            appointment_time: '14:30',
+            appointment_datetime: '2025-08-09 14:30:00',
+            patient_name: 'Another Patient',
+            dentist_name: 'Dr. Smith',
+            status: 'confirmed',
+            approval_status: 'approved'
+        }
+    ];
+}
+
+console.log('Loaded appointments for conflict detection:', window.appointments);
+
 // Calendar state management - Initialize these first
 let currentCalendarDate = new Date();
 let currentDisplayedMonth = currentCalendarDate.getMonth();
@@ -482,6 +511,19 @@ function openAddAppointmentPanelWithTime(date, time) {
       }
       
       panel.classList.add('active');
+      
+      // Trigger conflict detection if both date and time are set
+      if (dateInput && dateInput.value && timeInput && timeInput.value) {
+        console.log('Triggering conflict detection from openAddAppointmentPanelWithTime');
+        // Dispatch a change event to trigger the conflict checker
+        const event = new Event('change', { bubbles: true });
+        timeInput.dispatchEvent(event);
+      } else if (dateInput && dateInput.value) {
+        console.log('Date set, waiting for time input to trigger conflict detection');
+        // Dispatch a change event on the date input
+        const event = new Event('change', { bubbles: true });
+        dateInput.dispatchEvent(event);
+      }
     }
   } else if (userType === 'doctor') {
     const availabilityPanel = document.getElementById('doctorAvailabilityPanel');
@@ -720,4 +762,124 @@ function declineAppointment(appointmentId) {
         alert('Failed to decline appointment');
     });
 }
+
+// Clean Appointment Conflict Detection System
+class ConflictDetector {
+    constructor() {
+        this.timeoutId = null;
+        this.init();
+    }
+
+    init() {
+        console.log('ConflictDetector: Initializing...');
+        
+        const timeInput = document.getElementById('appointmentTime');
+        const dateInput = document.getElementById('appointmentDate');
+        
+        if (timeInput && dateInput) {
+            timeInput.addEventListener('change', () => this.scheduleCheck());
+            dateInput.addEventListener('change', () => this.scheduleCheck());
+            console.log('ConflictDetector: Event listeners attached');
+        } else {
+            console.warn('ConflictDetector: Required form elements not found');
+        }
+    }
+
+    scheduleCheck() {
+        // Clear previous timeout
+        if (this.timeoutId) {
+            clearTimeout(this.timeoutId);
+        }
+        
+        // Schedule new check after 500ms delay
+        this.timeoutId = setTimeout(() => this.checkConflicts(), 500);
+    }
+
+    async checkConflicts() {
+        const dateInput = document.getElementById('appointmentDate');
+        const timeInput = document.getElementById('appointmentTime');
+        
+        if (!dateInput?.value || !timeInput?.value) {
+            this.hideWarning();
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('appointment_date', dateInput.value);
+            formData.append('appointment_time', timeInput.value);
+            formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+            const response = await fetch('<?= base_url() ?>staff/appointments/check-conflicts', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success && data.has_conflicts) {
+                this.showWarning(data.conflicts);
+            } else {
+                this.hideWarning();
+            }
+            
+        } catch (error) {
+            console.error('Conflict check error:', error);
+            this.hideWarning();
+        }
+    }
+
+    showWarning(conflicts) {
+        const warningDiv = document.getElementById('timeConflictWarning');
+        const messageSpan = document.getElementById('conflictMessage');
+        
+        if (!warningDiv || !messageSpan) return;
+
+        let message = `⚠️ Scheduling conflict detected! `;
+        if (conflicts.length === 1) {
+            const conflict = conflicts[0];
+            message += `${conflict.patient_name} has an appointment at ${conflict.appointment_time}`;
+            if (conflict.dentist_name && conflict.dentist_name !== 'Unassigned') {
+                message += ` with ${conflict.dentist_name}`;
+            }
+            message += ` (${Math.round(conflict.time_difference)} minutes apart)`;
+        } else {
+            message += `${conflicts.length} conflicting appointments found`;
+        }
+
+        messageSpan.textContent = message;
+        warningDiv.classList.remove('hidden');
+        
+        // Highlight input field
+        const timeInput = document.getElementById('appointmentTime');
+        if (timeInput) {
+            timeInput.classList.add('border-red-500');
+            timeInput.classList.remove('border-gray-300');
+        }
+    }
+
+    hideWarning() {
+        const warningDiv = document.getElementById('timeConflictWarning');
+        const timeInput = document.getElementById('appointmentTime');
+        
+        if (warningDiv) {
+            warningDiv.classList.add('hidden');
+        }
+        
+        if (timeInput) {
+            timeInput.classList.remove('border-red-500');
+            timeInput.classList.add('border-gray-300');
+        }
+    }
+}
+
+// Initialize conflict detector when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    new ConflictDetector();
+});
+
 </script> 

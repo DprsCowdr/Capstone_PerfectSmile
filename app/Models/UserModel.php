@@ -28,8 +28,11 @@ class UserModel extends Model
         'name' => 'required|min_length[2]|max_length[100]',
         'email' => 'required|valid_email|is_unique[user.email,id,{id}]',
         'phone' => 'required|min_length[10]|max_length[15]',
-        'password' => 'required|min_length[6]',
-        'user_type' => 'required|in_list[admin,dentist,patient,staff,guest]',
+        'password' => 'permit_empty|min_length[6]',
+        // Accept both cases; will normalize to lowercase before save
+        'gender' => 'permit_empty|in_list[male,female,other,Male,Female,Other]',
+        // Include dentist (legacy doctor kept for backward compatibility)
+        'user_type' => 'required|in_list[admin,doctor,dentist,patient,staff,guest]',
         'status' => 'permit_empty|in_list[active,inactive]'
     ];
 
@@ -90,6 +93,16 @@ class UserModel extends Model
         if (isset($data['data']['password'])) {
             $data['data']['password'] = password_hash($data['data']['password'], PASSWORD_DEFAULT);
         }
+        if (isset($data['data']['gender'])) {
+            $data['data']['gender'] = strtolower($data['data']['gender']);
+        }
+        if (isset($data['data']['user_type'])) {
+            $data['data']['user_type'] = strtolower($data['data']['user_type']);
+            // Map legacy 'doctor' to 'dentist'
+            if ($data['data']['user_type'] === 'doctor') {
+                $data['data']['user_type'] = 'dentist';
+            }
+        }
         return $data;
     }
 
@@ -100,6 +113,15 @@ class UserModel extends Model
     {
         if (isset($data['data']['password'])) {
             $data['data']['password'] = password_hash($data['data']['password'], PASSWORD_DEFAULT);
+        }
+        if (isset($data['data']['gender'])) {
+            $data['data']['gender'] = strtolower($data['data']['gender']);
+        }
+        if (isset($data['data']['user_type'])) {
+            $data['data']['user_type'] = strtolower($data['data']['user_type']);
+            if ($data['data']['user_type'] === 'doctor') {
+                $data['data']['user_type'] = 'dentist';
+            }
         }
         return $data;
     }

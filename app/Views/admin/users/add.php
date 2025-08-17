@@ -26,16 +26,22 @@
                 <h1 class="text-2xl font-bold text-gray-800">Add New User</h1>
             </div>
 
-            <?php if (session()->getFlashdata('error')): ?>
+            <?php if ($err = session()->getFlashdata('error')): ?>
+                <?php $errors = is_array($err) ? $err : [$err]; ?>
                 <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     <i class="fas fa-exclamation-circle mr-2"></i>
-                    <?= session()->getFlashdata('error') ?>
+                    <ul class="list-disc ml-5 text-sm space-y-1">
+                        <?php foreach ($errors as $e): if(!$e) continue; ?>
+                            <li><?= esc($e) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
             <?php endif; ?>
 
             <!-- Add User Form -->
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <form action="<?= base_url('admin/users/store') ?>" method="POST">
+                <form id="addUserForm" action="<?= base_url('admin/users/store') ?>" method="POST">
+                    <?= csrf_field() ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Basic Information -->
                         <div class="space-y-4">
@@ -57,7 +63,7 @@
 
                             <div>
                                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                                <input type="tel" id="phone" name="phone" required 
+                                <input type="tel" id="phone" name="phone" required pattern="[0-9+\-() ]{10,}" title="Enter a valid phone number" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        value="<?= old('phone') ?>">
                             </div>
@@ -228,6 +234,13 @@ function calculateAge() {
 // Calculate age on page load if date is already selected
 document.addEventListener('DOMContentLoaded', function() {
     calculateAge();
+    document.getElementById('addUserForm').addEventListener('submit', function(e) {
+        const anyChecked = Array.from(document.querySelectorAll('input[name="branches[]"]')).some(cb => cb.checked);
+        if (!anyChecked) {
+            e.preventDefault();
+            alert('Please select at least one branch.');
+        }
+    });
 });
 </script>
 

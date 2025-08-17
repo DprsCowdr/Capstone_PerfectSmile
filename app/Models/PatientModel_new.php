@@ -44,11 +44,6 @@ class PatientModel extends Model
     protected $skipValidation = false;
     protected $cleanValidationRules = true;
 
-    // Define casts for automatic type conversion
-    protected $casts = [
-        'medical_conditions' => 'json'
-    ];
-
     protected $castHandlers = [];
 
     // Events

@@ -27,48 +27,48 @@
 window.BASE_URL = '<?= base_url() ?>';
 </script>
 
-<div class="flex min-h-screen bg-gray-100">
+<div class="flex min-h-screen bg-gray-50">
     <!-- Include existing sidebar -->
     <?= view('templates/sidebar') ?>
 
     <!-- Main Content Area -->
-    <div class="flex-1 lg:ml-0 p-6">
+    <div class="flex-1 lg:ml-0 p-8 space-y-8">
         <!-- Page Header -->
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-2">Records Management</h1>
-            <p class="text-gray-600">Comprehensive dental records management system</p>
-        </div>
+        <header class="mb-2">
+            <h1 class="text-xl font-semibold text-gray-800 tracking-tight">Records Management</h1>
+            <p class="text-sm text-gray-500">Comprehensive dental records management system</p>
+        </header>
 
         <!-- Main Content Area - Full Width Records Table -->
-        <div class="bg-white shadow rounded-lg">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center mb-4">
-                    <h2 class="text-lg font-bold text-gray-800">Recent Records</h2>
+        <section class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex items-center mb-3">
+                    <h2 class="text-sm font-semibold text-gray-700">Recent Records</h2>
                 </div>
                 
                 <!-- Advanced Search Bar -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex flex-col md:flex-row gap-4">
+                <div class="bg-gray-50 rounded-md p-4">
+                    <div class="flex flex-col md:flex-row gap-4 md:items-center">
                         <!-- Main Search Input -->
                         <div class="flex-1 relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-search text-gray-400"></i>
                             </div>
-                            <input type="text" 
+                <input type="text" 
                                    id="recordsSearchInput" 
-                                   class="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                   placeholder="Search by patient name, email, phone, date, type, or allergies...">
+                    class="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm placeholder:text-gray-400"
+                                   placeholder="Search patient name, contact, date, type, allergies...">
                         </div>
                         
                         <!-- Search Filters -->
-                        <div class="flex gap-2">
-                            <select id="statusFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
+            <div class="flex gap-3 md:w-auto">
+                <select id="statusFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
                                 <option value="">All Status</option>
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
                             
-                            <select id="typeFilter" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
+                <select id="typeFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
                                 <option value="">All Types</option>
                                 <option value="general">General</option>
                                 <option value="checkup">Checkup</option>
@@ -76,14 +76,14 @@ window.BASE_URL = '<?= base_url() ?>';
                                 <option value="emergency">Emergency</option>
                             </select>
                             
-                            <button id="clearSearch" class="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm transition-colors">
-                                <i class="fas fa-times mr-1"></i>Clear
+                <button id="clearSearch" class="px-3 py-2.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-medium transition-colors flex items-center gap-1 shadow-sm">
+                                <i class="fas fa-times text-[11px]"></i><span>Clear</span>
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Search Results Summary -->
-                    <div id="searchSummary" class="mt-3 text-sm text-gray-600 hidden">
+            <!-- Search Results Summary -->
+            <div id="searchSummary" class="mt-3 text-xs text-gray-600 hidden">
                         <i class="fas fa-info-circle mr-1"></i>
                         <span id="searchResultsCount">0</span> records found
                         <span id="searchTermDisplay"></span>
@@ -91,68 +91,63 @@ window.BASE_URL = '<?= base_url() ?>';
                 </div>
             </div>
             
-            <div class="overflow-x-auto">
-                <table class="full-width-table min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+        <div class="overflow-x-auto scrollbar-thin">
+        <table class="min-w-full divide-y divide-gray-100">
+            <thead class="bg-gray-50/70">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Patient</th>
+                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Type</th>
+                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-gray-100 text-sm">
                         <?php if (!empty($records)): ?>
                             <?php foreach ($records as $record): ?>
-                                <tr class="hover:bg-gray-50 transition-colors duration-200">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-5 py-3 whitespace-nowrap text-[13px] text-gray-800">
                                         <?= date('M j, Y', strtotime($record['record_date'])) ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="flex-shrink-0 h-10 w-10">
-                                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                                    <i class="fas fa-user text-blue-600"></i>
-                                                </div>
+                                    <td class="px-5 py-3 whitespace-nowrap">
+                                        <div class="flex items-start gap-4">
+                                            <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+                                                <i class="fas fa-user"></i>
                                             </div>
-                                            <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900"><?= esc($record['patient_name']) ?></div>
-                                                <div class="text-sm text-gray-500">
+                                            <div class="min-w-[180px] space-y-1">
+                                                <div class="text-[13px] font-medium text-gray-900 leading-tight tracking-tight">
+                                                    <?= esc($record['patient_name']) ?>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500">
                                                     <?= esc($record['patient_email']) ?>
                                                     <?php if (!empty($record['patient_phone'])): ?>
                                                         • <?= esc($record['patient_phone']) ?>
                                                     <?php endif; ?>
                                                 </div>
                                                 <?php if (!empty($record['allergies'])): ?>
-                                                    <div class="text-xs text-red-600 mt-1">
-                                                        <i class="fas fa-exclamation-triangle mr-1"></i>
-                                                        Allergies: <?= esc($record['allergies']) ?>
+                                                    <div class="text-[10px] text-red-600 mt-1 flex items-center gap-1">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                        <span><?= esc($record['allergies']) ?></span>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <td class="px-5 py-3 whitespace-nowrap text-[13px] text-gray-700">
                                         <?= ucfirst($record['record_type'] ?? 'General') ?>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                            <?= ($record['status'] ?? 'active') === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
+                                    <td class="px-5 py-3 whitespace-nowrap">
+                                        <span class="px-2 py-0.5 inline-flex text-[10px] font-medium rounded-full tracking-wide <?= ($record['status'] ?? 'active') === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600' ?>">
                                             <?= ucfirst($record['status'] ?? 'Active') ?>
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap records-table-actions">
-                                        <div class="flex flex-wrap gap-2">
-                                            <button onclick="window.recordsManager?.openPatientRecordsModal(<?= $record['user_id'] ?>)"
-                                                    class="action-btn action-btn-view">
-                                                <i class="fas fa-eye mr-1"></i>
-                                                <span>View</span>
+                                    <td class="px-5 py-3 whitespace-nowrap">
+                                        <div class="flex items-center gap-3">
+                                            <button onclick="window.recordsManager?.openPatientRecordsModal(<?= $record['user_id'] ?>)" class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-[11px] font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 shadow-sm">
+                                                View
                                             </button>
-                                            <button onclick="deleteRecord(<?= $record['id'] ?>)"
-                                                    class="action-btn action-btn-delete">
-                                                <i class="fas fa-trash mr-1"></i>
-                                                <span>Delete</span>
+                                            <button onclick="deleteRecord(<?= $record['id'] ?>)" class="px-3 py-1.5 rounded-md bg-red-50 text-red-600 text-[11px] font-medium hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1">
+                                                Delete
                                             </button>
                                         </div>
                                     </td>
@@ -160,15 +155,11 @@ window.BASE_URL = '<?= base_url() ?>';
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                                    <div class="flex flex-col items-center py-8">
-                                        <i class="fas fa-file-medical fa-3x text-gray-300 mb-4"></i>
-                                        <p class="text-lg font-medium">No records found</p>
-                                        <p class="text-sm">Get started by creating a new dental record.</p>
-                                        <a href="<?= base_url('admin/dental-records/create') ?>" 
-                                           class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                            <i class="fas fa-plus mr-2"></i>Create New Record
-                                        </a>
+                                <td colspan="5" class="px-6 py-14 text-center text-gray-500">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fas fa-file-medical text-3xl text-gray-300 mb-3"></i>
+                                        <p class="text-sm font-medium">No records found</p>
+                                        <p class="text-xs">Create a new dental record to get started.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -176,83 +167,47 @@ window.BASE_URL = '<?= base_url() ?>';
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </div>
 </div>
 
 <!-- Patient Records Modal -->
-<div id="patientRecordsModal" class="modal-overlay hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm z-50 transition-all duration-300 ease-in-out">
-    <div id="modalDialog" class="modal-container flex items-center justify-center min-h-screen p-4">
-        <div class="resizable-modal relative bg-white rounded-xl shadow-2xl border border-gray-200 transition-all duration-300 ease-in-out transform scale-95 opacity-0" 
-             style="width: 90%; max-width: 1200px; min-width: 800px; height: 85vh; max-height: 95vh; min-height: 600px;">
+<div id="patientRecordsModal" class="hidden fixed inset-0 z-50 flex items-start justify-center bg-gray-900/50 backdrop-blur-sm p-4 overflow-y-auto">
+    <div id="modalDialog" class="w-full max-w-5xl mx-auto">
+        <div class="modal-panel relative bg-white rounded-lg border border-gray-200 shadow-xl overflow-hidden transform transition-all scale-95 opacity-0" style="min-height:560px;">
             
             <!-- Modal Header -->
-            <div class="modal-header-resizable flex justify-between items-center p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-xl">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-user-md text-white"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-900">Patient Records</h3>
-                        <p class="text-sm text-gray-600">Comprehensive patient information</p>
-                    </div>
-                </div>
-                
-                <!-- Modal Controls -->
-                <div class="modal-controls flex items-center space-x-2">
-                    <button id="fullscreenToggle" type="button" class="fullscreen-btn" title="Toggle Fullscreen">
-                        <i class="fas fa-expand"></i>
-                    </button>
-                    <button type="button" onclick="window.recordsManager?.closePatientRecordsModal()" 
-                            class="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-white/50 transition-colors">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
-            </div>
+            <header class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-white">
+                <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-user-md text-blue-600"></i>
+                    Patient Records
+                </h3>
+                <button type="button" onclick="window.recordsManager?.closePatientRecordsModal()" class="text-gray-400 hover:text-gray-600 p-1.5 rounded-md hover:bg-gray-100">
+                    <span class="sr-only">Close</span>
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </header>
             
             <!-- Modal Navigation -->
-            <div class="flex space-x-1 px-6 pt-4 border-b border-gray-100">
-                <button id="basic-info-tab" onclick="window.recordsManager?.showRecordTab('basic-info')" 
-                        class="record-tab px-4 py-3 text-sm font-medium rounded-t-lg bg-blue-600 text-white shadow-sm transition-all duration-200">
-                    <i class="fas fa-user mr-2"></i>Basic Info
-                </button>
-                <button id="dental-records-tab" onclick="window.recordsManager?.showRecordTab('dental-records')" 
-                        class="record-tab px-4 py-3 text-sm font-medium rounded-t-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
-                    <i class="fas fa-tooth mr-2"></i>Dental Records
-                </button>
-                <button id="dental-chart-tab" onclick="window.recordsManager?.showRecordTab('dental-chart')" 
-                        class="record-tab px-4 py-3 text-sm font-medium rounded-t-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
-                    <i class="fas fa-chart-line mr-2"></i>Dental Chart
-                </button>
-                <button id="appointments-tab" onclick="window.recordsManager?.showRecordTab('appointments')" 
-                        class="record-tab px-4 py-3 text-sm font-medium rounded-t-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
-                    <i class="fas fa-calendar mr-2"></i>Appointments
-                </button>
-                <button id="treatments-tab" onclick="window.recordsManager?.showRecordTab('treatments')" 
-                        class="record-tab px-4 py-3 text-sm font-medium rounded-t-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
-                    <i class="fas fa-procedures mr-2"></i>Treatments
-                </button>
-                <button id="medical-records-tab" onclick="window.recordsManager?.showRecordTab('medical-records')" 
-                        class="record-tab px-4 py-3 text-sm font-medium rounded-t-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200">
-                    <i class="fas fa-file-medical mr-2"></i>Medical Records
-                </button>
-            </div>
+            <nav class="flex gap-1 px-5 pt-3 border-b border-gray-100 bg-white overflow-x-auto text-xs">
+                <button id="basic-info-tab" onclick="window.recordsManager?.showRecordTab('basic-info')" class="record-tab px-3 py-2 rounded-md bg-blue-600 text-white font-medium">Basic Info</button>
+                <button id="dental-records-tab" onclick="window.recordsManager?.showRecordTab('dental-records')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Dental Records</button>
+                <button id="dental-chart-tab" onclick="window.recordsManager?.showRecordTab('dental-chart')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Dental Chart</button>
+                <button id="appointments-tab" onclick="window.recordsManager?.showRecordTab('appointments')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Appointments</button>
+                <button id="treatments-tab" onclick="window.recordsManager?.showRecordTab('treatments')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Treatments</button>
+                <button id="medical-records-tab" onclick="window.recordsManager?.showRecordTab('medical-records')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Medical Records</button>
+            </nav>
             
             <!-- Modal Content -->
-            <div class="modal-content-resizable p-6 overflow-y-auto" style="height: calc(100% - 140px);">
-                <div id="modalContent" class="w-full h-full">
-                    <div class="flex items-center justify-center h-32">
-                        <div class="text-center">
-                            <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
-                            <p class="text-gray-600">Loading patient information...</p>
+            <div class="px-5 py-4 overflow-y-auto" style="height: calc(100% - 92px);">
+                <div id="modalContent" class="w-full h-full text-sm">
+                    <div class="flex items-center justify-center h-40">
+                        <div class="text-center space-y-2">
+                            <i class="fas fa-spinner fa-spin text-xl text-blue-500"></i>
+                            <p class="text-xs text-gray-500">Loading patient information...</p>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Resize Handle -->
-            <div class="resize-handle-se absolute bottom-0 right-0 w-5 h-5 cursor-se-resize opacity-60 hover:opacity-100 transition-opacity">
-                <i class="fas fa-grip-lines-vertical text-gray-400 text-xs transform rotate-45"></i>
             </div>
         </div>
     </div>
