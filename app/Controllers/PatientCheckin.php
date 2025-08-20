@@ -99,17 +99,46 @@ class PatientCheckin extends BaseController
             return redirect()->to('/checkin');
         }
 
-        // Update appointment status to checked_in
-        $result = $this->appointmentModel->update($appointmentId, [
-            'status' => 'checked_in',
-            'checked_in_at' => date('Y-m-d H:i:s'),
-            'checked_in_by' => $user['id']
-        ]);
+        // Update appointment status to checked_in and create check-in record
+        $db = \Config\Database::connect();
+        $db->transStart();
 
-        if ($result) {
+        try {
+            // Update appointment status
+            $appointmentResult = $this->appointmentModel->update($appointmentId, [
+                'status' => 'checked_in'
+            ]);
+
+            if (!$appointmentResult) {
+                throw new \Exception('Failed to update appointment status');
+            }
+
+            // Create patient check-in record
+            $patientCheckinModel = new \App\Models\PatientCheckinModel();
+            $checkinResult = $patientCheckinModel->insert([
+                'appointment_id' => $appointmentId,
+                'patient_id' => $appointment['user_id'],
+                'checked_in_at' => date('Y-m-d H:i:s'),
+                'checked_in_by' => $user['id'],
+                'status' => 'checked_in',
+                'notes' => 'Patient checked in via admin interface'
+            ]);
+
+            if (!$checkinResult) {
+                throw new \Exception('Failed to create check-in record');
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                throw new \Exception('Transaction failed');
+            }
+
             session()->setFlashdata('success', 'Patient checked in successfully');
-        } else {
-            session()->setFlashdata('error', 'Failed to check in patient');
+        } catch (\Exception $e) {
+            $db->transRollback();
+            log_message('error', 'Check-in failed: ' . $e->getMessage());
+            session()->setFlashdata('error', 'Failed to check in patient: ' . $e->getMessage());
         }
 
         return redirect()->to('/checkin');

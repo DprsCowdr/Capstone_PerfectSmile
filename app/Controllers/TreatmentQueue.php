@@ -30,23 +30,27 @@ class TreatmentQueue extends BaseController
         // Get checked-in patients waiting for treatment
         $waitingPatients = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, user.phone as patient_phone, 
-                     TIMESTAMPDIFF(MINUTE, checked_in_at, NOW()) as waiting_time')
+                     patient_checkins.checked_in_at,
+                     TIMESTAMPDIFF(MINUTE, patient_checkins.checked_in_at, NOW()) as waiting_time')
             ->join('user', 'user.id = appointments.user_id')
+            ->join('patient_checkins', 'patient_checkins.appointment_id = appointments.id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
             ->where('appointments.status', 'checked_in')
             ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('checked_in_at', 'ASC')
+            ->orderBy('patient_checkins.checked_in_at', 'ASC')
             ->findAll();
 
         // Get ongoing treatments
         $ongoingTreatments = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, 
-                     TIMESTAMPDIFF(MINUTE, started_at, NOW()) as treatment_duration')
+                     treatment_sessions.started_at,
+                     TIMESTAMPDIFF(MINUTE, treatment_sessions.started_at, NOW()) as treatment_duration')
             ->join('user', 'user.id = appointments.user_id')
+            ->join('treatment_sessions', 'treatment_sessions.appointment_id = appointments.id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
             ->where('appointments.status', 'ongoing')
             ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('started_at', 'ASC')
+            ->orderBy('treatment_sessions.started_at', 'ASC')
             ->findAll();
 
         return view('queue/dashboard', [
@@ -87,37 +91,59 @@ class TreatmentQueue extends BaseController
         }
 
         try {
-            // Update status to ongoing
-            $data = [
-                'status' => 'ongoing',
-                'started_at' => date('Y-m-d H:i:s'),
-                'called_by' => $user['id']
-            ];
-            
-            log_message('debug', "Updating appointment with data: " . json_encode($data));
-            
-            $result = $this->appointmentModel->update($appointmentId, $data);
+            // Start database transaction
+            $db = \Config\Database::connect();
+            $db->transStart();
 
-            if ($result) {
-                // If the user is a dentist/doctor, redirect to checkup module
-                if (in_array($user['user_type'], ['dentist', 'doctor'])) {
-                    log_message('info', "Dentist called patient for treatment: {$appointmentId}");
-                    return redirect()->to("/checkup/patient/{$appointmentId}")
-                        ->with('success', 'Patient called for treatment');
-                } else {
-                    // Staff and admin users should be redirected back to the check-in dashboard
-                    log_message('info', "Staff/admin sent patient to treatment: {$appointmentId}");
-                    session()->setFlashdata('success', 'Patient sent to treatment queue');
-                    return redirect()->back();
-                }
+            // Update appointment status to ongoing
+            $appointmentResult = $this->appointmentModel->update($appointmentId, [
+                'status' => 'ongoing'
+            ]);
+
+            if (!$appointmentResult) {
+                throw new \Exception('Failed to update appointment status');
+            }
+
+            // Create treatment session record
+            $treatmentSessionModel = new \App\Models\TreatmentSessionModel();
+            $sessionResult = $treatmentSessionModel->insert([
+                'appointment_id' => $appointmentId,
+                'patient_id' => $appointment['user_id'],
+                'dentist_id' => $appointment['dentist_id'],
+                'started_at' => date('Y-m-d H:i:s'),
+                'called_by' => $user['id'],
+                'status' => 'ongoing',
+                'notes' => 'Patient called for treatment'
+            ]);
+
+            if (!$sessionResult) {
+                throw new \Exception('Failed to create treatment session');
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                throw new \Exception('Transaction failed');
+            }
+
+            log_message('debug', "Successfully called patient for treatment: {$appointmentId}");
+
+            // If the user is a dentist/doctor, redirect to checkup module
+            if (in_array($user['user_type'], ['dentist', 'doctor'])) {
+                log_message('info', "Dentist called patient for treatment: {$appointmentId}");
+                return redirect()->to("/checkup/patient/{$appointmentId}")
+                    ->with('success', 'Patient called for treatment');
             } else {
-                log_message('error', "Failed to call patient: {$appointmentId}. Validation errors: " . print_r($this->appointmentModel->errors(), true));
-                session()->setFlashdata('error', 'Failed to call patient: ' . implode(', ', $this->appointmentModel->errors()));
+                // Staff and admin users should be redirected back to the check-in dashboard
+                log_message('info', "Staff/admin sent patient to treatment: {$appointmentId}");
+                session()->setFlashdata('success', 'Patient sent to treatment queue');
                 return redirect()->back();
             }
+
         } catch (\Exception $e) {
+            $db->transRollback();
             log_message('error', "Exception calling patient: {$appointmentId}. " . $e->getMessage());
-            session()->setFlashdata('error', 'Error: ' . $e->getMessage());
+            session()->setFlashdata('error', 'Failed to call patient: ' . $e->getMessage());
             return redirect()->back();
         }
     }
