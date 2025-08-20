@@ -1,4 +1,8 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<?php if (function_exists('file_exists') && file_exists(FCPATH . 'css/flatpickr.min.css')): ?>
+    <link rel="stylesheet" href="<?= base_url('css/flatpickr.min.css') ?>">
+<?php else: ?>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<?php endif; ?>
 <!-- Tailwind Patients Table -->
 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
     <h1 class="font-bold text-2xl md:text-3xl text-black tracking-tight">Lists of Patients</h1>
@@ -260,7 +264,7 @@
     <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
         <div class="flex flex-col items-center text-center gap-4">
             <div class="flex flex-col items-center gap-2">
-                <button class="bg-indigo-50 rounded-full w-8 h-8 flex items-center justify-center text-indigo-400 hover:bg-indigo-100 transition">
+                <button id="showNewActionPanelBtn" class="bg-indigo-50 rounded-full w-8 h-8 flex items-center justify-center text-indigo-400 hover:bg-indigo-100 transition">
                     <i class="fas fa-plus text-sm"></i>
                 </button>
                 <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl text-indigo-300">
@@ -439,284 +443,44 @@
     </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Function to calculate age from date of birth
-    function calculateAge(dateOfBirth) {
-        if (!dateOfBirth) return '';
-        
-        const today = new Date();
-        const birthDate = new Date(dateOfBirth);
-        
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        
-        return age > 0 ? age + ' years' : 'Invalid date';
-    }
-
-    // Initialize modern date picker with age calculation
-    flatpickr(".modern-date-input", {
-        dateFormat: "Y-m-d",
-        allowInput: false,
-        clickOpens: true,
-        maxDate: new Date(),
-        yearDropdown: true,
-        monthDropdown: true,
-        theme: "light",
-        disableMobile: false,
-        locale: {
-            firstDayOfWeek: 1
-        },
-        onChange: function(selectedDates, dateStr, instance) {
-            console.log('Date changed:', dateStr);
-            // Calculate and display age when date changes
-            const age = calculateAge(dateStr);
-            console.log('Calculated age:', age);
-            
-            // Make sure elements exist before setting values
-            const calculatedAgeInput = document.getElementById('calculated_age');
-            const ageInput = document.getElementById('age');
-            
-            if (calculatedAgeInput) {
-                calculatedAgeInput.value = age;
-            }
-            if (ageInput) {
-                const ageNumber = age.replace(' years', '').replace('Invalid date', '0');
-                ageInput.value = ageNumber; // Store just the number
-                console.log('Age input set to:', ageNumber);
-            }
-        }
-    });
-
-    // Initialize date picker for update form
-    flatpickr("#update-patient-date-of-birth", {
-        dateFormat: "Y-m-d",
-        allowInput: false,
-        clickOpens: true,
-        maxDate: new Date(),
-        yearDropdown: true,
-        monthDropdown: true,
-        theme: "light",
-        disableMobile: false,
-        locale: {
-            firstDayOfWeek: 1
-        }
-    });
-
-    // Add Patient Panel
-    var addBtn = document.getElementById('showAddPatientFormBtn');
-    var addPanel = document.getElementById('addPatientPanel');
-    var addCloseBtn = document.getElementById('closeAddPatientPanel');
-    if (addBtn && addPanel && addCloseBtn) {
-        addBtn.addEventListener('click', function() {
-            addPanel.classList.add('active');
-        });
-        addCloseBtn.addEventListener('click', function() {
-            addPanel.classList.remove('active');
-        });
-    }
-
-    // View Patient Panel
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.showViewPatientPanelBtn');
-        if (btn) {
-            e.preventDefault();
-            var viewPanel = document.getElementById('viewPatientPanel');
-            if (viewPanel) viewPanel.classList.add('active');
-            // Get patient data
-            var patient = btn.getAttribute('data-patient');
-            if (patient) {
-                try {
-                    var data = JSON.parse(patient);
-                    document.getElementById('view-patient-name').textContent = data.name || '';
-                    document.getElementById('view-patient-email').textContent = data.email || '';
-                    document.getElementById('view-patient-phone').textContent = data.phone || '';
-                    document.getElementById('view-patient-gender').textContent = data.gender || '';
-                    document.getElementById('view-patient-date-of-birth').textContent = data.date_of_birth || '';
-                    document.getElementById('view-patient-address').textContent = data.address || '';
-                } catch (err) {
-                    console.error('Error parsing patient data:', err);
-                }
-            }
-        }
-        if (e.target.closest('#closeViewPatientPanel')) {
-            var viewPanel = document.getElementById('viewPatientPanel');
-            if (viewPanel) viewPanel.classList.remove('active');
-        }
-    });
-
-    // Update Patient Panel (table edit icon)
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.showUpdatePatientPanelBtnTable')) {
-            e.preventDefault();
-            e.stopPropagation();
-            var updatePanel = document.getElementById('updatePatientPanel');
-            if (updatePanel) {
-                // Close any other open panels first
-                document.querySelectorAll('.slide-in-panel.active').forEach(function(panel) {
-                    if (panel !== updatePanel) {
-                        panel.classList.remove('active');
-                    }
-                });
-                updatePanel.classList.add('active');
-                document.body.classList.add('panel-open');
-            }
-            
-            // Get patient ID and load data
-            var patientId = e.target.closest('.showUpdatePatientPanelBtnTable').getAttribute('data-patient-id');
-            if (patientId) {
-                loadPatientData(patientId);
-            }
-        }
-        if (e.target.closest('#closeUpdatePatientPanel')) {
-            e.preventDefault();
-            e.stopPropagation();
-            var updatePanel = document.getElementById('updatePatientPanel');
-            if (updatePanel) {
-                updatePanel.classList.remove('active');
-                document.body.classList.remove('panel-open');
-            }
-        }
-    });
-    
-    // Function to load patient data for update
-    function loadPatientData(patientId) {
-        console.log('Loading patient data for ID:', patientId);
-        var userType = '<?= $user['user_type'] ?>';
-        
-        // Set form action first
-        document.getElementById('updatePatientForm').action = '<?= base_url() ?>' + userType + '/patients/update/' + patientId;
-        console.log('Form action set to:', document.getElementById('updatePatientForm').action);
-        
-        fetch('<?= base_url() ?>' + userType + '/patients/get/' + patientId)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Patient data received:', data);
-                if (data.error) {
-                    console.error('Error loading patient data:', data.error);
-                    return;
-                }
-                
-                // Fill the form fields
-                document.getElementById('update-patient-id').value = data.id;
-                document.getElementById('update-patient-name').value = data.name || '';
-                document.getElementById('update-patient-email').value = data.email || '';
-                document.getElementById('update-patient-phone').value = data.phone || '';
-                document.getElementById('update-patient-address').value = data.address || '';
-                document.getElementById('update-patient-gender').value = data.gender || '';
-                document.getElementById('update-patient-date-of-birth').value = data.date_of_birth || '';
-                document.getElementById('update-patient-age').value = data.age || '';
-                document.getElementById('update-patient-occupation').value = data.occupation || '';
-                document.getElementById('update-patient-nationality').value = data.nationality || '';
-                
-                console.log('Form fields populated');
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    }
-    
-    // Handle update form submission
-    document.getElementById('updatePatientForm').addEventListener('submit', function(e) {
-        console.log('Form submitted!');
-        console.log('Form action:', this.action);
-        console.log('Form method:', this.method);
-        
-        // Log all form fields
-        var formData = new FormData(this);
-        for (var pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
-        
-        // Let the form submit normally - no need to prevent default
-        // The form will post to the correct URL and handle the redirect
-    });
-    
-    // Update Patient Panel (pen in view panel)
-    var showUpdateBtnPen = document.querySelector('.showUpdatePatientPanelBtn');
-    if (showUpdateBtnPen) {
-        showUpdateBtnPen.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var updatePanel = document.getElementById('updatePatientPanel');
-            if (updatePanel) {
-                // Close any other open panels first
-                document.querySelectorAll('.slide-in-panel.active').forEach(function(panel) {
-                    if (panel !== updatePanel) {
-                        panel.classList.remove('active');
-                    }
-                });
-                updatePanel.classList.add('active');
-                document.body.classList.add('panel-open');
-            }
-            
-            // Get patient data from view panel
-            var patientName = document.getElementById('view-patient-name').textContent;
-            var patientEmail = document.getElementById('view-patient-email').textContent;
-            var patientPhone = document.getElementById('view-patient-phone').textContent;
-            var patientGender = document.getElementById('view-patient-gender').textContent;
-            var patientDateOfBirth = document.getElementById('view-patient-date-of-birth').textContent;
-            var patientAddress = document.getElementById('view-patient-address').textContent;
-            
-            // Fill the form fields (we'll need to get the full data via AJAX)
-            // For now, we'll use the data from the view panel
-            document.getElementById('update-patient-name').value = patientName;
-            document.getElementById('update-patient-email').value = patientEmail;
-            document.getElementById('update-patient-phone').value = patientPhone;
-            document.getElementById('update-patient-gender').value = patientGender;
-            document.getElementById('update-patient-date-of-birth').value = patientDateOfBirth;
-            document.getElementById('update-patient-address').value = patientAddress;
-        });
-    }
-
-    // Tab switching for View Patient panel
-    var tabBtns = document.querySelectorAll('.view-patient-tab-btn');
-    var tabContents = document.querySelectorAll('.view-patient-tab-content');
-    tabBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var tab = btn.getAttribute('data-tab');
-            
-            // Remove active from all buttons
-            tabBtns.forEach(function(b) { 
-                b.classList.remove('active'); 
-                b.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
-                b.classList.add('text-indigo-500');
-            });
-            
-            // Hide all content
-            tabContents.forEach(function(c) { 
-                c.classList.add('hidden');
-            });
-            
-            // Set active button
-            btn.classList.add('active');
-            btn.classList.add('bg-white', 'text-gray-800', 'shadow-sm');
-            btn.classList.remove('text-indigo-500');
-            
-            // Show active content
-            var content = document.getElementById('view-patient-tab-content-' + tab);
-            if (content) {
-                content.classList.remove('hidden');
-            }
-        });
-    });
-});
-</script> 
+<?php if (function_exists('file_exists') && file_exists(FCPATH . 'js/flatpickr.min.js')): ?>
+    <script src="<?= base_url('js/flatpickr.min.js') ?>"></script>
+<?php else: ?>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<?php endif; ?>
+<!-- Externalized patient panel JS -->
+<script src="<?= base_url('js/patientsTable.js') ?>"></script>
 
 <!-- Debug CSS for slide-in-panel -->
 <style>
+/* Left slide-in panel */
+.slide-in-panel-left {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  max-width: 28rem;
+  background: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+.slide-in-panel-left.active {
+  transform: translateX(0);
+}
+
+/* Make slide-in panels wider */
 .slide-in-panel {
   position: fixed;
   top: 0;
   right: 0;
   height: 100vh;
   width: 100vw;
-  max-width: 28rem;
+  max-width: 35rem; /* Increased from 28rem to 35rem */
   background: #ffffff;
   box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
   z-index: 50;
@@ -728,16 +492,12 @@ document.addEventListener('DOMContentLoaded', function() {
 .slide-in-panel.active {
   transform: translateX(0);
 }
-@media (min-width: 640px) {
-  .slide-in-panel {
-    width: 28rem;
-    max-width: 100vw;
-  }
-}
-@media (max-width: 639px) {
-  .slide-in-panel {
-    width: 100vw;
-    max-width: 100vw;
+
+:root { --panel-width: 35rem; } /* Updated panel width */
+@media (min-width: 1024px) {
+  /* When action panel is open, shift the view panel left by panel width */
+  #viewPatientPanel.shifted {
+    right: var(--panel-width);
   }
 }
 
@@ -792,137 +552,342 @@ body.panel-open {
 }
 </style>
 
-<!-- Debug JS for Add, View, and Update Patient panels -->
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    console.log('Patient panel JS loaded');
+<!-- New Action Slide-in Panel (slides from right) -->
+<div id="newActionPanel" class="slide-in-panel p-4 lg:p-6 flex flex-col gap-4">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-700 capitalize">Patient Medical History</h2>
+        <button class="close-btn text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" id="closeNewActionPanel" aria-label="Close">&times;</button>
+    </div>
     
-    // Add Patient
-    var addBtn = document.getElementById('showAddPatientFormBtn');
-    var addPanel = document.getElementById('addPatientPanel');
-    var addCloseBtn = document.getElementById('closeAddPatientPanel');
-    if (addBtn && addPanel && addCloseBtn) {
-        addBtn.addEventListener('click', function() {
-            console.log('Add Patient button clicked');
-            addPanel.classList.add('active');
-            document.body.classList.add('panel-open');
-        });
-        addCloseBtn.addEventListener('click', function() {
-            addPanel.classList.remove('active');
-            document.body.classList.remove('panel-open');
-        });
-    }
-    
-    // View Patient
-    document.querySelectorAll('.showViewPatientPanelBtn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            var viewPanel = document.getElementById('viewPatientPanel');
-            if (viewPanel) {
-                console.log('View Patient button clicked');
-                viewPanel.classList.add('active');
-                document.body.classList.add('panel-open');
-            }
-        });
-    });
-    var viewCloseBtn = document.getElementById('closeViewPatientPanel');
-    if (viewCloseBtn) {
-        viewCloseBtn.addEventListener('click', function() {
-            var viewPanel = document.getElementById('viewPatientPanel');
-            if (viewPanel) {
-                viewPanel.classList.remove('active');
-                document.body.classList.remove('panel-open');
-            }
-        });
-    }
-    
-    // Update Patient
-    document.querySelectorAll('.showUpdatePatientPanelBtnTable, .showUpdatePatientPanelBtn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            var updatePanel = document.getElementById('updatePatientPanel');
-            if (updatePanel) {
-                console.log('Update Patient button clicked');
-                updatePanel.classList.add('active');
-                document.body.classList.add('panel-open');
-            }
-        });
-    });
-    var updateCloseBtn = document.getElementById('closeUpdatePatientPanel');
-    if (updateCloseBtn) {
-        updateCloseBtn.addEventListener('click', function() {
-            var updatePanel = document.getElementById('updatePatientPanel');
-            if (updatePanel) {
-                updatePanel.classList.remove('active');
-                document.body.classList.remove('panel-open');
-            }
-        });
-    }
-    
-    // Close panels when clicking outside (mobile)
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('slide-in-panel')) {
-            e.target.classList.remove('active');
-            document.body.classList.remove('panel-open');
-        }
-    });
-    
-    // Handle swipe to close on mobile
-    let startX = 0;
-    let currentX = 0;
-    
-    document.querySelectorAll('.slide-in-panel').forEach(function(panel) {
-        panel.addEventListener('touchstart', function(e) {
-            startX = e.touches[0].clientX;
-        });
-        
-        panel.addEventListener('touchmove', function(e) {
-            currentX = e.touches[0].clientX;
-            const diffX = startX - currentX;
-            
-            // Only allow right swipe to close
-            if (diffX > 50) {
-                panel.style.transform = `translateX(${diffX}px)`;
-            }
-        });
-        
-        panel.addEventListener('touchend', function(e) {
-            const diffX = startX - currentX;
-            
-            if (diffX > 100) {
-                // Close panel
-                panel.classList.remove('active');
-                document.body.classList.remove('panel-open');
-            }
-            
-            // Reset transform
-            panel.style.transform = '';
-        });
-    });
-    
-    // Prevent zoom on double tap
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function (event) {
-        const now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
-});
+    <!-- Panel Content -->
+    <div class="bg-white rounded-lg shadow-sm p-4">
+        <div class="flex flex-col gap-4">
+            <!-- Dental History Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Dental History</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label for="previous_dentist" class="block text-sm font-medium text-gray-700 mb-2">Previous Dentist <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="text" id="previous_dentist" name="previous_dentist" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="Enter previous dentist name (leave blank if none)" 
+                               value="<?= esc($patient['previous_dentist'] ?? old('previous_dentist')) ?>"
+                               onchange="updateHiddenField('previous_dentist', this.value)">
+                    </div>
+                    <div>
+                        <label for="last_dental_visit" class="block text-sm font-medium text-gray-700 mb-2">Last Dental Visit Date <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="date" id="last_dental_visit" name="last_dental_visit" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               value="<?= esc($patient['last_dental_visit'] ?? old('last_dental_visit')) ?>"
+                               onchange="updateHiddenField('last_dental_visit', this.value)">
+                    </div>
+                </div>
+            </div>
 
-// Debug function to check form data before submission
-function debugFormData() {
-    console.log('Form submission debug:');
-    console.log('Name:', document.getElementById('name').value);
-    console.log('Email:', document.getElementById('email').value);
-    console.log('Phone:', document.getElementById('phone').value);
-    console.log('Gender:', document.getElementById('gender').value);
-    console.log('Date of Birth:', document.getElementById('date_of_birth').value);
-    console.log('Age:', document.getElementById('age').value);
-    console.log('Calculated Age:', document.getElementById('calculated_age').value);
-    console.log('Occupation:', document.getElementById('occupation').value);
-    console.log('Nationality:', document.getElementById('nationality').value);
-    console.log('Address:', document.getElementById('address').value);
-}
-</script> 
+            <!-- Medical History Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Medical History <span class="text-gray-500 font-normal text-sm">(All fields optional)</span></h3>
+                
+                <!-- Optional Notice -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 mr-2 mt-0.5"></i>
+                        <p class="text-xs text-blue-700">
+                            <span class="font-medium">For Staff Convenience:</span> All medical history fields are optional. You can leave any field blank if the patient doesn't have the information, doesn't know the answer, or prefers not to answer.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Physician Information -->
+                <div class="grid grid-cols-1 gap-3 mb-4">
+                    <div>
+                        <label for="physician_name" class="block text-sm font-medium text-gray-700 mb-1">Name of Physician <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="text" id="physician_name" name="physician_name" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="Enter physician name (leave blank if none)" 
+                               value="<?= esc($patient['physician_name'] ?? old('physician_name')) ?>"
+                               onchange="updateHiddenField('physician_name', this.value)">
+                    </div>
+                    <div>
+                        <label for="physician_specialty" class="block text-sm font-medium text-gray-700 mb-1">Specialty <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="text" id="physician_specialty" name="physician_specialty" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="Enter specialty (leave blank if not applicable)" 
+                               value="<?= esc($patient['physician_specialty'] ?? old('physician_specialty')) ?>"
+                               onchange="updateHiddenField('physician_specialty', this.value)">
+                    </div>
+                    <div>
+                        <label for="physician_phone" class="block text-sm font-medium text-gray-700 mb-1">Office Telephone Number <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="tel" id="physician_phone" name="physician_phone" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="Enter office phone number (leave blank if unknown)" 
+                               value="<?= esc($patient['physician_phone'] ?? old('physician_phone')) ?>"
+                               onchange="updateHiddenField('physician_phone', this.value)">
+                    </div>
+                    <div>
+                        <label for="physician_address" class="block text-sm font-medium text-gray-700 mb-1">Office Address <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <textarea id="physician_address" name="physician_address" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                  placeholder="Enter office address (leave blank if unknown)"
+                                  onchange="updateHiddenField('physician_address', this.value)"><?= esc($patient['physician_address'] ?? old('physician_address')) ?></textarea>
+                    </div>
+                </div>
+
+                <!-- General Health Questions -->
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Are you in good health? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                        <div class="flex space-x-3">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="good_health" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('good_health', this.value)">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="good_health" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('good_health', this.value)">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="good_health" value="" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('good_health', this.value)">
+                                <span class="ml-1 text-xs">Skip</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Are you under medical treatment now? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                        <div class="flex space-x-3">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="under_treatment" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('under_treatment', this.value); toggleTreatmentCondition()">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="under_treatment" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('under_treatment', this.value); toggleTreatmentCondition()">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="under_treatment" value="" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('under_treatment', this.value); toggleTreatmentCondition()">
+                                <span class="ml-1 text-xs">Skip</span>
+                            </label>
+                        </div>
+                        <div id="treatment_condition_div" class="hidden mt-2">
+                            <input type="text" id="treatment_condition" name="treatment_condition" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="What condition is being treated?" 
+                                   value="<?= esc($patient['treatment_condition'] ?? old('treatment_condition')) ?>"
+                                   onchange="updateHiddenField('treatment_condition', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Serious Illness and Hospitalization -->
+                <div class="space-y-3 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Have you ever had a serious illness or surgical operation?</label>
+                        <div class="flex space-x-3 mb-2">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="serious_illness" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('serious_illness', this.value); toggleIllnessDetails()">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="serious_illness" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('serious_illness', this.value); toggleIllnessDetails()">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                        </div>
+                        <div id="illness_details_div" class="hidden">
+                            <input type="text" id="illness_details" name="illness_details" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   placeholder="If yes, what illness or operation?" 
+                                   value="<?= esc($patient['illness_details'] ?? old('illness_details')) ?>"
+                                   onchange="updateHiddenField('illness_details', this.value)">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Have you ever been hospitalized?</label>
+                        <div class="flex space-x-3 mb-2">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="hospitalized" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('hospitalized', this.value); toggleHospitalizationDetails()">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="hospitalized" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('hospitalized', this.value); toggleHospitalizationDetails()">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                        </div>
+                        <div id="hospitalization_details_div" class="hidden grid grid-cols-1 gap-2">
+                            <input type="text" name="hospitalization_where" placeholder="Where?" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   value="<?= esc($patient['hospitalization_where'] ?? old('hospitalization_where')) ?>"
+                                   onchange="updateHiddenField('hospitalization_where', this.value)">
+                            <input type="text" name="hospitalization_when" placeholder="When?" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   value="<?= esc($patient['hospitalization_when'] ?? old('hospitalization_when')) ?>"
+                                   onchange="updateHiddenField('hospitalization_when', this.value)">
+                            <input type="text" name="hospitalization_why" placeholder="Why?" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   value="<?= esc($patient['hospitalization_why'] ?? old('hospitalization_why')) ?>"
+                                   onchange="updateHiddenField('hospitalization_why', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tobacco Use and Blood Pressure -->
+                <div class="grid grid-cols-1 gap-3 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Do you use tobacco products? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                        <div class="flex space-x-3">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="tobacco_use" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('tobacco_use', this.value)">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="tobacco_use" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('tobacco_use', this.value)">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="tobacco_use" value="" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('tobacco_use', this.value)">
+                                <span class="ml-1 text-xs">Skip</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="blood_pressure" class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (mmHg) <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                        <input type="text" id="blood_pressure" name="blood_pressure" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                               placeholder="e.g., 120/80 (leave blank if unknown)" 
+                               value="<?= esc($patient['blood_pressure'] ?? old('blood_pressure')) ?>"
+                               onchange="updateHiddenField('blood_pressure', this.value)">
+                    </div>
+                </div>
+
+                <!-- Allergies -->
+                <div class="mb-4">
+                    <label for="allergies" class="block text-sm font-medium text-gray-700 mb-1">Allergies <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                    <textarea id="allergies" name="allergies" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              placeholder="Specify any allergies (leave blank if none)"
+                              onchange="updateHiddenField('allergies', this.value)"><?= esc($patient['allergies'] ?? old('allergies')) ?></textarea>
+                </div>
+            </div>
+
+            <!-- For Women Only Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">For Women Only <span class="text-gray-500 font-normal text-sm">(All fields optional)</span></h3>
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Are you pregnant? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                        <div class="flex space-x-3">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="pregnant" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('pregnant', this.value)">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="pregnant" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('pregnant', this.value)">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="pregnant" value="na" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('pregnant', this.value)">
+                                <span class="ml-1 text-xs">N/A</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Are you nursing? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                        <div class="flex space-x-3">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="nursing" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('nursing', this.value)">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="nursing" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('nursing', this.value)">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="nursing" value="na" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('nursing', this.value)">
+                                <span class="ml-1 text-xs">N/A</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Are you taking birth control pills? <span class="text-gray-500 font-normal">(Optional)</span></label>
+                        <div class="flex space-x-3">
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="birth_control" value="yes" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('birth_control', this.value)">
+                                <span class="ml-1 text-xs">Yes</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="birth_control" value="no" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('birth_control', this.value)">
+                                <span class="ml-1 text-xs">No</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="birth_control" value="na" class="form-radio text-blue-600" onchange="updateHiddenFieldRadio('birth_control', this.value)">
+                                <span class="ml-1 text-xs">N/A</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical Conditions Section -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Medical Conditions <span class="text-gray-500 font-normal text-sm">(All optional)</span></h3>
+                <p class="text-xs text-gray-600 mb-4">Do you have or have you ever had any of the following? (Check all that apply - leave blank if none or unknown)</p>
+                <div class="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                    <?php
+                    $medicalConditions = [
+                        'high_blood_pressure' => 'High blood pressure',
+                        'low_blood_pressure' => 'Low blood pressure',
+                        'epilepsy' => 'Epilepsy/Convulsion',
+                        'aids_hiv' => 'AIDS or HIV infection',
+                        'std' => 'Sexually transmitted disease',
+                        'stomach_ulcers' => 'Stomach trouble/Ulcers',
+                        'fainting' => 'Fainting Seizure',
+                        'weight_loss' => 'Rapid weight loss',
+                        'radiation_therapy' => 'Radiation Therapy',
+                        'joint_replacement' => 'Joint replacement/implant',
+                        'heart_surgery' => 'Heart surgery',
+                        'heart_attack' => 'Heart attack',
+                        'thyroid_problem' => 'Thyroid problem',
+                        'heart_disease' => 'Heart disease',
+                        'heart_murmur' => 'Heart murmur',
+                        'hepatitis_liver' => 'Hepatitis/Liver disease',
+                        'rheumatic_fever' => 'Rheumatic fever',
+                        'hay_fever' => 'Hay fever/Allergies',
+                        'respiratory_problem' => 'Respiratory problem',
+                        'hepatitis_jaundice' => 'Hepatitis/Jaundice',
+                        'tuberculosis' => 'Tuberculosis',
+                        'swollen_ankles' => 'Swollen ankles',
+                        'kidney_disease' => 'Kidney disease',
+                        'diabetes' => 'Diabetes',
+                        'chest_pain' => 'Chest pain',
+                        'stroke' => 'Stroke',
+                        'cancer_tumors' => 'Cancer/Tumors',
+                        'anemia' => 'Anemia',
+                        'angina' => 'Angina',
+                        'asthma' => 'Asthma',
+                        'emphysema' => 'Emphysema',
+                        'bleeding_problem' => 'Bleeding problem',
+                        'blood_disease' => 'Blood disease',
+                        'head_injuries' => 'Head injuries',
+                        'arthritis' => 'Arthritis/Rheumatism'
+                    ];
+                    
+                    foreach ($medicalConditions as $key => $condition): ?>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="medical_conditions[]" value="<?= $key ?>" class="form-checkbox text-blue-600 rounded" onchange="updateHiddenFieldCheckbox('medical_conditions', this.value)">
+                            <span class="ml-2 text-xs"><?= $condition ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <div class="mt-4">
+                    <label for="other_conditions" class="block text-sm font-medium text-gray-700 mb-1">Others (specify) <span class="text-gray-500 font-normal">(Optional)</span>:</label>
+                    <input type="text" id="other_conditions" name="other_conditions" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                           placeholder="Specify other medical conditions (leave blank if none)" 
+                           value="<?= esc($patient['other_conditions'] ?? old('other_conditions')) ?>"
+                           onchange="updateHiddenField('other_conditions', this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Externalized patient panel JS loaded above -->
