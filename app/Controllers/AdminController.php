@@ -361,14 +361,6 @@ class AdminController extends BaseAdminController
         ], $formData));
     }
 
-    public function invoice()
-    {
-        $user = $this->checkAdminAuth();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-        return view('admin/billing/invoice', ['user' => $user]);
-    }
 
     public function rolePermission()
     {

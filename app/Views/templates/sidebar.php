@@ -197,7 +197,7 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('admin/waitlist'), 'fas fa-clipboard-list', 'Waitlist', $currentUrl) ?>
                 <?= nav_link(base_url('admin/procedures'), 'fas fa-file-medical', 'Procedures', $currentUrl) ?>
                 <?= nav_link(base_url('admin/records'), 'fas fa-folder-open', 'Records', $currentUrl) ?>
-                <?= nav_link(base_url('admin/invoice'), 'fas fa-file-invoice-dollar', 'Invoice', $currentUrl) ?>
+                <?= nav_link(base_url('admin/invoices'), 'fas fa-file-invoice-dollar', 'Invoices', $currentUrl) ?>
             </div>
 
             <!-- Patient Flow Section -->
