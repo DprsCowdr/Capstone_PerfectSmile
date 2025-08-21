@@ -59,11 +59,14 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('appointments', 'AdminController::appointments'); // → appointments/index.php
     $routes->post('appointments/create', 'AdminController::createAppointment');
     $routes->post('appointments/update/(:num)', 'AdminController::updateAppointment/$1');
+    $routes->put('appointments/update/(:num)', 'AdminController::updateAppointment/$1');
+    $routes->get('appointments/update/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->post('appointments/delete/(:num)', 'AdminController::deleteAppointment/$1');
     $routes->post('appointments/approve/(:num)', 'AdminController::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'AdminController::declineAppointment/$1');
+        // Calendar: fetch appointments by branch
+        $routes->get('appointments/by-branch/(:num)', 'AdminController::getAppointmentsByBranch/$1');
     $routes->post('appointments/available-dentists', 'AdminController::getAvailableDentists');
-    $routes->post('appointments/check-conflicts', 'AdminController::checkAppointmentConflicts');
     $routes->get('appointments/details/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->get('waitlist', 'AdminController::waitlist'); // → appointments/waitlist.php
     
@@ -146,7 +149,6 @@ $routes->group('doctor', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/update/(:num)', 'Dentist::updateAppointment/$1');
     $routes->post('appointments/delete/(:num)', 'Dentist::deleteAppointment/$1');
     $routes->post('appointments/available-dentists', 'Dentist::getAvailableDentists');
-    $routes->post('appointments/check-conflicts', 'Dentist::checkAppointmentConflicts');
     $routes->get('appointments/details/(:num)', 'Dentist::getAppointmentDetails/$1');
     
     // Patients Module (accessible by dentist)
@@ -207,5 +209,4 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('patients/update/(:num)', 'StaffController::updatePatient/$1');
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
-    $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
 });

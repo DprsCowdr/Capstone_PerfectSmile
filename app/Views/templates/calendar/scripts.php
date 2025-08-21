@@ -1,7 +1,92 @@
 <script>
+  // Handles the All Appointments modal logic for the calendar
+function showAllAppointments() {
+  let modal = document.getElementById('allAppointmentsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'allAppointmentsModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 relative animate-fade-in">
+        <button id="closeAllAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">All Appointments <span class='ml-2 text-base text-gray-500 font-normal'>(${(window.appointments||[]).length})</span></h2>
+        <div id="allAppointmentsList" class="max-h-[60vh] overflow-y-auto"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  // Populate the list
+  const list = modal.querySelector('#allAppointmentsList');
+  const appointments = window.appointments || [];
+  if (appointments.length === 0) {
+    list.innerHTML = '<div class="text-gray-500">No appointments found.</div>';
+  } else {
+    list.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 rounded-xl shadow">
+          <thead class="bg-blue-50 sticky top-0 z-10">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Patient</th>
+              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Date</th>
+              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Time</th>
+              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Status</th>
+              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Dentist</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-100">
+            ${appointments.map((apt, i) => `
+              <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-blue-50'} hover:bg-blue-100 transition">
+                <td class="px-4 py-2 font-semibold text-blue-800">${apt.patient_name || 'Unknown'}</td>
+                <td class="px-4 py-2 text-gray-600">${apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : '')}</td>
+                <td class="px-4 py-2 text-gray-600">${apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : '')}</td>
+                <td class="px-4 py-2 text-xs">
+                  <span class="inline-block rounded-full px-2 py-1 ${getStatusBadgeClass(apt.status)}">${apt.status || ''}</span>
+                </td>
+                <td class="px-4 py-2 text-gray-500">${apt.dentist_name || ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+// Helper for status badge color
+function getStatusBadgeClass(status) {
+  switch ((status||'').toLowerCase()) {
+    case 'pending': return 'bg-yellow-100 text-yellow-800';
+    case 'scheduled': return 'bg-blue-100 text-blue-800';
+    case 'confirmed': return 'bg-green-100 text-green-800';
+    case 'completed': return 'bg-green-200 text-green-900';
+    case 'cancelled': return 'bg-red-100 text-red-800';
+    case 'no_show': return 'bg-gray-100 text-gray-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
+  modal.classList.remove('hidden');
+  // Close handler
+  modal.querySelector('#closeAllAppointmentsModal').onclick = () => {
+    modal.classList.add('hidden');
+  };
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const allBtn = document.getElementById('allAppointmentsBtn');
+  if (allBtn) {
+    allBtn.addEventListener('click', showAllAppointments);
+  }
+});
+</script>
+ 
+<script>
 // Pass data to JavaScript
 window.userType = '<?= $user['user_type'] ?>';
-window.appointments = <?= json_encode($appointments ?? []) ?>;
+let _apts = <?= json_encode($appointments ?? []) ?>;
+if (!Array.isArray(_apts)) {
+  // If it's an object (from array_filter with numeric keys missing), convert to array
+  window.appointments = Object.values(_apts);
+} else {
+  window.appointments = _apts;
+}
 window.baseUrl = '<?= base_url() ?>';
 
 // Add some test appointments for debugging if none exist
@@ -34,7 +119,7 @@ if (!window.appointments || window.appointments.length === 0) {
 console.log('Loaded appointments for conflict detection:', window.appointments);
 
 // Calendar state management - Initialize these first
-let currentCalendarDate = new Date();
+let currentCalendarDate = getPHDate();
 let currentDisplayedMonth = currentCalendarDate.getMonth();
 let currentDisplayedYear = currentCalendarDate.getFullYear();
 let currentSelectedDay = currentCalendarDate.getDate(); // Track selected day for day view
@@ -66,12 +151,12 @@ if (dropdownBtn && dropdownMenu) {
 function switchView(view) {
   // Safety check - ensure variables are initialized
   if (typeof currentSelectedDay === 'undefined') {
-    const today = new Date();
+    const today = getPHDate();
     currentSelectedDay = today.getDate();
     currentDisplayedMonth = today.getMonth();
     currentDisplayedYear = today.getFullYear();
   }
-  
+
   if (dropdownLabel) dropdownLabel.textContent = view;
   viewOptions.forEach(opt => {
     if (opt.getAttribute('data-view') === view) {
@@ -87,31 +172,46 @@ function switchView(view) {
       views[v].classList.add('hidden');
     }
   });
-  
+
   // Reset selected day to today when switching to day view
   if (view === 'Day') {
-    const today = new Date();
+    const today = getPHDate();
     currentSelectedDay = today.getDate();
     currentDisplayedMonth = today.getMonth();
     currentDisplayedYear = today.getFullYear();
   }
   // Reset week state when switching to week view
   if (view === 'Week') {
-    const today = new Date();
+    const today = getPHDate();
+    // Always start week on Monday (ISO 8601)
+    let dayOfWeek = today.getDay();
+    // JS: Sunday=0, Monday=1, ..., Saturday=6
+    let diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
     currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - today.getDay());
+    currentWeekStart.setDate(today.getDate() + diffToMonday);
     currentDisplayedYear = currentWeekStart.getFullYear();
     currentDisplayedMonth = currentWeekStart.getMonth();
     currentSelectedDay = currentWeekStart.getDate();
   }
-  
+
   updateCalendarDisplay();
   dropdownMenu.classList.add('hidden');
 }
 
+
 viewOptions.forEach(opt => {
   opt.addEventListener('click', function(e) {
-    switchView(opt.getAttribute('data-view'));
+    const view = opt.getAttribute('data-view');
+    if (view === 'All') {
+      if (typeof showAllAppointments === 'function') {
+        showAllAppointments();
+      } else {
+        alert('All Appointments function not loaded.');
+      }
+      dropdownMenu.classList.add('hidden');
+      return;
+    }
+    switchView(view);
   });
 });
 
@@ -124,7 +224,7 @@ updateCalendarDisplay();
 function navigateMonth(direction) {
   // Safety check - ensure variables are initialized
   if (typeof currentDisplayedMonth === 'undefined' || typeof currentDisplayedYear === 'undefined') {
-    const today = new Date();
+    const today = getPHDate();
     currentDisplayedMonth = today.getMonth();
     currentDisplayedYear = today.getFullYear();
   }
@@ -146,7 +246,7 @@ function navigateMonth(direction) {
 function navigateDay(direction) {
   // Safety check - ensure variables are initialized
   if (typeof currentSelectedDay === 'undefined' || typeof currentDisplayedMonth === 'undefined' || typeof currentDisplayedYear === 'undefined') {
-    const today = new Date();
+    const today = getPHDate();
     currentSelectedDay = today.getDate();
     currentDisplayedMonth = today.getMonth();
     currentDisplayedYear = today.getFullYear();
@@ -157,13 +257,11 @@ function navigateDay(direction) {
   
   if (currentView === 'Day') {
     // Navigate by day
-    const currentDate = new Date(currentDisplayedYear, currentDisplayedMonth, currentSelectedDay);
+    const currentDate = getPHDate(`${currentDisplayedYear}-${String(currentDisplayedMonth + 1).padStart(2, '0')}-${String(currentSelectedDay).padStart(2, '0')}`);
     currentDate.setDate(currentDate.getDate() + direction);
-    
     currentDisplayedYear = currentDate.getFullYear();
     currentDisplayedMonth = currentDate.getMonth();
     currentSelectedDay = currentDate.getDate();
-    
     console.log('Day navigation - new date:', currentSelectedDay, 'month:', currentDisplayedMonth, 'year:', currentDisplayedYear);
     updateCalendarDisplay();
   } else {
@@ -187,8 +285,8 @@ function handleCalendarNav(direction) {
 function navigateWeek(direction) {
   // If not set, initialize to the current week
   if (!currentWeekStart) {
-    const today = new Date(currentDisplayedYear, currentDisplayedMonth, currentSelectedDay);
-    currentWeekStart = new Date(today);
+    const today = getPHDate(`${currentDisplayedYear}-${String(currentDisplayedMonth + 1).padStart(2, '0')}-${String(currentSelectedDay).padStart(2, '0')}`);
+    currentWeekStart = getPHDate(today);
     currentWeekStart.setDate(today.getDate() - today.getDay()); // Sunday as first day
   }
   // Move by 7 days
@@ -203,7 +301,7 @@ function navigateWeek(direction) {
 }
 
 function goToToday() {
-  const today = new Date();
+  const today = getPHDate();
   currentDisplayedMonth = today.getMonth();
   currentDisplayedYear = today.getFullYear();
   currentSelectedDay = today.getDate();
@@ -273,81 +371,142 @@ function updateDayView() {
 
 function updateDayViewForDate(selectedDate) {
   const dayView = document.getElementById('dayView');
-  if (!dayView) return;
-  
+  if (!dayView) { console.error('[DayView] #dayView not found'); return; }
   const tbody = dayView.querySelector('tbody');
-  if (!tbody) return;
-  
-  // Get appointments for the selected date
+  if (!tbody) { console.error('[DayView] tbody not found in #dayView'); return; }
   const appointments = window.appointments || [];
+  // Filter all appointments for the selected date
   const dayAppointments = appointments.filter(apt => {
-    const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
-    return apt_date === selectedDate;
+    // Normalize both selectedDate and appointment date to YYYY-MM-DD
+    let apt_date = null;
+    if (apt.appointment_date) {
+      apt_date = apt.appointment_date.length > 10 ? apt.appointment_date.substring(0, 10) : apt.appointment_date;
+    } else if (apt.appointment_datetime) {
+      apt_date = apt.appointment_datetime.substring(0, 10);
+    }
+    // Remove any whitespace and compare
+    return apt_date && apt_date.trim() === selectedDate.trim();
   });
-  
-  // Update hourly slots (6 AM to 4 PM)
-  const hourlyRows = tbody.querySelectorAll('tr:not(:first-child)'); // Skip the all-day row
-  
+  if (!Array.isArray(appointments)) console.error('[DayView] window.appointments is not an array:', window.appointments);
+  if (appointments.length === 0) console.warn('[DayView] No appointments found in window.appointments');
+  if (dayAppointments.length === 0) console.warn(`[DayView] No appointments found for selectedDate: ${selectedDate}`);
+
+  // --- Update all-day row ---
+  const allDayRow = tbody.querySelector('tr:first-child td:last-child');
+  if (!allDayRow) { console.error('[DayView] All-day row cell not found'); }
+  if (allDayRow) {
+    // Find all-day appointments (no time or time is 00:00)
+    const allDayAppointments = dayAppointments.filter(apt => {
+      const apt_time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+      return !apt_time || apt_time === '00:00';
+    });
+    allDayRow.innerHTML = '';
+    allDayRow.onclick = () => openAddAppointmentPanelWithTime(selectedDate, '');
+    if (allDayAppointments.length === 0) console.info(`[DayView] No all-day appointments for ${selectedDate}`);
+    allDayAppointments.forEach(apt => {
+      // Color logic matches PHP
+      let bgColor, textColor, statusText;
+      switch ((apt.status || '').toLowerCase()) {
+        case 'confirmed': bgColor = 'bg-green-100'; textColor = 'text-green-800'; statusText = 'Confirmed'; break;
+        case 'cancelled': bgColor = 'bg-red-100'; textColor = 'text-red-800'; statusText = 'Cancelled'; break;
+        case 'completed': bgColor = 'bg-blue-100'; textColor = 'text-blue-800'; statusText = 'Completed'; break;
+        case 'pending_approval': bgColor = 'bg-yellow-100'; textColor = 'text-yellow-800'; statusText = 'Pending'; break;
+        default: bgColor = 'bg-gray-100'; textColor = 'text-gray-800'; statusText = (apt.status || 'Scheduled').charAt(0).toUpperCase() + (apt.status || 'Scheduled').slice(1); break;
+      }
+      const div = document.createElement('div');
+      div.className = `${bgColor} rounded p-1 sm:p-2 text-xs ${textColor} mb-1 hover:bg-opacity-80 transition-colors cursor-pointer`;
+      div.innerHTML = `
+        <div class=\"flex flex-col sm:flex-row sm:items-center sm:justify-between\">
+          <div class=\"flex flex-col sm:flex-row sm:items-center\">
+            <span class=\"font-bold text-gray-700 text-xs sm:text-sm\">${apt.patient_name || 'Appointment'}</span>
+            ${apt.appointment_time ? `<span class='text-gray-500 text-xs sm:ml-2'>(${apt.appointment_time})</span>` : ''}
+          </div>
+          <span class=\"text-xs ${textColor} font-semibold mt-1 sm:mt-0\">${statusText}</span>
+        </div>
+        ${apt.remarks ? `<div class='text-gray-600 italic text-xs mt-1'>${apt.remarks}</div>` : ''}
+      `;
+      div.onclick = function(e) { e.stopPropagation(); window.showDayAppointmentDetails(apt.id); };
+      allDayRow.appendChild(div);
+    });
+  }
+
+  // --- Update hourly slots (6 AM to 4 PM) ---
+  const hourlyRows = tbody.querySelectorAll('tr:not(:first-child)');
   hourlyRows.forEach((row, index) => {
-    const hour = index + 6; // Starting from 6 AM
+    const hour = index + 6;
     const appointmentCell = row.querySelector('td:last-child');
-    if (!appointmentCell) return;
-    
-    // Clear existing appointments
+    if (!appointmentCell) { console.error(`[DayView] Hourly cell not found for hour ${hour}`); return; }
     appointmentCell.innerHTML = '';
-    
-    // Set click handler
     const time = String(hour).padStart(2, '0') + ':00';
     appointmentCell.onclick = () => openAddAppointmentPanelWithTime(selectedDate, time);
-    
     // Find appointments for this hour
     const hourAppointments = dayAppointments.filter(apt => {
       const apt_time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
       if (!apt_time) return false;
-      
-      // Extract hour from appointment time
       const apt_hour = parseInt(apt_time.split(':')[0]);
       return apt_hour === hour;
     });
-    
-    // Add appointment indicators
+    if (hourAppointments.length === 0) console.info(`[DayView] No appointments for hour ${hour} on ${selectedDate}`);
     hourAppointments.forEach(apt => {
-      const appointmentDiv = document.createElement('div');
-      appointmentDiv.className = 'bg-blue-50 border border-blue-200 rounded-lg px-2 py-1 text-xs mb-1 relative';
-      
-      const content = document.createElement('div');
-      content.className = 'flex items-center text-blue-700';
-      
-      const icon = document.createElement('i');
-      icon.className = 'fas fa-calendar-check mr-1 text-blue-600';
-      content.appendChild(icon);
-      
-      const patientName = document.createElement('span');
-      patientName.className = 'font-medium text-blue-800';
-      patientName.textContent = apt.patient_name || 'Appointment';
-      
-      const timeSpan = document.createElement('span');
-      timeSpan.className = 'text-green-600 ml-2';
-      timeSpan.textContent = `(${apt.appointment_time || apt_time})`;
-      
-      content.appendChild(patientName);
-      content.appendChild(timeSpan);
-      appointmentDiv.appendChild(content);
-      
-      if (apt.remarks) {
-        const remarksSpan = document.createElement('span');
-        remarksSpan.className = 'ml-2 text-gray-600 italic';
-        remarksSpan.textContent = apt.remarks;
-        appointmentDiv.appendChild(remarksSpan);
+      let bgColor, textColor, statusText;
+      switch ((apt.status || '').toLowerCase()) {
+        case 'confirmed': bgColor = 'bg-green-100'; textColor = 'text-green-800'; statusText = 'Confirmed'; break;
+        case 'cancelled': bgColor = 'bg-red-100'; textColor = 'text-red-800'; statusText = 'Cancelled'; break;
+        case 'completed': bgColor = 'bg-blue-100'; textColor = 'text-blue-800'; statusText = 'Completed'; break;
+        case 'pending_approval': bgColor = 'bg-yellow-100'; textColor = 'text-yellow-800'; statusText = 'Pending'; break;
+        default: bgColor = 'bg-gray-100'; textColor = 'text-gray-800'; statusText = (apt.status || 'Scheduled').charAt(0).toUpperCase() + (apt.status || 'Scheduled').slice(1); break;
       }
-      
-      const statusSpan = document.createElement('span');
-      statusSpan.className = 'ml-2 text-xs text-blue-700';
-      statusSpan.textContent = apt.status || 'scheduled';
-      appointmentDiv.appendChild(statusSpan);
-      
-      appointmentCell.appendChild(appointmentDiv);
+      const div = document.createElement('div');
+      div.className = `${bgColor} rounded p-1 sm:p-2 text-xs ${textColor} mb-1 hover:bg-opacity-80 transition-colors cursor-pointer`;
+      div.innerHTML = `
+        <div class=\"flex flex-col sm:flex-row sm:items-center sm:justify-between\">
+          <div class=\"flex flex-col sm:flex-row sm:items-center\">
+            <span class=\"font-bold text-gray-700 text-xs sm:text-sm\">${apt.patient_name || 'Appointment'}</span>
+            <span class=\"text-gray-500 text-xs sm:ml-2\">(${apt.appointment_time})</span>
+          </div>
+          <span class=\"text-xs ${textColor} font-semibold mt-1 sm:mt-0\">${statusText}</span>
+        </div>
+        ${apt.remarks ? `<div class='text-gray-600 italic text-xs mt-1'>${apt.remarks}</div>` : ''}
+      `;
+      div.onclick = function(e) { e.stopPropagation(); window.showDayAppointmentDetails(apt.id); };
+      appointmentCell.appendChild(div);
     });
+// Show day view appointment details panel (global, reusing modal logic)
+window.showDayAppointmentDetails = function(appointmentId) {
+  const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
+  if (!appointment) {
+    alert('Appointment not found');
+    return;
+  }
+  let modal = document.getElementById('dayAppointmentsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dayAppointmentsModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+        <button id="closeDayAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">Appointment Details</h2>
+        <div id="dayAppointmentsList"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  // Populate details
+  const list = modal.querySelector('#dayAppointmentsList');
+  list.innerHTML = `
+    <div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>
+    <div class="mb-2"><span class="font-semibold">Date:</span> ${appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Status:</span> ${appointment.status || ''}</div>
+    <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
+    <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
+  `;
+  modal.classList.remove('hidden');
+  modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
+    modal.classList.add('hidden');
+  };
+}
   });
 }
 
@@ -407,9 +566,23 @@ function rebuildCalendarGrid() {
         }
         // Appointments indicator (show for all days if toggle ON, else only for today/future)
         const appointments = window.appointments || [];
+        // Use consistent date formatting (YYYY-MM-DD) and timezone for comparison
+        const cellDateStr = (() => {
+          const d = getPHDate(cell.date);
+          return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        })();
         const dayAppointments = appointments.filter(apt => {
-          const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
-          return apt_date === cell.date;
+          let apt_date = null;
+          if (apt.appointment_date) {
+            apt_date = apt.appointment_date.length > 10 ? apt.appointment_date.substring(0, 10) : apt.appointment_date;
+          } else if (apt.appointment_datetime) {
+            apt_date = apt.appointment_datetime.substring(0, 10);
+          }
+          if (!apt_date) return false;
+          // Normalize to PH timezone for comparison
+          const aptDateObj = getPHDate(apt_date);
+          const aptDateStr = aptDateObj.getFullYear() + '-' + String(aptDateObj.getMonth() + 1).padStart(2, '0') + '-' + String(aptDateObj.getDate()).padStart(2, '0');
+          return aptDateStr === cellDateStr;
         });
         let showCount = true;
         if (typeof window.showPastAppointments === 'function') {
@@ -421,13 +594,52 @@ function rebuildCalendarGrid() {
           bgOverlay.className = 'absolute inset-0 bg-blue-50 border-2 border-blue-100 rounded-lg opacity-80 pointer-events-none';
           td.appendChild(bgOverlay);
           const appointmentDiv = document.createElement('div');
-          appointmentDiv.className = 'relative z-10 mt-1 text-xs text-blue-700 font-medium flex items-center justify-center';
+          appointmentDiv.className = 'relative z-10 mt-1 text-xs text-blue-700 font-medium flex items-center justify-center cursor-pointer';
           const span = document.createElement('span');
           span.className = 'bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200';
-          span.innerHTML = `<i class="fas fa-calendar-check mr-1 text-blue-600"></i>${dayAppointments.length} apt${dayAppointments.length > 1 ? 's' : ''}`;
+          span.innerHTML = `<i class=\"fas fa-calendar-check mr-1 text-blue-600\"></i>${dayAppointments.length} apt${dayAppointments.length > 1 ? 's' : ''}`;
           appointmentDiv.appendChild(span);
+          // On click, show a list of appointments for that day
+          appointmentDiv.onclick = function(e) {
+            e.stopPropagation();
+            showDayAppointmentsModal(dayAppointments);
+          };
           td.appendChild(appointmentDiv);
         }
+// Show modal with list of appointments for a day, each clickable for editing
+function showDayAppointmentsModal(dayAppointments) {
+  let modal = document.getElementById('dayAppointmentsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dayAppointmentsModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+        <button id="closeDayAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">Appointments</h2>
+        <div id="dayAppointmentsList" class="max-h-[60vh] overflow-y-auto"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  // Populate the list
+  const list = modal.querySelector('#dayAppointmentsList');
+  if (dayAppointments.length === 0) {
+    list.innerHTML = '<div class="text-gray-500">No appointments found.</div>';
+  } else {
+    list.innerHTML = dayAppointments.map(apt => `
+      <div class="border rounded p-2 mb-2 bg-blue-50 hover:bg-blue-100 cursor-pointer" onclick="editAppointment(${apt.id})">
+        <div class="font-semibold text-blue-800">${apt.patient_name || 'Unknown'}</div>
+        <div class="text-xs text-gray-500">${apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : '')}</div>
+        <div class="text-xs text-gray-400">${apt.remarks ? apt.remarks : ''}</div>
+      </div>
+    `).join('');
+  }
+  modal.classList.remove('hidden');
+  modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
+    modal.classList.add('hidden');
+  };
+}
       }
       row.appendChild(td);
     });
@@ -441,6 +653,10 @@ function updateWeekView() {
   const weekDaysHeaderRow = document.getElementById('weekDaysHeaderRow');
   const weekViewBody = document.getElementById('weekViewBody');
   if (!weekDaysHeaderRow || !weekViewBody) return;
+
+  // Checkbox: show past appointments? (shared toggle)
+  const showPastCheckbox = document.getElementById('showPastAppointmentsToggle');
+  const showPast = showPastCheckbox && showPastCheckbox.checked;
 
   // Calculate week days based on currentWeekStart
   let weekDays = [];
@@ -457,21 +673,135 @@ function updateWeekView() {
 
   // Render header (replace all except first cell)
   weekDaysHeaderRow.innerHTML = '<th class="w-24 text-xs text-left text-gray-400 font-normal"></th>' +
-    weekDays.map(wd => `<th class="text-center text-xs text-gray-500 font-medium">${wd.label}<br><span class="font-normal">Others</span></th>`).join('');
+    weekDays.map(wd => {
+      // Highlight today
+      const today = new Date();
+      const wdDate = new Date(wd.date);
+      const isToday = wdDate.toDateString() === today.toDateString();
+      return `<th class="text-center text-xs font-medium ${isToday ? 'bg-blue-100 text-blue-800' : 'text-gray-500'}">${wd.label}<br><span class="font-normal">${isToday ? 'Today' : 'Others'}</span></th>`;
+    }).join('');
 
   // Render body
   let html = '';
   // All-day row
   html += '<tr><td class="bg-gray-100 text-xs text-gray-400 py-2 px-2 align-top">all-day</td>' +
-    weekDays.map(wd => `<td class="bg-gray-100 cursor-pointer" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`).join('') + '</tr>';
+    weekDays.map(wd => {
+      const today = new Date();
+      const wdDate = new Date(wd.date);
+      wdDate.setHours(0,0,0,0); today.setHours(0,0,0,0);
+      const isToday = wdDate.getTime() === today.getTime();
+      const isPast = wdDate < today;
+      if (!showPast && !isToday) {
+        // Only today is enabled
+        return `<td class="bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
+      }
+      if (!showPast && isToday) {
+        return `<td class="bg-gray-100 cursor-pointer hover:bg-blue-100" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`;
+      }
+      if (showPast && (isPast || isToday)) {
+        return `<td class="bg-gray-100 cursor-pointer hover:bg-blue-100" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`;
+      }
+      // Future days always disabled
+      return `<td class="bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
+    }).join('') + '</tr>';
   // Hourly rows
   for (let h = 6; h <= 16; h++) {
     const time = String(h).padStart(2, '0') + ':00';
-    html += `<tr><td class="text-xs text-gray-400 py-2 px-2 align-top border-t">${h <= 12 ? h : h-12}${h < 12 ? 'am' : 'pm'}</td>` +
-      weekDays.map(wd => `<td class="border-t cursor-pointer hover:bg-gray-50" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')"></td>`).join('') + '</tr>';
+    html += `<tr><td class="text-xs text-gray-400 py-2 px-2 align-top border-t">${h <= 12 ? h : h-12}${h < 12 ? 'am' : 'pm'}</td>`;
+    weekDays.forEach(wd => {
+      const today = new Date();
+      const wdDate = new Date(wd.date);
+      wdDate.setHours(0,0,0,0); today.setHours(0,0,0,0);
+      const isToday = wdDate.getTime() === today.getTime();
+      const isPast = wdDate < today;
+      if (!showPast && !isToday) {
+        html += `<td class="border-t bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
+        return;
+      }
+        if (!showPast && isToday) {
+          // Only today
+          // Find appointments for this day/hour
+          const appointments = (window.appointments || []).filter(apt => {
+            const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
+            const apt_time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+            if (!apt_date || !apt_time) return false;
+            const apt_hour = parseInt(apt_time.split(':')[0]);
+            return apt_date === wd.date && apt_hour === h;
+          });
+          html += `<td class="border-t cursor-pointer hover:bg-blue-50 min-h-12 p-1 sm:p-2" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')">`;
+          appointments.forEach(apt => {
+            html += `
+              <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" onclick="event.stopPropagation();showWeekAppointmentDetails(${apt.id})">
+                <span class="font-bold text-blue-900 text-xs sm:text-sm">${apt.patient_name || 'Appointment'}</span>
+              </div>
+            `;
+          });
+          html += `</td>`;
+          return;
+        }
+      if (showPast && (isPast || isToday)) {
+        // Past and today
+        const appointments = (window.appointments || []).filter(apt => {
+          const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
+          const apt_time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+          if (!apt_date || !apt_time) return false;
+          const apt_hour = parseInt(apt_time.split(':')[0]);
+          return apt_date === wd.date && apt_hour === h;
+        });
+        html += `<td class="border-t cursor-pointer hover:bg-blue-50 min-h-12 p-1 sm:p-2" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')">`;
+        appointments.forEach(apt => {
+          html += `
+            <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" onclick="event.stopPropagation();showWeekAppointmentDetails(${apt.id})">
+              <span class="font-bold text-blue-900 text-xs sm:text-sm">${apt.patient_name || 'Appointment'}</span>
+            </div>
+          `;
+        });
+        html += `</td>`;
+        return;
+      }
+// Show week view appointment details panel (global, reusing month view modal logic)
+window.showWeekAppointmentDetails = function(appointmentId) {
+  const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
+  if (!appointment) {
+    alert('Appointment not found');
+    return;
+  }
+  let modal = document.getElementById('dayAppointmentsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dayAppointmentsModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+        <button id="closeDayAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">Appointment Details</h2>
+        <div id="dayAppointmentsList"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  // Populate details
+  const list = modal.querySelector('#dayAppointmentsList');
+  list.innerHTML = `
+    <div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>
+    <div class="mb-2"><span class="font-semibold">Date:</span> ${appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
+    <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
+  `;
+  modal.classList.remove('hidden');
+  modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
+    modal.classList.add('hidden');
+  };
+}
+      // Future days always disabled
+      html += `<td class="border-t bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
+    });
+    html += '</tr>';
   }
   weekViewBody.innerHTML = html;
 }
+// No need to add a separate event listener for the week view checkbox, handled by shared toggle event
 
 // Keep the old navigateDay function for backward compatibility but make it not change URL
 function navigateToDate(date) {
@@ -512,18 +842,7 @@ function openAddAppointmentPanelWithTime(date, time) {
       
       panel.classList.add('active');
       
-      // Trigger conflict detection if both date and time are set
-      if (dateInput && dateInput.value && timeInput && timeInput.value) {
-        console.log('Triggering conflict detection from openAddAppointmentPanelWithTime');
-        // Dispatch a change event to trigger the conflict checker
-        const event = new Event('change', { bubbles: true });
-        timeInput.dispatchEvent(event);
-      } else if (dateInput && dateInput.value) {
-        console.log('Date set, waiting for time input to trigger conflict detection');
-        // Dispatch a change event on the date input
-        const event = new Event('change', { bubbles: true });
-        dateInput.dispatchEvent(event);
-      }
+  // (Conflict detection removed)
     }
   } else if (userType === 'doctor') {
     const availabilityPanel = document.getElementById('doctorAvailabilityPanel');
@@ -549,76 +868,76 @@ function openAddAppointmentPanelWithTime(date, time) {
 
 document.addEventListener('DOMContentLoaded', function() {
     // Function to load appointments for a specific date
-    function loadAppointmentsForDate(date) {
-        const contentDiv = document.getElementById('appointmentInfoContent');
-        if (!contentDiv) return;
-        
-        const appointments = window.appointments || [];
-        const dayAppointments = appointments.filter(apt => {
-            const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
-            return apt_date === date;
-        });
-        
-        if (dayAppointments.length === 0) {
-            contentDiv.innerHTML = `
-                <div class="text-center py-8">
-                    <div class="text-gray-500 text-lg">No appointments for ${new Date(date).toLocaleDateString()}</div>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = `<h3 class="text-gray-800 font-semibold mb-4">Appointments for ${new Date(date).toLocaleDateString()}</h3>`;
-        
-        dayAppointments.forEach(appointment => {
-            const statusClass = getStatusClass(appointment.status);
-            const statusText = appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1);
-            const approvalStatusClass = getApprovalStatusClass(appointment.approval_status || 'pending');
-            const approvalStatusText = (appointment.approval_status || 'pending').replace('_', ' ').charAt(0).toUpperCase() + (appointment.approval_status || 'pending').replace('_', ' ').slice(1);
-            const appointmentTypeClass = getAppointmentTypeClass(appointment.appointment_type || 'scheduled');
-            const appointmentTypeText = (appointment.appointment_type || 'scheduled').replace('_', ' ').charAt(0).toUpperCase() + (appointment.appointment_type || 'scheduled').replace('_', ' ').slice(1);
-            
-            html += `
-                <div class="border border-gray-200 rounded-lg p-4 mb-3 bg-white shadow-sm">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="font-semibold text-gray-800">
-                            📅 ${appointment.patient_name || 'Unknown Patient'}
-                        </div>
-                        <div class="flex gap-2">
-                            <span class="px-2 py-1 text-xs rounded-full ${appointmentTypeClass}">
-                                ${appointmentTypeText}
-                            </span>
-                            <span class="px-2 py-1 text-xs rounded-full ${statusClass}">
-                                ${statusText}
-                            </span>
-                            <span class="px-2 py-1 text-xs rounded-full ${approvalStatusClass}">
-                                ${approvalStatusText}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="flex gap-4 text-sm text-gray-600 mb-2">
-                        <div><i class="fas fa-clock"></i> ${appointment.appointment_time}</div>
-                        ${appointment.branch_name ? `<div><i class="fas fa-building"></i> ${appointment.branch_name}</div>` : ''}
-                        ${appointment.dentist_name ? `<div><i class="fas fa-user-md"></i> ${appointment.dentist_name}</div>` : ''}
-                    </div>
-                    ${appointment.remarks ? `<div class="text-sm text-gray-500 italic">${appointment.remarks}</div>` : ''}
-                    ${appointment.decline_reason ? `<div class="text-sm text-red-500 italic">Decline reason: ${appointment.decline_reason}</div>` : ''}
-                    <div class="mt-3 flex gap-2">
-                        ${appointment.approval_status === 'pending' && (window.userType === 'admin' || window.userType === 'doctor') ? `
-                            <button onclick="approveAppointment(${appointment.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded text-sm">Approve</button>
-                            <button onclick="declineAppointment(${appointment.id})" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-sm">Decline</button>
-                        ` : ''}
-                        ${window.userType === 'admin' ? `
-                            <button onclick="editAppointment(${appointment.id})" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm">Edit</button>
-                            <button onclick="deleteAppointment(${appointment.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-        });
-        
-        contentDiv.innerHTML = html;
+  function loadAppointmentsForDate(date) {
+    const contentDiv = document.getElementById('appointmentInfoContent');
+    if (!contentDiv) return;
+    const appointments = window.appointments || [];
+    // Normalize both selected date and appointment date to YYYY-MM-DD
+    const dayAppointments = appointments.filter(apt => {
+      let apt_date = null;
+      if (apt.appointment_date) {
+        apt_date = apt.appointment_date.length > 10 ? apt.appointment_date.substring(0, 10) : apt.appointment_date;
+      } else if (apt.appointment_datetime) {
+        apt_date = apt.appointment_datetime.substring(0, 10);
+      }
+      return apt_date && apt_date.trim() === date.trim();
+    });
+    if (dayAppointments.length === 0) {
+      contentDiv.innerHTML = `
+        <div class="text-center py-8">
+          <div class="text-gray-500 text-lg">No appointments for ${new Date(date).toLocaleDateString()}</div>
+        </div>
+      `;
+      return;
     }
+    let html = `<h3 class="text-gray-800 font-semibold mb-4">Appointments for ${new Date(date).toLocaleDateString()}</h3>`;
+    dayAppointments.forEach(appointment => {
+      const statusClass = getStatusClass(appointment.status);
+      const statusText = appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1);
+      const approvalStatusClass = getApprovalStatusClass(appointment.approval_status || 'pending');
+      const approvalStatusText = (appointment.approval_status || 'pending').replace('_', ' ').charAt(0).toUpperCase() + (appointment.approval_status || 'pending').replace('_', ' ').slice(1);
+      const appointmentTypeClass = getAppointmentTypeClass(appointment.appointment_type || 'scheduled');
+      const appointmentTypeText = (appointment.appointment_type || 'scheduled').replace('_', ' ').charAt(0).toUpperCase() + (appointment.appointment_type || 'scheduled').replace('_', ' ').slice(1);
+      html += `
+        <div class="border border-gray-200 rounded-lg p-4 mb-3 bg-white shadow-sm">
+          <div class="flex justify-between items-center mb-2">
+            <div class="font-semibold text-gray-800">
+              📅 ${appointment.patient_name || 'Unknown Patient'}
+            </div>
+            <div class="flex gap-2">
+              <span class="px-2 py-1 text-xs rounded-full ${appointmentTypeClass}">
+                ${appointmentTypeText}
+              </span>
+              <span class="px-2 py-1 text-xs rounded-full ${statusClass}">
+                ${statusText}
+              </span>
+              <span class="px-2 py-1 text-xs rounded-full ${approvalStatusClass}">
+                ${approvalStatusText}
+              </span>
+            </div>
+          </div>
+          <div class="flex gap-4 text-sm text-gray-600 mb-2">
+            <div><i class="fas fa-clock"></i> ${appointment.appointment_time}</div>
+            ${appointment.branch_name ? `<div><i class="fas fa-building"></i> ${appointment.branch_name}</div>` : ''}
+            ${appointment.dentist_name ? `<div><i class="fas fa-user-md"></i> ${appointment.dentist_name}</div>` : ''}
+          </div>
+          ${appointment.remarks ? `<div class="text-sm text-gray-500 italic">${appointment.remarks}</div>` : ''}
+          ${appointment.decline_reason ? `<div class="text-sm text-red-500 italic">Decline reason: ${appointment.decline_reason}</div>` : ''}
+          <div class="mt-3 flex gap-2">
+            ${appointment.approval_status === 'pending' && (window.userType === 'admin' || window.userType === 'doctor') ? `
+              <button onclick="approveAppointment(${appointment.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded text-sm">Approve</button>
+              <button onclick="declineAppointment(${appointment.id})" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-sm">Decline</button>
+            ` : ''}
+            ${window.userType === 'admin' ? `
+              <button onclick="editAppointment(${appointment.id})" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm">Edit</button>
+              <button onclick="deleteAppointment(${appointment.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    });
+    contentDiv.innerHTML = html;
+  }
     
     // Function to get status class for styling
     function getStatusClass(status) {
@@ -690,14 +1009,97 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Global functions for appointment actions
 function editAppointment(appointmentId) {
-    // Implement edit functionality
+  const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
+  if (!appointment) {
+    alert('Appointment not found');
+    return;
+  }
+  const panel = document.getElementById('editAppointmentPanel');
+  if (!panel) {
+    alert('Edit panel not found.');
+    return;
+  }
+  // Populate form fields
+  const form = panel.querySelector('form');
+  if (form) {
+    form.action = `${window.baseUrl}admin/appointments/update/${appointmentId}`;
+    if (form.elements['patient']) form.elements['patient'].value = appointment.patient_id || '';
+    if (form.elements['branch']) form.elements['branch'].value = appointment.branch_id || '';
+    if (form.elements['date']) form.elements['date'].value = appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '');
+    if (form.elements['time']) form.elements['time'].value = appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '');
+    if (form.elements['remarks']) form.elements['remarks'].value = appointment.remarks || '';
+  }
+  panel.classList.add('active');
+  // Hide the day appointments modal if open
+  const modal = document.getElementById('dayAppointmentsModal');
+  if (modal) modal.classList.add('hidden');
 }
 
 function deleteAppointment(appointmentId) {
-    if (confirm('Are you sure you want to delete this appointment?')) {
-        // Implement delete functionality
+  if (!confirm('Are you sure you want to delete this appointment?')) return;
+  fetch(`${window.baseUrl}admin/appointments/delete/${appointmentId}`, {
+    method: 'DELETE',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Appointment deleted successfully');
+      // Remove from window.appointments and update calendar UI
+      window.appointments = (window.appointments || []).filter(apt => apt.id != appointmentId);
+      updateCalendarDisplay();
+      // Also close any open modals/panels
+      const editPanel = document.getElementById('editAppointmentPanel');
+      if (editPanel) editPanel.classList.remove('active');
+      const dayModal = document.getElementById('dayAppointmentsModal');
+      if (dayModal) dayModal.classList.add('hidden');
+    } else {
+      alert('Failed to delete appointment: ' + (data.message || 'Unknown error'));
     }
+  })
+  .catch(() => {
+    alert('Failed to delete appointment');
+  });
 }
+// Intercept edit appointment form submit to update via AJAX and refresh UI
+document.addEventListener('DOMContentLoaded', function() {
+  const editPanel = document.getElementById('editAppointmentPanel');
+  if (editPanel) {
+    const form = editPanel.querySelector('form');
+    if (form) {
+      form.onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(form);
+        fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Appointment updated successfully');
+            // Update window.appointments with new data (simple reload for now)
+            // Optionally, fetch updated appointments via AJAX for more accuracy
+            location.reload();
+          } else {
+            alert('Failed to update appointment: ' + (data.message || 'Unknown error'));
+          }
+        })
+        .catch(() => {
+          alert('Failed to update appointment');
+        });
+      };
+    }
+  }
+});
 
 function approveAppointment(appointmentId) {
     const appointment = window.appointments.find(apt => apt.id == appointmentId);
@@ -762,124 +1164,28 @@ function declineAppointment(appointmentId) {
         alert('Failed to decline appointment');
     });
 }
-
-// Clean Appointment Conflict Detection System
-class ConflictDetector {
-    constructor() {
-        this.timeoutId = null;
-        this.init();
+// Helper: Always use Asia/Manila timezone for all calendar logic
+function getPHDate(dateStr) {
+  // Always return a Date object in Asia/Manila timezone
+  let d;
+  if (dateStr) {
+    if (typeof dateStr === 'string') {
+      // If dateStr is YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
+      d = new Date(dateStr.replace(/-/g, '/'));
+    } else if (dateStr instanceof Date) {
+      d = new Date(dateStr.getTime());
+    } else if (typeof dateStr === 'number') {
+      d = new Date(dateStr);
+    } else {
+      // Try to coerce to string and parse
+      d = new Date(String(dateStr));
     }
-
-    init() {
-        console.log('ConflictDetector: Initializing...');
-        
-        const timeInput = document.getElementById('appointmentTime');
-        const dateInput = document.getElementById('appointmentDate');
-        
-        if (timeInput && dateInput) {
-            timeInput.addEventListener('change', () => this.scheduleCheck());
-            dateInput.addEventListener('change', () => this.scheduleCheck());
-            console.log('ConflictDetector: Event listeners attached');
-        } else {
-            console.warn('ConflictDetector: Required form elements not found');
-        }
-    }
-
-    scheduleCheck() {
-        // Clear previous timeout
-        if (this.timeoutId) {
-            clearTimeout(this.timeoutId);
-        }
-        
-        // Schedule new check after 500ms delay
-        this.timeoutId = setTimeout(() => this.checkConflicts(), 500);
-    }
-
-    async checkConflicts() {
-        const dateInput = document.getElementById('appointmentDate');
-        const timeInput = document.getElementById('appointmentTime');
-        
-        if (!dateInput?.value || !timeInput?.value) {
-            this.hideWarning();
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('appointment_date', dateInput.value);
-            formData.append('appointment_time', timeInput.value);
-            formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-
-            const response = await fetch('<?= base_url() ?>staff/appointments/check-conflicts', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.success && data.has_conflicts) {
-                this.showWarning(data.conflicts);
-            } else {
-                this.hideWarning();
-            }
-            
-        } catch (error) {
-            console.error('Conflict check error:', error);
-            this.hideWarning();
-        }
-    }
-
-    showWarning(conflicts) {
-        const warningDiv = document.getElementById('timeConflictWarning');
-        const messageSpan = document.getElementById('conflictMessage');
-        
-        if (!warningDiv || !messageSpan) return;
-
-        let message = `⚠️ Scheduling conflict detected! `;
-        if (conflicts.length === 1) {
-            const conflict = conflicts[0];
-            message += `${conflict.patient_name} has an appointment at ${conflict.appointment_time}`;
-            if (conflict.dentist_name && conflict.dentist_name !== 'Unassigned') {
-                message += ` with ${conflict.dentist_name}`;
-            }
-            message += ` (${Math.round(conflict.time_difference)} minutes apart)`;
-        } else {
-            message += `${conflicts.length} conflicting appointments found`;
-        }
-
-        messageSpan.textContent = message;
-        warningDiv.classList.remove('hidden');
-        
-        // Highlight input field
-        const timeInput = document.getElementById('appointmentTime');
-        if (timeInput) {
-            timeInput.classList.add('border-red-500');
-            timeInput.classList.remove('border-gray-300');
-        }
-    }
-
-    hideWarning() {
-        const warningDiv = document.getElementById('timeConflictWarning');
-        const timeInput = document.getElementById('appointmentTime');
-        
-        if (warningDiv) {
-            warningDiv.classList.add('hidden');
-        }
-        
-        if (timeInput) {
-            timeInput.classList.remove('border-red-500');
-            timeInput.classList.add('border-gray-300');
-        }
-    }
+  } else {
+    d = new Date();
+  }
+  // Adjust for Manila timezone offset (UTC+8)
+  let utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  return new Date(utc + (8 * 60 * 60000));
 }
-
-// Initialize conflict detector when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    new ConflictDetector();
-});
 
 </script> 

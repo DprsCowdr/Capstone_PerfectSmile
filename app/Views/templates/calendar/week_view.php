@@ -1,3 +1,5 @@
+
+
 <!-- WEEK VIEW -->
 <div class="hidden" id="weekView">
   <div class="overflow-x-auto">
@@ -13,4 +15,12 @@
       </tbody>
     </table>
   </div>
-</div> 
+</div>
+
+
+<script>
+// Listen for the shared toggle event and update the week view only
+window.addEventListener('showPastAppointmentsChanged', function(e) {
+  if (typeof updateWeekViewDisplay === 'function') updateWeekViewDisplay();
+});
+</script>

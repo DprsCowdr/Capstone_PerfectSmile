@@ -54,6 +54,9 @@
 
     <!-- Calendar Views -->
     <div class="px-2 sm:px-4 pb-4 sm:pb-6 pt-2">
+      <!-- Shared Toggle for Past Appointments (only include ONCE above all views) -->
+      <?php include __DIR__ . '/calendar/appointments_toggle.php'; ?>
+
       <!-- Day View -->
       <?= view('templates/calendar/day_view', [
         'appointments' => $appointments,

@@ -241,14 +241,11 @@ abstract class BaseAdminController extends BaseController
         $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
         
         // Get appointments with branch filtering
-        $appointments = $this->appointmentService->getAllAppointments();
-        
-        // Filter by selected branch if admin has chosen one
         $selectedBranchId = session('selected_branch_id');
         if ($selectedBranchId && $user['user_type'] === 'admin') {
-            $appointments = array_filter($appointments, function($apt) use ($selectedBranchId) {
-                return ($apt['branch_id'] ?? null) == $selectedBranchId;
-            });
+            $appointments = $this->appointmentService->getAllAppointments($selectedBranchId);
+        } else {
+            $appointments = $this->appointmentService->getAllAppointments();
         }
         
         $data = array_merge([

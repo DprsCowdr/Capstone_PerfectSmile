@@ -30,6 +30,9 @@ $calendarTitle = date('F Y');
         <div data-view="Month" class="dropdown-option px-3 sm:px-4 py-2 flex items-center gap-2 text-gray-700 hover:bg-gray-100 cursor-pointer bg-gray-100 text-sm sm:text-base touch-manipulation">
           <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"></rect></svg>Month
         </div>
+        <div data-view="All" class="dropdown-option px-3 sm:px-4 py-2 flex items-center gap-2 text-blue-700 hover:bg-blue-100 cursor-pointer text-sm sm:text-base touch-manipulation">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"></circle><path d="M8 12h8" stroke="currentColor" stroke-width="2"></path></svg>All
+        </div>
       </div>
     </div>
     
@@ -51,14 +54,15 @@ $calendarTitle = date('F Y');
       </div>
       
       <!-- Action Buttons -->
-      <div class="flex items-center gap-2">
+      <!-- <div class="flex items-center gap-2">
         <button type="button" class="px-3 sm:px-4 py-2 bg-red-500 text-white rounded font-semibold shadow text-sm sm:text-base touch-manipulation min-h-10" id="todayBtn" onclick="goToToday()">Today</button>
+        <button type="button" class="px-3 sm:px-4 py-2 bg-blue-500 text-white rounded font-semibold shadow text-sm sm:text-base touch-manipulation min-h-10" id="allAppointmentsBtn">All</button>
         <button class="p-2 rounded hover:bg-gray-100 touch-manipulation min-h-10 min-w-10">
           <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M4 6h16M8 6v12M16 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-      </div>
+      </div> -->
     </div>
   </div>
 </div> 

@@ -1,9 +1,3 @@
-<!-- Toggle for showing total appointments on past days -->
-<div class="flex items-center mb-3 sm:mb-4">
-  <label for="showPastAppointmentsToggle" class="mr-2 text-xs sm:text-sm font-medium text-gray-700">Show total appointments for past days</label>
-  <input type="checkbox" id="showPastAppointmentsToggle" class="form-checkbox h-4 w-4 sm:h-5 sm:w-5 text-purple-600" checked>
-</div>
-
 <!-- MONTH VIEW (shown by default) -->
 <div id="monthView">
   <div class="overflow-x-auto">
@@ -222,18 +216,10 @@
 }
 </style>
 
+
 <script>
-// Toggle logic for showing/hiding appointment counts on past days
-const showPastAppointmentsToggle = document.getElementById('showPastAppointmentsToggle');
-const monthViewBody = document.getElementById('monthViewBody');
-let showPastAppointments = true;
-if (showPastAppointmentsToggle) {
-  showPastAppointmentsToggle.addEventListener('change', function() {
-    showPastAppointments = this.checked;
-    // Re-render the calendar grid (assumes a global function updateCalendarDisplay exists)
-    if (typeof updateCalendarDisplay === 'function') updateCalendarDisplay();
-  });
-}
-// Expose for use in PHP rendering
-window.showPastAppointments = () => showPastAppointments;
-</script> 
+// Listen for the shared toggle event and update the month view only
+window.addEventListener('showPastAppointmentsChanged', function(e) {
+  if (typeof updateCalendarDisplay === 'function') updateCalendarDisplay();
+});
+</script>
