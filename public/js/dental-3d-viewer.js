@@ -11,6 +11,7 @@ class Dental3DViewer {
         this.showControls = options.showControls !== false;
         this.onToothClick = options.onToothClick || null;
         this.onModelLoaded = options.onModelLoaded || null;
+        this.highlightOnClick = options.highlightOnClick !== false; // default true
         
         // Three.js objects
         this.scene = null;
@@ -179,6 +180,7 @@ class Dental3DViewer {
                 this.model = gltf.scene;
                 this.processModel();
                 this.scene.add(this.model);
+                this.isLoaded = true;
                 if (loadingDiv) loadingDiv.classList.add('hidden');
                 if (this.onModelLoaded) {
                     this.onModelLoaded();
@@ -252,7 +254,9 @@ class Dental3DViewer {
             const toothNumber = this.mapMeshIndexToToothNumber(meshIndex);
             
             if (toothNumber) {
-                this.highlightTooth(meshIndex);
+                if (this.highlightOnClick) {
+                    this.highlightTooth(meshIndex);
+                }
                 
                 if (this.onToothClick) {
                     this.onToothClick(toothNumber, clickPoint, event, {
