@@ -474,7 +474,7 @@
 }
 
 /* Make slide-in panels wider */
-.slide-in-panel {
+  .slide-in-panel {
   position: fixed;
   top: 0;
   right: 0;

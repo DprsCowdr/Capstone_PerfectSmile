@@ -248,6 +248,7 @@ $currentUrl = current_url();
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Management</label>
                 <?= nav_link(base_url('staff/appointments'), 'fas fa-calendar-check', 'Appointments', $currentUrl) ?>
                 <?= nav_link(base_url('staff/patients'), 'fas fa-users', 'Patients', $currentUrl) ?>
+                <?= nav_link(base_url('staff/waitlist'), 'fas fa-clipboard-list', 'Waitlist', $currentUrl) ?>
                 <?= nav_link('#', 'fas fa-file-invoice-dollar', 'Invoices', $currentUrl) ?>
             </div>
 

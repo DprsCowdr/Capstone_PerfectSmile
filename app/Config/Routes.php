@@ -211,4 +211,5 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/approve/(:num)', 'StaffController::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'StaffController::declineAppointment/$1');
+    $routes->get('waitlist', 'StaffController::waitlist');
 });

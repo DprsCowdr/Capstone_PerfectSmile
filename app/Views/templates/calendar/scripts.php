@@ -159,29 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Add some test appointments for debugging if none exist
 if (!window.appointments || window.appointments.length === 0) {
-    console.log('No appointments found, adding test data for conflict detection debugging');
-    window.appointments = [
-        {
-            id: 999,
-            appointment_date: '2025-08-09',
-            appointment_time: '10:00',
-            appointment_datetime: '2025-08-09 10:00:00',
-            patient_name: 'Test Patient',
-            dentist_name: 'Dr. Test',
-            status: 'approved',
-            approval_status: 'approved'
-        },
-        {
-            id: 998,
-            appointment_date: '2025-08-09',
-            appointment_time: '14:30',
-            appointment_datetime: '2025-08-09 14:30:00',
-            patient_name: 'Another Patient',
-            dentist_name: 'Dr. Smith',
-            status: 'confirmed',
-            approval_status: 'approved'
-        }
-    ];
+    console.log('No appointments found');
+    window.appointments = [];
 }
 
 console.log('Loaded appointments for conflict detection:', window.appointments);
@@ -353,10 +332,13 @@ function getFilteredAppointments() {
     return window.appointments || [];
   }
   
-  return (window.appointments || []).filter(apt => {
-    if (!apt.branch_name) return false;
+  const filtered = (window.appointments || []).filter(apt => {
+    if (!apt.branch_name) {
+      return false;
+    }
     
     const branchName = apt.branch_name.toLowerCase();
+    
     if (window.currentBranchFilter === 'nabua') {
       return branchName.includes('nabua');
     } else if (window.currentBranchFilter === 'iriga') {
@@ -365,6 +347,8 @@ function getFilteredAppointments() {
     
     return true;
   });
+  
+  return filtered;
 }
 
 // Initialize calendar display

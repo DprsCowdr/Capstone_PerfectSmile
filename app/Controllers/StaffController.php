@@ -3,9 +3,18 @@
 namespace App\Controllers;
 
 use App\Services\AuthService;
+use App\Services\DashboardService;
 
 class StaffController extends BaseAdminController
 {
+    protected $dashboardService;
+    
+    public function __construct()
+    {
+        parent::__construct();
+        $this->dashboardService = new DashboardService();
+    }
+    
     protected function getAuthenticatedUser()
     {
         return AuthService::checkStaffAuth();
@@ -65,7 +74,8 @@ class StaffController extends BaseAdminController
     public function approveAppointment($id)
     {
         $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
+        if (!is_array($user)) {
+            // Authentication failed, return the response (JSON error)
             return $user;
         }
 
@@ -104,7 +114,8 @@ class StaffController extends BaseAdminController
     public function declineAppointment($id)
     {
         $user = $this->getAuthenticatedUserApi();
-        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
+        if (!is_array($user)) {
+            // Authentication failed, return the response (JSON error)
             return $user;
         }
 
@@ -178,6 +189,40 @@ class StaffController extends BaseAdminController
     public function createAppointment()
     {
         return $this->createAppointmentLogic('/staff/appointments', 'staff');
+    }
+
+    /**
+     * Staff waitlist (pending approvals) - branch-scoped
+     */
+    public function waitlist()
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        // Get pending appointments, limited to branches the staff is assigned to
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $pendingAppointments = $appointmentModel->getPendingApprovalAppointments();
+
+        $branchUserModel = new \App\Models\BranchUserModel();
+        $userBranches = $branchUserModel->getUserBranches($user['id']);
+        $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
+        if (!empty($branchIds)) {
+            $pendingAppointments = array_values(array_filter($pendingAppointments, function($apt) use ($branchIds) {
+                return in_array($apt['branch_id'] ?? null, $branchIds);
+            }));
+        } else {
+            $pendingAppointments = [];
+        }
+
+        $formData = $this->dashboardService->getFormData();
+
+        return view('admin/appointments/waitlist', array_merge([
+            'user' => $user,
+            'pendingAppointments' => $pendingAppointments,
+            'isStaff' => true
+        ], $formData));
     }
 
     /**
