@@ -55,13 +55,23 @@
                 <th class="px-4 py-4 text-left">Phone number</th>
                 <th class="px-4 py-4 text-left">Address</th>
                 <th class="px-4 py-4 text-left">Status</th>
-                <th class="px-6 py-4 text-left">Actions</th>
             </tr>
         </thead>
         <tbody>
             <?php if (!empty($patients)): ?>
                 <?php foreach ($patients as $patient): ?>
-                <tr class="border-b last:border-b-0 hover:bg-indigo-50 transition">
+                <tr class="patient-row border-b last:border-b-0 hover:bg-indigo-50 transition cursor-pointer" data-patient='<?= json_encode([
+                            "id" => $patient["id"],
+                            "name" => $patient["name"],
+                            "email" => $patient["email"],
+                            "phone" => $patient["phone"],
+                            "gender" => $patient["gender"],
+                            "date_of_birth" => $patient["date_of_birth"],
+                            "address" => $patient["address"],
+                            "age" => $patient["age"],
+                            "occupation" => $patient["occupation"],
+                            "nationality" => $patient["nationality"]
+                        ], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'>
                     <td class="min-w-[180px] px-8 py-5">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center font-bold text-lg text-indigo-400">
@@ -86,22 +96,7 @@
                             <?= $statusText ?>
                         </span>
                     </td>
-                    <td class="px-6 py-5">
-                        <a href="#" title="View" class="showViewPatientPanelBtn mr-2" data-patient='<?= json_encode([
-                            "id" => $patient["id"],
-                            "name" => $patient["name"],
-                            "email" => $patient["email"],
-                            "phone" => $patient["phone"],
-                            "gender" => $patient["gender"],
-                            "date_of_birth" => $patient["date_of_birth"],
-                            "address" => $patient["address"],
-                            "age" => $patient["age"],
-                            "occupation" => $patient["occupation"],
-                            "nationality" => $patient["nationality"]
-                        ], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'><i class="fas fa-eye text-indigo-400 text-lg"></i></a>
-                        <a href="#" title="Edit" class="showUpdatePatientPanelBtnTable mr-2" data-patient-id="<?= $patient['id'] ?>"><i class="fas fa-edit text-indigo-400 text-lg"></i></a>
-                        <a href="#" title="Delete" class="mr-2"><i class="fas fa-trash text-red-400 text-lg"></i></a>
-                    </td>
+                    
                 </tr>
                 <?php endforeach; ?>
             <?php else: ?>
@@ -165,9 +160,6 @@
                     "nationality" => $patient["nationality"]
                 ], JSON_HEX_APOS | JSON_HEX_QUOT) ?>'>
                     <i class="fas fa-eye"></i>
-                </a>
-                <a href="#" title="Edit" class="showUpdatePatientPanelBtnTable p-2 text-indigo-400 hover:bg-indigo-50 rounded-lg transition" data-patient-id="<?= $patient['id'] ?>">
-                    <i class="fas fa-edit"></i>
                 </a>
                 <a href="#" title="Delete" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition">
                     <i class="fas fa-trash"></i>
@@ -257,16 +249,29 @@
 <div id="viewPatientPanel" class="slide-in-panel p-4 lg:p-6 flex flex-col gap-4">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold text-gray-700 capitalize">Patient Info</h2>
+        <div class="flex items-center gap-2">
+            <button id="deletePatientBtn" class="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition" title="Delete Patient">
+                <i class="fas fa-trash mr-1"></i> Delete
+            </button>
         <button class="close-btn text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" id="closeViewPatientPanel" aria-label="Close">&times;</button>
+        </div>
     </div>
     
     <!-- Patient Header Section -->
-    <div class="bg-white rounded-lg shadow-sm p-4 mb-4">
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-4 relative">
         <div class="flex flex-col items-center text-center gap-4">
             <div class="flex flex-col items-center gap-2">
-                <button id="showNewActionPanelBtn" class="bg-indigo-50 rounded-full w-8 h-8 flex items-center justify-center text-indigo-400 hover:bg-indigo-100 transition">
+                <div class="flex gap-2">
+                    <button id="showNewActionPanelBtn" class="bg-indigo-50 rounded-full w-8 h-8 flex items-center justify-center text-indigo-400 hover:bg-indigo-100 transition" title="Medical History">
                     <i class="fas fa-plus text-sm"></i>
                 </button>
+                    <button id="showPatientRecordsBtn" class="bg-green-50 rounded-full w-8 h-8 flex items-center justify-center text-green-400 hover:bg-green-100 transition" title="View Records">
+                        <i class="fas fa-folder-open text-sm"></i>
+                    </button>
+                    <button id="showDentalChartBtn" class="bg-blue-50 rounded-full w-8 h-8 flex items-center justify-center text-blue-400 hover:bg-blue-100 transition" title="View Latest Dental Chart">
+                        <i class="fas fa-tooth text-sm"></i>
+                    </button>
+                </div>
                 <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl text-indigo-300">
                     <i class="fas fa-user"></i>
                 </div>
@@ -277,7 +282,7 @@
             <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-center gap-2 mb-1">
                     <span class="font-semibold text-lg text-black truncate" id="view-patient-name"></span>
-                    <i class="fas fa-pen showUpdatePatientPanelBtn text-indigo-300 cursor-pointer hover:text-indigo-500 transition"></i>
+                    <i class="fas fa-pen showUpdatePatientPanelBtn text-indigo-300 cursor-pointer hover:text-indigo-500 transition" data-patient-id=""></i>
                 </div>
                 <div class="text-black text-sm mb-2" id="view-patient-email"></div>
                 <div class="flex flex-wrap gap-4 justify-center text-xs text-black">
@@ -405,9 +410,9 @@
                 <label class="text-black text-sm font-medium" for="update-patient-gender">Gender</label>
                 <select id="update-patient-gender" name="gender" class="block w-full px-3 py-2 mt-1 text-black bg-white border border-gray-200 rounded-md focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 focus:outline-none focus:ring" required>
                     <option value="">Select Gender</option>
-                    <option value="male">👨 Male</option>
-                    <option value="female">👩 Female</option>
-                    <option value="other">⚧ Other</option>
+                    <option value="Male">👨 Male</option>
+                    <option value="Female">👩 Female</option>
+                    <option value="Other">⚧ Other</option>
                 </select>
             </div>
             
@@ -448,6 +453,14 @@
 <?php else: ?>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <?php endif; ?>
+<!-- Three.js libraries for 3D Dental Model -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- 3D Dental Viewer styles -->
+<link rel="stylesheet" href="<?= base_url('css/dental-3d-viewer.css') ?>">
+<!-- 3D Dental Viewer component -->
+<script src="<?= base_url('js/dental-3d-viewer.js') ?>"></script>
 <!-- Externalized patient panel JS -->
 <script src="<?= base_url('js/patientsTable.js') ?>"></script>
 
@@ -474,7 +487,7 @@
 }
 
 /* Make slide-in panels wider */
-.slide-in-panel {
+  .slide-in-panel {
   position: fixed;
   top: 0;
   right: 0;
@@ -488,6 +501,11 @@
   transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Update patient panel should be on top */
+#updatePatientPanel {
+  z-index: 60;
 }
 .slide-in-panel.active {
   transform: translateX(0);
@@ -527,6 +545,82 @@ input, select, textarea {
   border-radius: 0.375rem;
 }
 
+/* Radio buttons and checkboxes styling */
+input[type="radio"], input[type="checkbox"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Ensure disabled radio buttons and checkboxes remain visible */
+input[type="radio"][disabled], input[type="checkbox"][disabled] {
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+}
+
+/* Custom radio button styling */
+.form-radio {
+  -webkit-appearance: auto;
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  background-color: white;
+  cursor: pointer;
+  position: relative;
+}
+
+.form-radio:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.form-radio:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 6px;
+  height: 6px;
+  background-color: white;
+  border-radius: 50%;
+}
+
+/* Custom checkbox styling */
+.form-checkbox {
+  -webkit-appearance: auto;
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  position: relative;
+}
+
+.form-checkbox:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.form-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
 /* Mobile-friendly table */
 @media (max-width: 1023px) {
   .table-responsive {
@@ -550,13 +644,71 @@ body.panel-open {
   position: fixed;
   width: 100%;
 }
+
+/* Popup used by Latest Dental Chart viewer */
+.treatment-popup {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  width: 280px;
+  z-index: 70;
+  display: none; /* shown on click */
+}
+.treatment-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.treatment-popup-title { font-weight: 600; font-size: 0.9rem; }
+.treatment-popup-close { color: #6b7280; }
+.treatment-popup-content { padding: 0.75rem; font-size: 0.85rem; color: #111827; }
 </style>
+
+<!-- Dental Chart Slide-in Panel (view latest) -->
+<div id="dentalChartPanel" class="slide-in-panel p-4 lg:p-6 flex flex-col gap-4">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-700 capitalize">Latest Dental Chart</h2>
+        <button class="close-btn text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" id="closeDentalChartPanel" aria-label="Close">&times;</button>
+    </div>
+    <div id="dental-chart-content" class="bg-white rounded-lg shadow-sm p-4 min-h-[200px]">
+        <div class="text-center text-sm text-gray-600">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2 block text-gray-400"></i>
+            Loading dental chart...
+        </div>
+
+        <!-- 3D viewer container (hidden until we have data) -->
+        <div class="mt-4">
+            <div class="dental-3d-viewer-container">
+                <div id="dentalChart3DViewer" class="dental-3d-viewer" style="height: 320px;">
+                    <div class="model-loading" id="chart3dLoading">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>Loading 3D Model...
+                    </div>
+                    <div class="model-error hidden" id="chart3dError">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <div>Failed to load 3D model</div>
+                    </div>
+                    <canvas class="dental-3d-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="text-xs text-gray-500 text-center">Charts are read-only here. Go to records to edit.</div>
+ </div>
 
 <!-- New Action Slide-in Panel (slides from right) -->
 <div id="newActionPanel" class="slide-in-panel p-4 lg:p-6 flex flex-col gap-4">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold text-gray-700 capitalize">Patient Medical History</h2>
+        <div class="flex gap-2">
+            <button type="button" onclick="clearMedicalHistoryForm()" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg transition-colors">
+                <i class="fas fa-eraser mr-1"></i>Clear Form
+            </button>
         <button class="close-btn text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" id="closeNewActionPanel" aria-label="Close">&times;</button>
+        </div>
     </div>
     
     <!-- Panel Content -->
@@ -885,6 +1037,14 @@ body.panel-open {
                            value="<?= esc($patient['other_conditions'] ?? old('other_conditions')) ?>"
                            onchange="updateHiddenField('other_conditions', this.value)">
                 </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="pt-4 border-t border-gray-200">
+                <button type="button" onclick="saveMedicalHistory()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+                    <i class="fas fa-save mr-2"></i>Save Medical History
+            </button>
+                <p class="text-xs text-gray-500 mt-2 text-center">This will save the medical history to the patient's record</p>
             </div>
         </div>
     </div>

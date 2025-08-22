@@ -7,9 +7,6 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', to: 'Home::index');
 
-// Debug route (REMOVE IN PRODUCTION)
-$routes->get('debug', 'Home::debug');
-
 // Guest routes (no authentication required)
 $routes->get('guest/book-appointment', 'Guest::bookAppointment');
 $routes->post('guest/book-appointment', 'Guest::submitAppointment');
@@ -177,6 +174,13 @@ $routes->group('doctor', ['filter' => 'auth'], function($routes) {
 $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Patient::dashboard');
     $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
+    $routes->post('save-medical-history', 'Patient::saveMedicalHistory'); // Save medical history via AJAX
+    $routes->get('get-medical-history/(:num)', 'Patient::getMedicalHistory/$1'); // Get medical history via AJAX
+    $routes->get('get-treatments/(:num)', 'Patient::getPatientTreatments/$1'); // Get patient treatments via AJAX
+    $routes->get('get-appointments/(:num)', 'Patient::getPatientAppointments/$1'); // Get patient appointments via AJAX
+    $routes->get('get-bills/(:num)', 'Patient::getPatientBills/$1'); // Get patient bills via AJAX
+    $routes->get('test-treatments', 'Patient::testTreatmentsEndpoint'); // Test treatments endpoint
+    $routes->get('test-database', 'Patient::testDatabase'); // Test database connection
 });
 
 // Patient Check-in routes (for staff/reception)
