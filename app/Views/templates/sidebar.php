@@ -259,12 +259,19 @@ $currentUrl = current_url();
             </div>
 
             <?php elseif ($userType === 'patient'): ?>
-            <!-- My Account Section -->
+            <!-- My Appointments Section -->
             <div class="space-y-2 sm:space-y-3">
-                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">My Account</label>
-                <?= nav_link('#', 'fas fa-calendar-check', 'My Appointments', $currentUrl) ?>
-                <?= nav_link('#', 'fas fa-file-medical-alt', 'My Records', $currentUrl) ?>
-                <?= nav_link('#', 'fas fa-user-cog', 'Profile', $currentUrl) ?>
+                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Appointments</label>
+                <?= nav_link(base_url('patient/calendar'), 'fas fa-calendar-alt', 'Calendar View', $currentUrl) ?>
+                <?= nav_link(base_url('patient/book-appointment'), 'fas fa-calendar-plus', 'Book Appointment', $currentUrl) ?>
+                <?= nav_link(base_url('patient/appointments'), 'fas fa-calendar-check', 'My Appointments', $currentUrl) ?>
+            </div>
+
+            <!-- My Records Section -->
+            <div class="space-y-2 sm:space-y-3">
+                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Medical Records</label>
+                <?= nav_link(base_url('patient/records'), 'fas fa-file-medical-alt', 'My Records', $currentUrl) ?>
+                <?= nav_link(base_url('patient/profile'), 'fas fa-user-cog', 'My Profile', $currentUrl) ?>
             </div>
             <?php endif; ?>
 

@@ -86,26 +86,22 @@
             echo '>';
             
             // Wrap content in a div for proper positioning
-            echo '<div>';
+            echo '<div class="calendar-cell-content">';
             
             // Day number in top area
             if (!empty($cell['day'])) {
-              echo '<div class="flex justify-start">';
+              echo '<div class="day-number">';
               echo '<span class="text-xs sm:text-sm font-semibold text-gray-700">' . $cell['day'] . '</span>';
               echo '</div>';
-            } else {
-              echo '<div></div>'; // Empty div to maintain structure
             }
             
             // Appointment indicator in bottom area
             if ($hasAppointments && $approvedCount > 0) {
-              echo '<div class="flex justify-end">';
+              echo '<div class="appointment-badge">';
               echo '<div class="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 bg-blue-500 text-white rounded-full text-xs font-bold shadow-sm">';
               echo $approvedCount;
               echo '</div>';
               echo '</div>';
-            } else {
-              echo '<div></div>'; // Empty div to maintain structure
             }
             
             echo '</div>'; // Close content wrapper div
@@ -124,6 +120,25 @@
   width: 14.2857%;
 }
 
+.calendar-cell-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px;
+}
+
+.day-number {
+  align-self: flex-start;
+}
+
+.appointment-badge {
+  align-self: flex-end;
+  margin-top: auto;
+}
+
 /* Mobile: Keep square layout */
 @media (max-width: 767px) {
   #monthView table {
@@ -139,15 +154,12 @@
     border: 1px solid #e5e7eb;
   }
 
-  #monthView td > div {
+  #monthView td .calendar-cell-content {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
     padding: 2px;
   }
 }
@@ -169,24 +181,9 @@
     vertical-align: top;
   }
 
-  #monthView td > div {
-    position: relative;
-    height: 100%;
+  #monthView td .calendar-cell-content {
     padding: 8px;
-    display: block;
-  }
-  
-  /* Restore absolute positioning for desktop */
-  #monthView td .flex.justify-start {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-  }
-  
-  #monthView td .flex.justify-end {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
+    height: 100%;
   }
 }
 
@@ -196,18 +193,8 @@
     height: 110px; /* Even bigger for large screens */
   }
   
-  #monthView td > div {
+  #monthView td .calendar-cell-content {
     padding: 10px;
-  }
-  
-  #monthView td .flex.justify-start {
-    top: 10px;
-    left: 10px;
-  }
-  
-  #monthView td .flex.justify-end {
-    bottom: 10px;
-    right: 10px;
   }
 }
 

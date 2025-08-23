@@ -113,6 +113,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update current branch filter
                 window.currentBranchFilter = branchValue;
+                console.log('[Branch Filter] Changed to:', branchValue);
+                console.log('[Branch Filter] Total appointments:', window.appointments?.length || 0);
+                console.log('[Branch Filter] Filtered appointments:', getFilteredAppointments()?.length || 0);
                 
                 // Update dropdown label
                 if (branchDropdownLabel) {
@@ -136,11 +139,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (typeof rebuildCalendarGrid === 'function') {
                     rebuildCalendarGrid();
                 }
-                if (typeof renderDayView === 'function') {
-                    renderDayView();
+                if (typeof updateDayViewForDate === 'function' && typeof currentSelectedDay !== 'undefined') {
+                    const selectedDate = `${currentDisplayedYear}-${String(currentDisplayedMonth + 1).padStart(2, '0')}-${String(currentSelectedDay).padStart(2, '0')}`;
+                    updateDayViewForDate(selectedDate);
                 }
-                if (typeof renderWeekView === 'function') {
-                    renderWeekView();
+                if (typeof updateWeekView === 'function') {
+                    updateWeekView();
                 }
             });
         });
@@ -164,6 +168,85 @@ if (!window.appointments || window.appointments.length === 0) {
 }
 
 console.log('Loaded appointments for conflict detection:', window.appointments);
+
+// Function to populate available time slots for patients
+function populateAvailableTimeSlots(selectedDate, timeSelect) {
+  // Clear existing options
+  timeSelect.innerHTML = '<option value="">Select Time</option>';
+  
+  // Get all appointments for the selected date
+  const dateAppointments = (window.appointments || []).filter(apt => {
+    const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
+    return aptDate === selectedDate;
+  });
+  
+  // Create time slots from 8:00 AM to 6:00 PM (30-minute intervals)
+  const startHour = 8;
+  const endHour = 18;
+  let availableSlots = 0;
+  let bookedSlots = 0;
+  
+  for (let hour = startHour; hour < endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const timeStr = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+      const displayTime = formatTime(timeStr);
+      
+      // Check if this time slot is already booked
+      const isBooked = dateAppointments.some(apt => {
+        const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+        return aptTime === timeStr;
+      });
+      
+      const option = document.createElement('option');
+      option.value = timeStr;
+      
+      if (isBooked) {
+        option.textContent = `${displayTime} (Unavailable)`;
+        option.disabled = true;
+        option.style.color = '#ef4444';
+        bookedSlots++;
+      } else {
+        option.textContent = displayTime;
+        availableSlots++;
+      }
+      
+      timeSelect.appendChild(option);
+    }
+  }
+  
+  // Show availability message
+  const availabilityMessage = document.getElementById('availabilityMessage');
+  const unavailableMessage = document.getElementById('unavailableMessage');
+  const availabilityText = document.getElementById('availabilityText');
+  const unavailableText = document.getElementById('unavailableText');
+  
+  if (availableSlots > 0) {
+    if (availabilityMessage && availabilityText) {
+      availabilityText.textContent = `${availableSlots} time slots available`;
+      availabilityMessage.style.display = 'block';
+    }
+    if (unavailableMessage) {
+      unavailableMessage.style.display = 'none';
+    }
+  } else {
+    if (unavailableMessage && unavailableText) {
+      unavailableText.textContent = 'No available time slots for this date';
+      unavailableMessage.style.display = 'block';
+    }
+    if (availabilityMessage) {
+      availabilityMessage.style.display = 'none';
+    }
+  }
+}
+
+// Helper function to format time for display
+function formatTime(timeStr) {
+  const [hours, minutes] = timeStr.split(':');
+  const hour = parseInt(hours);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${displayHour}:${minutes} ${ampm}`;
+}
 
 // Calendar state management - Initialize these first
 let currentCalendarDate = getPHDate();
@@ -265,75 +348,18 @@ viewOptions.forEach(opt => {
 // Initialize with Month view
 switchView('Month');
 
-// Branch filter dropdown logic
-const branchDropdownBtn = document.getElementById('branchDropdownBtn');
-const branchDropdownMenu = document.getElementById('branchDropdownMenu');
-const branchDropdownLabel = document.getElementById('branchDropdownLabel');
-const branchOptions = branchDropdownMenu ? branchDropdownMenu.querySelectorAll('.branch-filter-option') : [];
-let currentBranchFilter = 'all'; // Track current branch filter
-
-// Show/hide branch dropdown
-if (branchDropdownBtn && branchDropdownMenu) {
-  branchDropdownBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    branchDropdownMenu.classList.toggle('hidden');
-  });
-  document.addEventListener('click', function() {
-    branchDropdownMenu.classList.add('hidden');
-  });
-}
-
-// Branch filter logic
-function filterByBranch(branchFilter) {
-  currentBranchFilter = branchFilter;
-  
-  // Update dropdown label and styling
-  if (branchDropdownLabel) {
-    if (branchFilter === 'all') {
-      branchDropdownLabel.textContent = 'All';
-      branchDropdownLabel.className = 'text-gray-900';
-    } else if (branchFilter === 'nabua') {
-      branchDropdownLabel.textContent = 'Nabua';
-      branchDropdownLabel.className = 'text-green-700 font-semibold';
-    } else if (branchFilter === 'iriga') {
-      branchDropdownLabel.textContent = 'Iriga';
-      branchDropdownLabel.className = 'text-blue-700 font-semibold';
-    }
-  }
-  
-  // Update option selection states
-  branchOptions.forEach(opt => {
-    if (opt.getAttribute('data-branch') === branchFilter) {
-      opt.classList.add('bg-gray-100');
-    } else {
-      opt.classList.remove('bg-gray-100');
-    }
-  });
-  
-  // Filter appointments and refresh calendar display
-  updateCalendarDisplay();
-  branchDropdownMenu.classList.add('hidden');
-}
-
-// Add event listeners to branch options
-branchOptions.forEach(opt => {
-  opt.addEventListener('click', function(e) {
-    const branch = opt.getAttribute('data-branch');
-    filterByBranch(branch);
-  });
-});
-
-// Initialize with 'All' branch filter
-filterByBranch('all');
-
 // Helper function to get filtered appointments based on current branch filter
 function getFilteredAppointments() {
+  console.log('[getFilteredAppointments] Current filter:', window.currentBranchFilter);
+  console.log('[getFilteredAppointments] Raw appointments:', window.appointments?.length || 0);
+  
   if (window.currentBranchFilter === 'all') {
     return window.appointments || [];
   }
   
   const filtered = (window.appointments || []).filter(apt => {
     if (!apt.branch_name) {
+      console.log('[getFilteredAppointments] Appointment missing branch_name:', apt.id);
       return false;
     }
     
@@ -348,6 +374,7 @@ function getFilteredAppointments() {
     return true;
   });
   
+  console.log('[getFilteredAppointments] Filtered result:', filtered.length);
   return filtered;
 }
 
@@ -952,7 +979,32 @@ function openAddAppointmentPanelWithTime(date, time) {
   // Update the day view to show appointments for the clicked date
   updateDayViewForDate(date);
   
-  if (userType === 'admin' || userType === 'staff') {
+  if (userType === 'patient') {
+    const panel = document.getElementById('addAppointmentPanel');
+    if (panel) {
+      const dateInput = document.getElementById('appointmentDate');
+      const dateDisplay = document.getElementById('selectedDateDisplay');
+      const timeSelect = document.getElementById('timeSelect');
+      
+      if (dateInput) dateInput.value = date;
+      if (dateDisplay) {
+        const formattedDate = new Date(date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        dateDisplay.value = formattedDate;
+      }
+      
+      // Populate available time slots for patients
+      if (timeSelect) {
+        populateAvailableTimeSlots(date, timeSelect);
+      }
+      
+      panel.classList.add('active');
+    }
+  } else if (userType === 'admin' || userType === 'staff') {
     const panel = document.getElementById('addAppointmentPanel');
     if (panel) {
       const dateInput = document.getElementById('appointmentDate');
@@ -1320,5 +1372,9 @@ function getPHDate(dateStr) {
   let utc = d.getTime() + (d.getTimezoneOffset() * 60000);
   return new Date(utc + (8 * 60 * 60000));
 }
+
+// Set user type for JavaScript
+window.userType = '<?= $user['user_type'] ?? 'admin' ?>';
+console.log('User type set to:', window.userType);
 
 </script> 

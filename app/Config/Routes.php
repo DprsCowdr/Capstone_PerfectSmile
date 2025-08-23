@@ -176,10 +176,17 @@ $routes->group('doctor', ['filter' => 'auth'], function($routes) {
 });
 
 // Patient routes (protected)
-$routes->group('patient', ['filter' => 'auth'], function($routes) {
-    $routes->get('dashboard', 'Patient::dashboard');
-    $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
-});
+  $routes->group('patient', ['filter' => 'auth'], function($routes) {
+      $routes->get('dashboard', 'Patient::dashboard');
+      $routes->get('book-appointment', 'Patient::bookAppointment');
+      $routes->get('calendar', 'Patient::calendar');
+      $routes->post('book-appointment', 'Patient::submitAppointment');
+      $routes->get('appointments', 'Patient::appointments');
+      $routes->get('records', 'Patient::records');
+      $routes->get('profile', 'Patient::profile');
+      $routes->get('show-dentists', 'Patient::showDentists'); // Debug: Show all dentists
+      $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
+  });
 
 // Patient Check-in routes (for staff/reception)
 $routes->group('checkin', ['filter' => 'auth'], function($routes) {
