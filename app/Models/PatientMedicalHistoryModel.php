@@ -21,7 +21,6 @@ class PatientMedicalHistoryModel extends Model
         'tobacco_use', 'blood_pressure', 'allergies',
         'pregnant', 'nursing', 'birth_control',
         'medical_conditions', 'other_conditions',
-        'current_treatment', 'hospitalization_details', 'special_notes',
         'created_at', 'updated_at'
     ];
 
