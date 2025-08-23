@@ -9,7 +9,7 @@ function showAllAppointments() {
     modal.innerHTML = `
       <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 relative animate-fade-in">
         <button id="closeAllAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
-        <h2 class="text-xl font-bold mb-4 text-blue-700">All Appointments <span class='ml-2 text-base text-gray-500 font-normal'>(${(window.appointments||[]).length})</span></h2>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">All Appointments <span class='ml-2 text-base text-gray-500 font-normal'>(${getFilteredAppointments().length})</span></h2>
         <div id="allAppointmentsList" class="max-h-[60vh] overflow-y-auto"></div>
       </div>
     `;
@@ -17,7 +17,7 @@ function showAllAppointments() {
   }
   // Populate the list
   const list = modal.querySelector('#allAppointmentsList');
-  const appointments = window.appointments || [];
+  const appointments = getFilteredAppointments(); // Use branch-filtered appointments
   if (appointments.length === 0) {
     list.innerHTML = '<div class="text-gray-500">No appointments found.</div>';
   } else {
@@ -88,6 +88,74 @@ if (!Array.isArray(_apts)) {
   window.appointments = _apts;
 }
 window.baseUrl = '<?= base_url() ?>';
+window.branches = <?= json_encode($branches ?? []) ?>;
+
+// Initialize branch filter dropdown
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize branch dropdown functionality
+    const branchDropdownBtn = document.getElementById('branchDropdownBtn');
+    const branchDropdownMenu = document.getElementById('branchDropdownMenu');
+    const branchDropdownLabel = document.getElementById('branchDropdownLabel');
+    
+    if (branchDropdownBtn && branchDropdownMenu) {
+        // Toggle dropdown visibility
+        branchDropdownBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            branchDropdownMenu.classList.toggle('hidden');
+        });
+        
+        // Handle branch filter option clicks
+        const branchOptions = branchDropdownMenu.querySelectorAll('.branch-filter-option');
+        branchOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                const branchValue = this.getAttribute('data-branch');
+                const branchLabel = this.textContent.trim();
+                
+                // Update current branch filter
+                window.currentBranchFilter = branchValue;
+                
+                // Update dropdown label
+                if (branchDropdownLabel) {
+                    branchDropdownLabel.textContent = branchLabel;
+                    // Update label color based on branch
+                    branchDropdownLabel.className = branchValue === 'nabua' ? 'text-green-700' : 
+                                                   branchValue === 'iriga' ? 'text-blue-700' : 
+                                                   'text-gray-900';
+                }
+                
+                // Update active state visual
+                branchOptions.forEach(opt => opt.classList.remove('bg-gray-100', 'bg-green-100', 'bg-blue-100'));
+                this.classList.add(branchValue === 'nabua' ? 'bg-green-100' : 
+                                  branchValue === 'iriga' ? 'bg-blue-100' : 
+                                  'bg-gray-100');
+                
+                // Hide dropdown
+                branchDropdownMenu.classList.add('hidden');
+                
+                // Refresh current view
+                if (typeof rebuildCalendarGrid === 'function') {
+                    rebuildCalendarGrid();
+                }
+                if (typeof renderDayView === 'function') {
+                    renderDayView();
+                }
+                if (typeof renderWeekView === 'function') {
+                    renderWeekView();
+                }
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!branchDropdownBtn.contains(e.target) && !branchDropdownMenu.contains(e.target)) {
+                branchDropdownMenu.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Initialize current branch filter to 'all'
+    window.currentBranchFilter = 'all';
+});
 
 // Add some test appointments for debugging if none exist
 if (!window.appointments || window.appointments.length === 0) {
@@ -217,6 +285,87 @@ viewOptions.forEach(opt => {
 
 // Initialize with Month view
 switchView('Month');
+
+// Branch filter dropdown logic
+const branchDropdownBtn = document.getElementById('branchDropdownBtn');
+const branchDropdownMenu = document.getElementById('branchDropdownMenu');
+const branchDropdownLabel = document.getElementById('branchDropdownLabel');
+const branchOptions = branchDropdownMenu ? branchDropdownMenu.querySelectorAll('.branch-filter-option') : [];
+let currentBranchFilter = 'all'; // Track current branch filter
+
+// Show/hide branch dropdown
+if (branchDropdownBtn && branchDropdownMenu) {
+  branchDropdownBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    branchDropdownMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', function() {
+    branchDropdownMenu.classList.add('hidden');
+  });
+}
+
+// Branch filter logic
+function filterByBranch(branchFilter) {
+  currentBranchFilter = branchFilter;
+  
+  // Update dropdown label and styling
+  if (branchDropdownLabel) {
+    if (branchFilter === 'all') {
+      branchDropdownLabel.textContent = 'All';
+      branchDropdownLabel.className = 'text-gray-900';
+    } else if (branchFilter === 'nabua') {
+      branchDropdownLabel.textContent = 'Nabua';
+      branchDropdownLabel.className = 'text-green-700 font-semibold';
+    } else if (branchFilter === 'iriga') {
+      branchDropdownLabel.textContent = 'Iriga';
+      branchDropdownLabel.className = 'text-blue-700 font-semibold';
+    }
+  }
+  
+  // Update option selection states
+  branchOptions.forEach(opt => {
+    if (opt.getAttribute('data-branch') === branchFilter) {
+      opt.classList.add('bg-gray-100');
+    } else {
+      opt.classList.remove('bg-gray-100');
+    }
+  });
+  
+  // Filter appointments and refresh calendar display
+  updateCalendarDisplay();
+  branchDropdownMenu.classList.add('hidden');
+}
+
+// Add event listeners to branch options
+branchOptions.forEach(opt => {
+  opt.addEventListener('click', function(e) {
+    const branch = opt.getAttribute('data-branch');
+    filterByBranch(branch);
+  });
+});
+
+// Initialize with 'All' branch filter
+filterByBranch('all');
+
+// Helper function to get filtered appointments based on current branch filter
+function getFilteredAppointments() {
+  if (window.currentBranchFilter === 'all') {
+    return window.appointments || [];
+  }
+  
+  return (window.appointments || []).filter(apt => {
+    if (!apt.branch_name) return false;
+    
+    const branchName = apt.branch_name.toLowerCase();
+    if (window.currentBranchFilter === 'nabua') {
+      return branchName.includes('nabua');
+    } else if (window.currentBranchFilter === 'iriga') {
+      return branchName.includes('iriga');
+    }
+    
+    return true;
+  });
+}
 
 // Initialize calendar display
 updateCalendarDisplay();
@@ -374,7 +523,7 @@ function updateDayViewForDate(selectedDate) {
   if (!dayView) { console.error('[DayView] #dayView not found'); return; }
   const tbody = dayView.querySelector('tbody');
   if (!tbody) { console.error('[DayView] tbody not found in #dayView'); return; }
-  const appointments = window.appointments || [];
+  const appointments = getFilteredAppointments(); // Use branch-filtered appointments
   // Filter all appointments for the selected date
   const dayAppointments = appointments.filter(apt => {
     // Normalize both selectedDate and appointment date to YYYY-MM-DD
@@ -387,8 +536,8 @@ function updateDayViewForDate(selectedDate) {
     // Remove any whitespace and compare
     return apt_date && apt_date.trim() === selectedDate.trim();
   });
-  if (!Array.isArray(appointments)) console.error('[DayView] window.appointments is not an array:', window.appointments);
-  if (appointments.length === 0) console.warn('[DayView] No appointments found in window.appointments');
+  if (!Array.isArray(appointments)) console.error('[DayView] getFilteredAppointments() is not an array:', appointments);
+  if (appointments.length === 0) console.warn('[DayView] No appointments found in getFilteredAppointments()');
   if (dayAppointments.length === 0) console.warn(`[DayView] No appointments found for selectedDate: ${selectedDate}`);
 
   // --- Update all-day row ---
@@ -565,7 +714,7 @@ function rebuildCalendarGrid() {
           td.textContent = cell.day;
         }
         // Appointments indicator (show for all days if toggle ON, else only for today/future)
-        const appointments = window.appointments || [];
+        const appointments = getFilteredAppointments(); // Use branch-filtered appointments
         // Use consistent date formatting (YYYY-MM-DD) and timezone for comparison
         const cellDateStr = (() => {
           const d = getPHDate(cell.date);
@@ -721,7 +870,7 @@ function updateWeekView() {
         if (!showPast && isToday) {
           // Only today
           // Find appointments for this day/hour
-          const appointments = (window.appointments || []).filter(apt => {
+          const appointments = getFilteredAppointments().filter(apt => {
             const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
             const apt_time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
             if (!apt_date || !apt_time) return false;
@@ -741,7 +890,7 @@ function updateWeekView() {
         }
       if (showPast && (isPast || isToday)) {
         // Past and today
-        const appointments = (window.appointments || []).filter(apt => {
+        const appointments = getFilteredAppointments().filter(apt => {
           const apt_date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
           const apt_time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
           if (!apt_date || !apt_time) return false;
@@ -871,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadAppointmentsForDate(date) {
     const contentDiv = document.getElementById('appointmentInfoContent');
     if (!contentDiv) return;
-    const appointments = window.appointments || [];
+    const appointments = getFilteredAppointments();
     // Normalize both selected date and appointment date to YYYY-MM-DD
     const dayAppointments = appointments.filter(apt => {
       let apt_date = null;

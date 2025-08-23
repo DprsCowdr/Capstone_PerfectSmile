@@ -20,9 +20,22 @@ class Staff extends BaseController
             return redirect()->to('/dashboard');
         }
 
-        // Get appointments created by staff (pending approval)
+        // Get appointments created by staff (pending approval) and limit to user's branches
         $appointmentModel = new \App\Models\AppointmentModel();
         $pendingAppointments = $appointmentModel->getPendingApprovalAppointments();
+
+        // Restrict pending appointments to branches assigned to this staff user
+        $branchUserModel = new \App\Models\BranchUserModel();
+        $userBranches = $branchUserModel->getUserBranches($user['id']);
+        $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
+        if (!empty($branchIds)) {
+            $pendingAppointments = array_values(array_filter($pendingAppointments, function($apt) use ($branchIds) {
+                return in_array($apt['branch_id'] ?? null, $branchIds);
+            }));
+        } else {
+            // If staff has no branch assignments, show no pending approvals
+            $pendingAppointments = [];
+        }
         
         // Get today's appointments
         $todayAppointments = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
@@ -275,6 +288,87 @@ class Staff extends BaseController
             'branches' => $branches,
             'dentists' => $dentists
         ]);
+    }
+
+    /**
+     * Staff approves a pending appointment (from waitlist)
+     */
+    public function approveAppointment($id)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        $dentistId = $this->request->getPost('dentist_id');
+
+        // Load appointment and check branch assignment
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($id);
+        if (!$appointment) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
+        }
+
+        $branchUserModel = new \App\Models\BranchUserModel();
+        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to approve appointments for this branch']);
+        }
+
+        $appointmentService = new \App\Services\AppointmentService();
+        $result = $appointmentService->approveAppointment($id, $dentistId ?: null);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON($result);
+        }
+
+        session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
+        return redirect()->back();
+    }
+
+    /**
+     * Staff declines a pending appointment (from waitlist)
+     */
+    public function declineAppointment($id)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        $reason = $this->request->getPost('reason');
+        if (empty($reason)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Decline reason is required']);
+        }
+
+        // Load appointment and check branch assignment
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($id);
+        if (!$appointment) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
+        }
+
+        $branchUserModel = new \App\Models\BranchUserModel();
+        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to decline appointments for this branch']);
+        }
+
+        $appointmentService = new \App\Services\AppointmentService();
+        $result = $appointmentService->declineAppointment($id, $reason);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON($result);
+        }
+
+        session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
+        return redirect()->back();
     }
 
     public function createAppointment()

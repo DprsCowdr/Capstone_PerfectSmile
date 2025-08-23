@@ -111,6 +111,10 @@
                                     <i class="fas fa-comment mr-1"></i> <?= $appointment['remarks'] ?>
                                 </div>
                                 <?php endif; ?>
+                                <div class="mt-3 flex space-x-2">
+                                    <button onclick="staffApproveAppointment(<?= $appointment['id'] ?>)" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-check mr-1"></i>Approve</button>
+                                    <button onclick="staffDeclineAppointment(<?= $appointment['id'] ?>)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-times mr-1"></i>Decline</button>
+                                </div>
                             </div>
                             <?php endforeach; ?>
                         </div>
@@ -194,3 +198,34 @@
 </div>
 
 <?= view('templates/footer') ?> 
+<script>
+function staffApproveAppointment(appointmentId) {
+    if (!confirm('Approve this appointment?')) return;
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    fetch(`<?= base_url() ?>staff/appointments/approve/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
+    .catch(e => { console.error(e); alert('An error occurred'); });
+}
+
+function staffDeclineAppointment(appointmentId) {
+    const reason = prompt('Reason for declining the appointment (required):');
+    if (!reason || !reason.trim()) { alert('Decline reason is required'); return; }
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    formData.append('reason', reason);
+    fetch(`<?= base_url() ?>staff/appointments/decline/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
+    .catch(e => { console.error(e); alert('An error occurred'); });
+}
+</script>

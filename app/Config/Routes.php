@@ -209,4 +209,6 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('patients/update/(:num)', 'StaffController::updatePatient/$1');
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
+    $routes->post('appointments/approve/(:num)', 'StaffController::approveAppointment/$1');
+    $routes->post('appointments/decline/(:num)', 'StaffController::declineAppointment/$1');
 });

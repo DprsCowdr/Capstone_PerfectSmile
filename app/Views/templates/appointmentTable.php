@@ -89,7 +89,8 @@
 <!-- JavaScript -->
 <?= view('templates/calendar/scripts', [
   'user' => $user,
-  'appointments' => $appointments ?? []
+  'appointments' => $appointments ?? [],
+  'branches' => $branches ?? []
 ]) ?>
 
 <!-- CSS -->
