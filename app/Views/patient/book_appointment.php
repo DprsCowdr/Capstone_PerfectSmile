@@ -8,7 +8,7 @@
                 <a href="<?= base_url('patient/dashboard') ?>" class="text-gray-600 hover:text-gray-800 mr-4">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
-                <h1 class="text-xl font-semibold text-gray-800">Book Appointment</h1>
+                <h1 class="text-xl font-semibold text-gray-800">Book Appointments</h1>
             </div>
             <div class="flex items-center ml-auto">
                 <span class="mr-4 hidden lg:inline text-gray-600 font-semibold"><?= $user['name'] ?? 'Patient' ?></span>

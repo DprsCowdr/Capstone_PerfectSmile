@@ -7,7 +7,7 @@
             <!-- Patient-specific header -->
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-gray-800">Book Your Appointment</h1>
-                <p class="text-gray-600">Select a date and time that works for you</p>
+                <p class="text-gray-600">Select a date and time that works for youu</p>
             </div>
 
             <?= view('templates/appointmentTable', [

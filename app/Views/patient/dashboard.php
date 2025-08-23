@@ -18,13 +18,13 @@
                         <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-user mr-2 text-gray-400"></i>Profile</a>
                         <div class="border-t my-1"></div>
                         <a href="<?= base_url('auth/logout') ?>" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-sign-out-alt mr-2 text-gray-400"></i>Logout</a>
-                    </div>
+                    </div>ted
                 </div>
             </div>
         </nav>
         <!-- End of Topbar -->
         <main class="flex-1 px-6 pb-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">👤 Patient Dashboard</h1>
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">👤 Patient Dashboards</h1>
             
             <!-- Welcome Message -->
             <div class="bg-gradient-to-r from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-6 mb-8">
