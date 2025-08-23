@@ -221,7 +221,7 @@ function approveAppointment(appointmentId, isAssigned) {
         const formData = new FormData();
         formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
 
-        fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
+        fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
             method: 'POST',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
             formData.append('reason', reason);
             
-            fetch(`<?= base_url() ?>admin/appointments/decline/${appointmentId}`, {
+            fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/decline/${appointmentId}`, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'

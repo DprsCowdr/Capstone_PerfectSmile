@@ -51,7 +51,17 @@ class Patient extends BaseController
         
         // Get pending appointments count
         $pendingAppointments = $appointmentModel->where('user_id', $user['id'])
-                                               ->whereIn('status', ['pending', 'scheduled'])
+                                               ->where('approval_status', 'pending')
+                                               ->countAllResults();
+        
+        // Get rejected appointments count
+        $rejectedAppointments = $appointmentModel->where('user_id', $user['id'])
+                                                ->where('approval_status', 'declined')
+                                                ->countAllResults();
+        
+        // Get approved appointments count
+        $approvedAppointments = $appointmentModel->where('user_id', $user['id'])
+                                                ->where('approval_status', 'approved')
                                                ->countAllResults();
         
         return view('patient/dashboard', [
@@ -60,338 +70,220 @@ class Patient extends BaseController
             'upcomingAppointments' => $upcomingAppointments,
             'totalAppointments' => $totalAppointments,
             'completedTreatments' => $completedTreatments,
-            'pendingAppointments' => $pendingAppointments
+            'pendingAppointments' => $pendingAppointments,
+            'rejectedAppointments' => $rejectedAppointments,
+            'approvedAppointments' => $approvedAppointments
         ]);
     }
 
-    /**
-     * Save patient medical history via AJAX
-     */
-    public function saveMedicalHistory()
+    public function bookAppointment()
     {
-        // Check if user is logged in and has appropriate permissions
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized access'
-            ])->setStatusCode(403);
-        }
-
-        // Get patient ID from request
-        $patientId = $this->request->getPost('patient_id');
-        if (!$patientId) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Patient ID is required'
-            ])->setStatusCode(400);
-        }
-
-        try {
-            $patientModel = new PatientModel();
-            
-            // Collect medical history data from the form
-            $medicalHistoryData = [
-                'previous_dentist' => $this->request->getPost('previous_dentist'),
-                'last_dental_visit' => $this->request->getPost('last_dental_visit'),
-                'physician_name' => $this->request->getPost('physician_name'),
-                'physician_specialty' => $this->request->getPost('physician_specialty'),
-                'physician_phone' => $this->request->getPost('physician_phone'),
-                'physician_address' => $this->request->getPost('physician_address'),
-                'good_health' => $this->request->getPost('good_health'),
-                'under_treatment' => $this->request->getPost('under_treatment'),
-                'treatment_condition' => $this->request->getPost('treatment_condition'),
-                'serious_illness' => $this->request->getPost('serious_illness'),
-                'illness_details' => $this->request->getPost('illness_details'),
-                'hospitalized' => $this->request->getPost('hospitalized'),
-                'hospitalization_where' => $this->request->getPost('hospitalization_where'),
-                'hospitalization_when' => $this->request->getPost('hospitalization_when'),
-                'hospitalization_why' => $this->request->getPost('hospitalization_why'),
-                'tobacco_use' => $this->request->getPost('tobacco_use'),
-                'blood_pressure' => $this->request->getPost('blood_pressure'),
-                'allergies' => $this->request->getPost('allergies'),
-                'pregnant' => $this->request->getPost('pregnant'),
-                'nursing' => $this->request->getPost('nursing'),
-                'birth_control' => $this->request->getPost('birth_control'),
-                'medical_conditions' => $this->request->getPost('medical_conditions') ?: [],
-                'other_conditions' => $this->request->getPost('other_conditions'),
-            ];
-
-            // Remove empty values to avoid unnecessary database updates
-            $medicalHistoryData = array_filter($medicalHistoryData, function($value) {
-                return $value !== null && $value !== '' && $value !== [];
-            });
-
-            // Update patient medical history
-            $result = $patientModel->updateMedicalHistory($patientId, $medicalHistoryData);
-
-            if ($result) {
-                return $this->response->setJSON([
-                    'success' => true,
-                    'message' => 'Medical history saved successfully'
-                ]);
-            } else {
-                return $this->response->setJSON([
-                    'success' => false,
-                    'message' => 'Failed to save medical history'
-                ])->setStatusCode(500);
-            }
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error saving medical history: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'An error occurred while saving medical history'
-            ])->setStatusCode(500);
-        }
+        
+        // Get available branches and dentists
+        $branchModel = new \App\Models\BranchModel();
+        $userModel = new \App\Models\UserModel();
+        
+        $branches = $branchModel->findAll(); // No status column in branches table
+        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll(); // Fixed: Use 'dentist' not 'doctor'
+        
+        return view('patient/book_appointment', [
+            'user' => $user,
+            'branches' => $branches,
+            'dentists' => $dentists
+        ]);
     }
 
-    /**
-     * Get patient medical history via AJAX
-     */
-    public function getMedicalHistory($patientId)
+    public function calendar()
     {
-        // Check if user is logged in and has appropriate permissions
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized access'
-            ])->setStatusCode(403);
-        }
-
-        try {
-            $patientModel = new PatientModel();
-            
-            // Get patient with medical history
-            $patient = $patientModel->getPatientWithMedicalHistory($patientId);
-            
-            if (!$patient) {
-                return $this->response->setJSON([
-                    'success' => false,
-                    'message' => 'Patient not found'
-                ])->setStatusCode(404);
-            }
-
-            // Extract medical history data
-            $medicalHistory = [];
-            $medicalHistoryFields = [
-                'previous_dentist', 'last_dental_visit',
-                'physician_name', 'physician_specialty', 'physician_phone', 'physician_address',
-                'good_health', 'under_treatment', 'treatment_condition', 'serious_illness',
-                'illness_details', 'hospitalized', 'hospitalization_where', 'hospitalization_when', 'hospitalization_why',
-                'tobacco_use', 'blood_pressure', 'allergies',
-                'pregnant', 'nursing', 'birth_control',
-                'medical_conditions', 'other_conditions'
-            ];
-
-            foreach ($medicalHistoryFields as $field) {
-                if (isset($patient[$field])) {
-                    $medicalHistory[$field] = $patient[$field];
-                }
-            }
-
-            return $this->response->setJSON([
-                'success' => true,
-                'medical_history' => $medicalHistory
-            ]);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error getting medical history: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'An error occurred while getting medical history'
-            ])->setStatusCode(500);
-        }
+        
+        // Get available branches and dentists
+        $branchModel = new \App\Models\BranchModel();
+        $userModel = new \App\Models\UserModel();
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        $branches = $branchModel->findAll(); // No status column in branches table
+        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll(); // Fixed: Use 'dentist' not 'doctor'
+        
+        // Get existing appointments to show on calendar (for current month and next month)
+        $currentDate = date('Y-m-01'); // First day of current month
+        $nextMonthDate = date('Y-m-01', strtotime('+2 months')); // First day of month after next
+        
+        $appointments = $appointmentModel->select('appointments.*, branches.name as branch_name, dentist.name as dentist_name')
+                                        ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                        ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
+                                        ->where('appointments.appointment_datetime >=', $currentDate)
+                                        ->where('appointments.appointment_datetime <', $nextMonthDate)
+                                        ->whereIn('appointments.approval_status', ['approved', 'pending'])
+                                        ->findAll();
+        
+        return view('patient/calendar', [
+            'user' => $user,
+            'branches' => $branches,
+            'dentists' => $dentists,
+            'appointments' => $appointments
+        ]);
     }
 
-    /**
-     * Test database connection and table structure
-     */
-    public function testDatabase()
+    public function submitAppointment()
     {
-        try {
-            $db = \Config\Database::connect();
-            
-            // Test if we can connect to the database
-            $result = $db->query("SELECT COUNT(*) as count FROM dental_record")->getRow();
-            
-            // Test if we can get records for patient ID 3
-            $result2 = $db->query("SELECT COUNT(*) as count FROM dental_record WHERE user_id = 3")->getRow();
-            
-            // Get a sample record
-            $result3 = $db->query("SELECT * FROM dental_record WHERE user_id = 3 LIMIT 1")->getRow();
-            
-            return $this->response->setJSON([
-                'success' => true,
-                'total_records' => $result->count,
-                'patient_3_records' => $result2->count,
-                'sample_record' => $result3
-            ]);
-            
-        } catch (\Exception $e) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Database error: ' . $e->getMessage()
-            ])->setStatusCode(500);
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
+            return redirect()->to('/login');
         }
-    }
 
-    /**
-     * Test method to check if dental records endpoint is working
-     */
-    public function testTreatmentsEndpoint()
-    {
-        try {
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
+        $user = Auth::getCurrentUser();
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        $dentistId = $this->request->getPost('dentist_id');
+        
+        // If no specific dentist selected, auto-assign an available dentist from the selected branch
+        if (empty($dentistId)) {
+            $userModel = new \App\Models\UserModel();
+            $branchId = $this->request->getPost('branch_id');
             
-            // Test with patient ID 3 (which we know has records)
-            $patientId = 3;
-            $treatments = $dentalRecordModel->where('user_id', $patientId)
-                                          ->orderBy('record_date', 'DESC')
+            // Find available dentists for the selected branch
+            $availableDentists = $userModel->where('user_type', 'dentist') // Fixed: Use 'dentist' not 'doctor'
+                                          ->where('status', 'active')
                                           ->findAll();
             
-            return $this->response->setJSON([
-                'success' => true,
-                'message' => 'Endpoint is working',
-                'patient_id' => $patientId,
-                'count' => count($treatments),
-                'treatments' => $treatments
-            ]);
-            
-        } catch (\Exception $e) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
-            ])->setStatusCode(500);
-        }
-    }
-
-    /**
-     * Get patient treatments (dental records) via AJAX
-     */
-    public function getPatientTreatments($patientId)
-    {
-        // Check if user is logged in and has appropriate permissions
-        $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
-            log_message('error', 'Unauthorized access attempt to getPatientTreatments');
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized access'
-            ])->setStatusCode(403);
-        }
-
-        try {
-            $dentalRecordModel = new \App\Models\DentalRecordModel();
-            
-            // Ensure patient ID is an integer
-            $patientId = (int) $patientId;
-            
-            // Debug: Log the patient ID being searched
-            log_message('info', "Searching for dental records with patient ID: {$patientId}");
-            
-            // Get dental records for the patient
-            $treatments = $dentalRecordModel->where('user_id', $patientId)
-                                          ->orderBy('record_date', 'DESC')
-                                          ->findAll();
-
-            // Debug: Log the results
-            log_message('info', "Found " . count($treatments) . " dental records for patient ID: {$patientId}");
-            if (count($treatments) > 0) {
-                log_message('info', "First treatment: " . json_encode($treatments[0]));
+            if (!empty($availableDentists)) {
+                // For now, assign the first available dentist
+                // TODO: Could implement more sophisticated logic (least busy, preferred, etc.)
+                $dentistId = $availableDentists[0]['id'];
+                log_message('info', "Auto-assigned dentist ID {$dentistId} for patient appointment");
             } else {
-                log_message('info', "No treatments found for patient ID: {$patientId}");
+                log_message('warning', 'No available dentists found for auto-assignment');
             }
-
-            // Debug: Log the response being sent
-            $response = [
-                'success' => true,
-                'treatments' => $treatments
-            ];
-            log_message('info', "Sending response: " . json_encode($response));
-
-            return $this->response->setJSON($response);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error getting patient treatments: ' . $e->getMessage());
-            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'An error occurred while getting patient treatments'
-            ])->setStatusCode(500);
         }
-    }
 
-    /**
-     * Get patient appointments via AJAX
-     */
-    public function getPatientAppointments($patientId)
-    {
-        // Check if user is logged in and has appropriate permissions
-        $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized access'
-            ])->setStatusCode(403);
+        $data = [
+            'user_id' => $user['id'], // Patient books for themselves
+            'branch_id' => $this->request->getPost('branch_id'),
+            'dentist_id' => $dentistId, // Either selected or auto-assigned
+            'appointment_date' => $this->request->getPost('appointment_date'),
+            'appointment_time' => $this->request->getPost('appointment_time'),
+            'appointment_type' => 'scheduled',
+            'remarks' => $this->request->getPost('remarks'),
+            'approval_status' => 'pending', // Patient bookings need approval
+            'status' => 'pending'
+        ];
+
+        // Validate required fields
+        if (empty($data['branch_id']) || empty($data['appointment_date']) || empty($data['appointment_time'])) {
+            session()->setFlashdata('error', 'Please fill in all required fields');
+            return redirect()->back()->withInput();
         }
 
         try {
-            $appointmentModel = new \App\Models\AppointmentModel();
-            
-            // Get appointments for the patient
-            $appointments = $appointmentModel->where('user_id', $patientId)
-                                           ->orderBy('appointment_datetime', 'DESC')
-                                           ->findAll();
-
-            return $this->response->setJSON([
-                'success' => true,
-                'appointments' => $appointments
-            ]);
-
+            $appointmentModel->insert($data);
+            session()->setFlashdata('success', 'Appointment request submitted successfully! Please wait for confirmation.');
+            return redirect()->to('/patient/appointments');
         } catch (\Exception $e) {
-            log_message('error', 'Error getting patient appointments: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'An error occurred while getting patient appointments'
-            ])->setStatusCode(500);
+            session()->setFlashdata('error', 'Failed to submit appointment: ' . $e->getMessage());
+            return redirect()->back()->withInput();
         }
     }
 
-    /**
-     * Get patient bills via AJAX
-     */
-    public function getPatientBills($patientId)
+    public function appointments()
     {
-        // Check if user is logged in and has appropriate permissions
-        $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized access'
-            ])->setStatusCode(403);
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
+            return redirect()->to('/login');
         }
 
-        try {
-            $paymentModel = new \App\Models\PaymentModel();
-            
-            // Get payments for the patient
-            $bills = $paymentModel->where('patient_id', $patientId)
-                                 ->orderBy('created_at', 'DESC')
-                                 ->findAll();
+        $user = Auth::getCurrentUser();
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        // Get all patient's appointments
+        $appointments = $appointmentModel->select('appointments.*, branches.name as branch_name, dentist.name as dentist_name')
+                                        ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                        ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
+                                        ->where('appointments.user_id', $user['id'])
+                                        ->orderBy('appointments.appointment_datetime', 'DESC')
+                                        ->findAll();
+        
+        return view('patient/appointments', [
+            'user' => $user,
+            'appointments' => $appointments
+        ]);
+    }
+    public function records()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
 
-            return $this->response->setJSON([
-                'success' => true,
-                'bills' => $bills
-            ]);
+        $user = Auth::getCurrentUser();
+        
+        // Get patient's dental records
+        $dentalRecordModel = new \App\Models\DentalRecordModel();
+        $records = $dentalRecordModel->where('user_id', $user['id'])->findAll();
+        
+        return view('patient/records', [
+            'user' => $user,
+            'records' => $records
+        ]);
+    }
 
-        } catch (\Exception $e) {
-            log_message('error', 'Error getting patient bills: ' . $e->getMessage());
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'An error occurred while getting patient bills'
-            ])->setStatusCode(500);
+    public function profile()
+    {
+        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $user = Auth::getCurrentUser();
+        
+        return view('patient/profile', [
+            'user' => $user
+        ]);
+    }
+
+    // Debug method to show all dentists
+    public function showDentists()
+    {
+        $userModel = new \App\Models\UserModel();
+        $dentists = $userModel->where('user_type', 'dentist')->findAll(); // Fixed: Use 'dentist' not 'doctor'
+        
+        echo "<h2>All Dentists in System:</h2>";
+        echo "<table border='1' cellpadding='10' style='border-collapse: collapse;'>";
+        echo "<tr style='background-color: #f0f0f0;'><th>ID</th><th>Name</th><th>Email</th><th>Status</th><th>Created</th></tr>";
+        
+        foreach ($dentists as $dentist) {
+            $statusColor = $dentist['status'] === 'active' ? 'green' : 'red';
+            echo "<tr>";
+            echo "<td>" . $dentist['id'] . "</td>";
+            echo "<td>" . $dentist['name'] . "</td>";
+            echo "<td>" . $dentist['email'] . "</td>";
+            echo "<td style='color: {$statusColor}; font-weight: bold;'>" . $dentist['status'] . "</td>";
+            echo "<td>" . $dentist['created_at'] . "</td>";
+            echo "</tr>";
+        }
+        
+        echo "</table>";
+        
+        echo "<h3>📊 Summary:</h3>";
+        $activeDentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll(); // Fixed: Use 'dentist' not 'doctor'
+        $inactiveDentists = $userModel->where('user_type', 'dentist')->where('status', 'inactive')->findAll(); // Fixed: Use 'dentist' not 'doctor'
+        
+        echo "<p><strong>Total Dentists:</strong> " . count($dentists) . "</p>";
+        echo "<p><strong>Active Dentists:</strong> " . count($activeDentists) . "</p>";
+        echo "<p><strong>Inactive Dentists:</strong> " . count($inactiveDentists) . "</p>";
+        
+        if (count($activeDentists) > 0) {
+            echo "<h3>🟢 Active Dentists Available for Auto-Assignment:</h3>";
+            foreach ($activeDentists as $dentist) {
+                echo "<p>✅ ID: {$dentist['id']}, Name: <strong>{$dentist['name']}</strong>, Email: {$dentist['email']}</p>";
+            }
+        } else {
+            echo "<p style='color: red;'>❌ <strong>No active dentists found!</strong> This is why dentist_id might be NULL.</p>";
         }
     }
 } 

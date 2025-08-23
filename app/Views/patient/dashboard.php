@@ -18,13 +18,13 @@
                         <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-user mr-2 text-gray-400"></i>Profile</a>
                         <div class="border-t my-1"></div>
                         <a href="<?= base_url('auth/logout') ?>" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-sign-out-alt mr-2 text-gray-400"></i>Logout</a>
-                    </div>
+                    </div>ted
                 </div>
             </div>
         </nav>
         <!-- End of Topbar -->
         <main class="flex-1 px-6 pb-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">👤 Patient Dashboard</h1>
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">👤 Patient Dashboards</h1>
             
             <!-- Welcome Message -->
             <div class="bg-gradient-to-r from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-6 mb-8">
@@ -39,6 +39,49 @@
                 </div>
             </div>
             
+            <!-- Rejected Appointments Alert -->
+            <?php if (($rejectedAppointments ?? 0) > 0): ?>
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">
+                            You have <?= $rejectedAppointments ?> rejected appointment<?= $rejectedAppointments > 1 ? 's' : '' ?>
+                        </h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>Some of your appointment requests were declined. Please review them and book a new appointment if needed.</p>
+                        </div>
+                        <div class="mt-3">
+                            <a href="<?= base_url('patient/appointments') ?>" class="text-sm bg-red-100 text-red-800 hover:bg-red-200 px-3 py-1 rounded-md font-medium transition">
+                                View All Appointments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <!-- Pending Appointments Alert -->
+            <?php if (($pendingAppointments ?? 0) > 0): ?>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-hourglass-half text-yellow-600 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">
+                            You have <?= $pendingAppointments ?> appointment<?= $pendingAppointments > 1 ? 's' : '' ?> awaiting approval
+                        </h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                            <p>Your appointment requests are being reviewed by our staff. You'll be notified once they're approved.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+            
             <!-- Cards Row -->
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
                 <!-- My Appointments Card -->
@@ -49,13 +92,13 @@
                     </div>
                     <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
                 </div>
-                <!-- Upcoming Appointments Card -->
-                <div class="bg-white border-l-4 border-green-400 shadow rounded-lg p-5 flex items-center justify-between">
+                <!-- Pending Appointments Card -->
+                <div class="bg-white border-l-4 border-yellow-400 shadow rounded-lg p-5 flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold text-green-600 uppercase mb-1">Upcoming</div>
-                        <div class="text-2xl font-bold text-gray-800"><?= count($upcomingAppointments ?? []) ?></div>
+                        <div class="text-xs font-bold text-yellow-600 uppercase mb-1">Pending</div>
+                        <div class="text-2xl font-bold text-gray-800"><?= $pendingAppointments ?? 0 ?></div>
                     </div>
-                    <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                    <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
                 </div>
                 <!-- Completed Treatments Card -->
                 <div class="bg-white border-l-4 border-purple-400 shadow rounded-lg p-5 flex items-center justify-between">
@@ -65,13 +108,13 @@
                     </div>
                     <i class="fas fa-check-circle fa-2x text-gray-300"></i>
                 </div>
-                <!-- Next Appointment Card -->
-                <div class="bg-white border-l-4 border-orange-400 shadow rounded-lg p-5 flex items-center justify-between">
+                <!-- Rejected Appointments Card -->
+                <div class="bg-white border-l-4 border-red-400 shadow rounded-lg p-5 flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold text-orange-600 uppercase mb-1">Next Visit</div>
-                        <div class="text-sm font-bold text-gray-800"><?= $nextAppointment ?? 'None' ?></div>
+                        <div class="text-xs font-bold text-red-600 uppercase mb-1">Rejected</div>
+                        <div class="text-2xl font-bold text-gray-800"><?= $rejectedAppointments ?? 0 ?></div>
                     </div>
-                    <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    <i class="fas fa-times-circle fa-2x text-gray-300"></i>
                 </div>
             </div>
 
@@ -83,12 +126,19 @@
                         <h2 class="text-lg font-bold text-slate-700">Quick Actions</h2>
                     </div>
                     <div class="p-6 space-y-3">
-                        <a href="<?= base_url('patient/book-appointment') ?>" class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition group">
+                        <a href="<?= base_url('patient/calendar') ?>" class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition group">
                             <div class="flex items-center">
-                                <i class="fas fa-calendar-plus text-blue-600 mr-3 text-lg"></i>
-                                <span class="font-semibold text-gray-700 group-hover:text-blue-700">Book New Appointment</span>
+                                <i class="fas fa-calendar-alt text-blue-600 mr-3 text-lg"></i>
+                                <span class="font-semibold text-gray-700 group-hover:text-blue-700">Calendar View</span>
                             </div>
                             <i class="fas fa-chevron-right text-gray-400 group-hover:text-blue-600"></i>
+                        </a>
+                        <a href="<?= base_url('patient/book-appointment') ?>" class="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-lg transition group">
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar-plus text-green-600 mr-3 text-lg"></i>
+                                <span class="font-semibold text-gray-700 group-hover:text-green-700">Book New Appointment</span>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 group-hover:text-green-600"></i>
                         </a>
                         <a href="<?= base_url('patient/appointments') ?>" class="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-lg transition group">
                             <div class="flex items-center">

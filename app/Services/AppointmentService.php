@@ -34,8 +34,14 @@ class AppointmentService
         ];
     }
     
-    public function getAllAppointments()
+    public function getAllAppointments($branchId = null)
     {
+        if ($branchId) {
+            // Only fetch appointments for the given branch
+            return array_filter($this->appointmentModel->getAllAppointmentsForAdmin(), function($apt) use ($branchId) {
+                return ($apt['branch_id'] ?? null) == $branchId;
+            });
+        }
         return $this->appointmentModel->getAllAppointmentsForAdmin();
     }
     
@@ -61,27 +67,7 @@ class AppointmentService
     
     private function createWalkInAppointment($data)
     {
-        // For walk-in appointments, check if dentist is available
-        if (!empty($data['dentist_id'])) {
-            $availableDentists = $this->appointmentModel->getAvailableDentists(
-                $data['appointment_date'], 
-                $data['appointment_time'], 
-                $data['branch_id']
-            );
-            
-            $isDentistAvailable = false;
-            foreach ($availableDentists as $dentist) {
-                if ($dentist['id'] == $data['dentist_id']) {
-                    $isDentistAvailable = true;
-                    break;
-                }
-            }
-            
-            if (!$isDentistAvailable) {
-                return ['success' => false, 'message' => 'Selected dentist is not available at this time'];
-            }
-        }
-        
+    // For walk-in appointments, allow booking regardless of dentist availability
         // Create walk-in appointment (auto-approved)
         $this->appointmentModel->createWalkInAppointment($data);
         return ['success' => true, 'message' => 'Walk-in appointment created successfully'];
@@ -90,20 +76,16 @@ class AppointmentService
     private function createScheduledAppointment($data)
     {
         log_message('info', 'Creating scheduled appointment with data: ' . json_encode($data));
-        
-        // Check if appointment is already pre-approved (admin-created)
+    // If dentist is assigned, allow booking regardless of dentist availability
+        // Insert appointment and return appropriate message
         if (isset($data['approval_status']) && $data['approval_status'] === 'approved') {
-            // Admin-created appointment with dentist - auto-approve
             $data['status'] = 'confirmed';
-            $this->appointmentModel->insert($data);
+            $this->insertAppointment($data);
             log_message('info', 'Admin-created appointment approved with dentist: ' . ($data['dentist_id'] ?? 'none'));
             return ['success' => true, 'message' => 'Appointment created and confirmed successfully.'];
         } else if (isset($data['approval_status']) && $data['approval_status'] === 'pending') {
-            // Admin-created appointment - mark as pending for waitlist approval
             $data['status'] = 'pending_approval';
-            $this->appointmentModel->insert($data);
-            
-            // Provide different messages based on whether dentist is assigned
+            $this->insertAppointment($data);
             if (!empty($data['dentist_id'])) {
                 log_message('info', 'Admin-created appointment pending with dentist assigned');
                 return ['success' => true, 'message' => 'Appointment request created with dentist assigned. Please review and approve.'];
@@ -112,20 +94,37 @@ class AppointmentService
                 return ['success' => true, 'message' => 'Appointment request created. Please assign a dentist and approve.'];
             }
         } else {
-            // ALL scheduled appointments go through waitlist approval process
-            // Set status to pending regardless of dentist availability
             $data['approval_status'] = 'pending';
             $data['status'] = 'pending_approval';
-            
             log_message('info', 'Scheduled appointment marked as pending approval - will go through waitlist');
-            $this->appointmentModel->insert($data);
-            
-            // Provide different messages based on whether dentist is assigned
+            $this->insertAppointment($data);
             if (!empty($data['dentist_id'])) {
                 return ['success' => true, 'message' => 'Appointment request submitted successfully with dentist assigned. It will be reviewed and approved by admin/staff.'];
             } else {
                 return ['success' => true, 'message' => 'Appointment request submitted successfully. It will be reviewed and approved by admin/staff.'];
             }
+        }
+    }
+    // Helper: Check if a dentist is available for a given date/time/branch
+    private function isDentistAvailable($date, $time, $branchId, $dentistId)
+    {
+        $availableDentists = $this->appointmentModel->getAvailableDentists($date, $time, $branchId);
+        foreach ($availableDentists as $dentist) {
+            if ($dentist['id'] == $dentistId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Helper: Insert appointment (handles both walk-in and scheduled)
+    private function insertAppointment($data)
+    {
+        // If walk-in, use special model method, else use insert
+        if (($data['appointment_type'] ?? '') === 'walkin') {
+            $this->appointmentModel->createWalkInAppointment($data);
+        } else {
+            $this->appointmentModel->insert($data);
         }
     }
     

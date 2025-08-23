@@ -1,5 +1,95 @@
+<!-- Patient Appointment Panel -->
+<?php if ($user['user_type'] === 'patient'): ?>
+<div id="addAppointmentPanel" class="slide-in-panel">
+  <button class="close-btn" id="closeAddAppointmentPanel" aria-label="Close">&times;</button>
+  <h5 class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold text-gray-600">
+    Book Your Appointment
+  </h5>
+  
+  <form id="appointmentForm" action="<?= base_url('patient/book-appointment') ?>" method="post" novalidate>
+    <?= csrf_field() ?>
+    <input type="hidden" name="appointment_date" id="appointmentDate">
+    
+    <div class="mb-3 sm:mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Selected Date</label>
+      <input type="text" id="selectedDateDisplay" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" readonly>
+    </div>
+
+    <!-- Patient info (hidden, auto-filled) -->
+    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+
+    <div class="mb-3 sm:mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Patient</label>
+      <input type="text" value="<?= esc($user['name']) ?>" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 text-sm sm:text-base" readonly>
+      <div class="text-xs text-blue-600 mt-1">
+        <i class="fas fa-info-circle"></i> You are booking for yourself
+      </div>
+    </div>
+
+    <div class="mb-3 sm:mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+      <select name="branch_id" id="branchSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
+        <option value="">Select Branch</option>
+        <?php if (isset($branches) && is_array($branches)): ?>
+          <?php foreach ($branches as $branch): ?>
+            <option value="<?= $branch['id'] ?>"><?= esc($branch['name']) ?></option>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </select>
+    </div>
+
+    <div class="mb-3 sm:mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Dentist (Optional)</label>
+      <select name="dentist_id" id="dentistSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
+        <option value="">Any Available Dentist</option>
+        <?php if (isset($dentists) && is_array($dentists)): ?>
+          <?php foreach ($dentists as $dentist): ?>
+            <option value="<?= $dentist['id'] ?>">Dr. <?= esc($dentist['name']) ?></option>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </select>
+    </div>
+
+    <div class="mb-3 sm:mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Time</label>
+      <select name="appointment_time" id="timeSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
+        <option value="">Select Time</option>
+        <!-- Time options will be populated by JavaScript based on availability -->
+      </select>
+      <div class="text-xs text-green-600 mt-1" id="availabilityMessage" style="display: none;">
+        <i class="fas fa-check-circle"></i> <span id="availabilityText"></span>
+      </div>
+      <div class="text-xs text-red-600 mt-1" id="unavailableMessage" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i> <span id="unavailableText"></span>
+      </div>
+    </div>
+
+    <div class="mb-4 sm:mb-6">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
+      <textarea name="remarks" rows="3" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" placeholder="Any specific concerns or requests..."></textarea>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      <button type="button" id="closeAddAppointmentPanel" class="flex-1 px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium">
+        Cancel
+      </button>
+      <button type="submit" class="flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium">
+        <i class="fas fa-calendar-plus mr-2"></i>
+        Book Appointment
+      </button>
+    </div>
+
+    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <div class="text-xs text-blue-700">
+        <i class="fas fa-info-circle mr-1"></i>
+        Your appointment request will be reviewed and confirmed by our staff.
+      </div>
+    </div>
+  </form>
+</div>
+
 <!-- Admin Appointment Panel -->
-<?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
+<?php elseif (in_array($user['user_type'], ['admin', 'staff'])): ?>
 <div id="addAppointmentPanel" class="slide-in-panel">
   <button class="close-btn" id="closeAddAppointmentPanel" aria-label="Close">&times;</button>
   <h5 class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold text-gray-600">

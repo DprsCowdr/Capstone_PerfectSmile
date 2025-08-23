@@ -107,6 +107,10 @@ class AuthService
 
         $user = Auth::getCurrentUser();
         
+        if (!$user) {
+            return response()->setJSON(['error' => 'User not found'])->setStatusCode(401);
+        }
+        
         if ($user['user_type'] !== 'staff') {
             return response()->setJSON(['error' => 'Forbidden'])->setStatusCode(403);
         }

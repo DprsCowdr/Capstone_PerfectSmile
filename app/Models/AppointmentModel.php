@@ -238,7 +238,7 @@ class AppointmentModel extends Model
                     ->join('branches', 'branches.id = appointments.branch_id', 'left')
                     ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
                     ->where('appointments.user_id', $patientId)
-                    ->where('appointments.approval_status', 'approved') // Only show approved appointments
+                    // Removed approval_status filter - show all appointments (pending, approved, rejected)
                     ->orderBy('appointments.appointment_datetime', 'DESC')
                     ->findAll();
         
@@ -264,7 +264,7 @@ class AppointmentModel extends Model
                       ->join('user', 'user.id = appointments.user_id')
                       ->join('branches', 'branches.id = appointments.branch_id', 'left')
                       ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
-                      ->where('appointments.status', 'pending_approval') // Look for pending_approval status
+                      ->where('appointments.approval_status', 'pending') // Fixed: Use approval_status = 'pending'
                       ->where('appointments.appointment_type', 'scheduled');
         
         if ($dentistId) {

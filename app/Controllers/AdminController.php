@@ -681,14 +681,48 @@ class AdminController extends BaseAdminController
         return redirect()->to('/admin/users')->with('error', 'Failed to delete user.');
     }
 
+
     public function updateAppointment($id)
     {
-        // ... existing update logic
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $data = [
+            'patient' => $this->request->getPost('patient'),
+            'branch' => $this->request->getPost('branch'),
+            'date' => $this->request->getPost('date'),
+            'time' => $this->request->getPost('time'),
+            'remarks' => $this->request->getPost('remarks'),
+        ];
+
+        $result = $this->appointmentService->updateAppointment($id, $data);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => (bool)$result, 'message' => $result ? 'Appointment updated successfully.' : 'Failed to update appointment.']);
+        }
+
+        session()->setFlashdata($result ? 'success' : 'error', $result ? 'Appointment updated successfully.' : 'Failed to update appointment.');
+        return redirect()->to('/admin/appointments');
     }
+
 
     public function deleteAppointment($id)
     {
-        // ... existing delete logic
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $result = $this->appointmentService->deleteAppointment($id);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => (bool)$result, 'message' => $result ? 'Appointment deleted successfully.' : 'Failed to delete appointment.']);
+        }
+
+        session()->setFlashdata($result ? 'success' : 'error', $result ? 'Appointment deleted successfully.' : 'Failed to delete appointment.');
+        return redirect()->to('/admin/appointments');
     }
 
     public function getAvailableDentists()
