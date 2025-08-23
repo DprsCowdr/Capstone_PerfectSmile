@@ -1,4 +1,39 @@
 <script>
+// Make showWeekAppointmentDetails globally available for week view appointment clicks
+window.showWeekAppointmentDetails = function(appointmentId) {
+  const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
+  if (!appointment) {
+    alert('Appointment not found');
+    return;
+  }
+  let modal = document.getElementById('dayAppointmentsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dayAppointmentsModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40';
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+        <button id="closeDayAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">Appointment Details</h2>
+        <div id="dayAppointmentsList"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  // Populate details
+  const list = modal.querySelector('#dayAppointmentsList');
+  list.innerHTML = `
+    <div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>
+    <div class="mb-2"><span class="font-semibold">Date:</span> ${appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
+    <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
+  `;
+  modal.classList.remove('hidden');
+  modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
+    modal.classList.add('hidden');
+  };
+}
   // Handles the All Appointments modal logic for the calendar
 function showAllAppointments() {
   let modal = document.getElementById('allAppointmentsModal');
@@ -919,7 +954,8 @@ function updateWeekView() {
         html += `</td>`;
         return;
       }
-// Show week view appointment details panel (global, reusing month view modal logic)
+
+// Make showWeekAppointmentDetails globally available
 window.showWeekAppointmentDetails = function(appointmentId) {
   const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
   if (!appointment) {

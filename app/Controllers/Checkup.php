@@ -204,53 +204,8 @@ class Checkup extends BaseController
             $db->query('START TRANSACTION');
             log_message('info', 'Transaction started manually');
 
-            // Get or create patient record (user record with medical history)
-            $patient = $this->patientModel->getPatientWithMedicalHistory($appointment['user_id']);
+            // Get patient record (medical history is now handled separately)
             $patientId = $appointment['user_id']; // Use existing user_id as patient_id
-
-            // Collect medical history data from the form - stored in patient_medical_history
-            $medicalHistoryData = [
-                'previous_dentist' => $this->request->getPost('previous_dentist'),
-                'last_dental_visit' => $this->request->getPost('last_dental_visit'),
-                'physician_name' => $this->request->getPost('physician_name'),
-                // Detailed fields maintained in dedicated table
-                'physician_specialty' => $this->request->getPost('physician_specialty'),
-                'physician_phone' => $this->request->getPost('physician_phone'),
-                'physician_address' => $this->request->getPost('physician_address'),
-                'good_health' => $this->request->getPost('good_health'),
-                'under_treatment' => $this->request->getPost('under_treatment'),
-                'treatment_condition' => $this->request->getPost('treatment_condition'),
-                'serious_illness' => $this->request->getPost('serious_illness'),
-                'illness_details' => $this->request->getPost('illness_details'),
-                'hospitalized' => $this->request->getPost('hospitalized'),
-                'hospitalization_where' => $this->request->getPost('hospitalization_where'),
-                'hospitalization_when' => $this->request->getPost('hospitalization_when'),
-                'hospitalization_why' => $this->request->getPost('hospitalization_why'),
-                'tobacco_use' => $this->request->getPost('tobacco_use'),
-                'blood_pressure' => $this->request->getPost('blood_pressure'),
-                'allergies' => $this->request->getPost('allergies'),
-                'pregnant' => $this->request->getPost('pregnant'),
-                'nursing' => $this->request->getPost('nursing'),
-                'birth_control' => $this->request->getPost('birth_control'),
-                // Multi-select JSON array
-                'medical_conditions' => $this->request->getPost('medical_conditions') ?: [],
-                'other_conditions' => $this->request->getPost('other_conditions'),
-                // Notes
-                'current_treatment' => $this->request->getPost('current_treatment'),
-                'hospitalization_details' => $this->request->getPost('hospitalization_details'),
-                'special_notes' => $this->request->getPost('notes_special') ?: null,
-            ];
-
-            // Remove empty values to avoid unnecessary database updates
-            $medicalHistoryData = array_filter($medicalHistoryData, function($value) {
-                return $value !== null && $value !== '' && $value !== [];
-            });
-
-            // Update patient medical history if data provided
-            if (!empty($medicalHistoryData)) {
-                $this->patientModel->updateMedicalHistory($patientId, $medicalHistoryData);
-                log_message('info', "Updated medical history for patient ID: {$patientId}");
-            }
 
             // Check if a dental record already exists for this appointment
             $existingRecord = $this->dentalRecordModel->where('appointment_id', $appointmentId)->first();

@@ -7,9 +7,6 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', to: 'Home::index');
 
-// Debug route (REMOVE IN PRODUCTION)
-$routes->get('debug', 'Home::debug');
-
 // Guest routes (no authentication required)
 $routes->get('guest/book-appointment', 'Guest::bookAppointment');
 $routes->post('guest/book-appointment', 'Guest::submitAppointment');
@@ -176,6 +173,7 @@ $routes->group('doctor', ['filter' => 'auth'], function($routes) {
 });
 
 // Patient routes (protected)
+
   $routes->group('patient', ['filter' => 'auth'], function($routes) {
       $routes->get('dashboard', 'Patient::dashboard');
       $routes->get('book-appointment', 'Patient::bookAppointment');
@@ -187,6 +185,7 @@ $routes->group('doctor', ['filter' => 'auth'], function($routes) {
       $routes->get('show-dentists', 'Patient::showDentists'); // Debug: Show all dentists
       $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
   });
+
 
 // Patient Check-in routes (for staff/reception)
 $routes->group('checkin', ['filter' => 'auth'], function($routes) {

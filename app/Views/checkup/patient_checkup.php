@@ -116,36 +116,6 @@
 
         <!-- Checkup Form -->
         <form action="/checkup/save/<?= $appointment['id'] ?>" method="POST" class="space-y-8">
-            <!-- Medical History Fields (Hidden inputs to include in main form) -->
-            <?php if (isset($patient)): ?>
-                <input type="hidden" name="previous_dentist" value="<?= esc($patient['previous_dentist'] ?? '') ?>">
-                <input type="hidden" name="last_dental_visit" value="<?= esc($patient['last_dental_visit'] ?? '') ?>">
-                <input type="hidden" name="physician_name" value="<?= esc($patient['physician_name'] ?? '') ?>">
-                <input type="hidden" name="physician_specialty" value="<?= esc($patient['physician_specialty'] ?? '') ?>">
-                <input type="hidden" name="physician_phone" value="<?= esc($patient['physician_phone'] ?? '') ?>">
-                <input type="hidden" name="physician_address" value="<?= esc($patient['physician_address'] ?? '') ?>">
-                <input type="hidden" name="good_health" value="<?= esc($patient['good_health'] ?? '') ?>">
-                <input type="hidden" name="under_treatment" value="<?= esc($patient['under_treatment'] ?? '') ?>">
-                <input type="hidden" name="treatment_condition" value="<?= esc($patient['treatment_condition'] ?? '') ?>">
-                <input type="hidden" name="serious_illness" value="<?= esc($patient['serious_illness'] ?? '') ?>">
-                <input type="hidden" name="illness_details" value="<?= esc($patient['illness_details'] ?? '') ?>">
-                <input type="hidden" name="hospitalized" value="<?= esc($patient['hospitalized'] ?? '') ?>">
-                <input type="hidden" name="hospitalization_where" value="<?= esc($patient['hospitalization_where'] ?? '') ?>">
-                <input type="hidden" name="hospitalization_when" value="<?= esc($patient['hospitalization_when'] ?? '') ?>">
-                <input type="hidden" name="hospitalization_why" value="<?= esc($patient['hospitalization_why'] ?? '') ?>">
-                <input type="hidden" name="tobacco_use" value="<?= esc($patient['tobacco_use'] ?? '') ?>">
-                <input type="hidden" name="blood_pressure" value="<?= esc($patient['blood_pressure'] ?? '') ?>">
-                <input type="hidden" name="allergies" value="<?= esc($patient['allergies'] ?? '') ?>">
-                <input type="hidden" name="pregnant" value="<?= esc($patient['pregnant'] ?? '') ?>">
-                <input type="hidden" name="nursing" value="<?= esc($patient['nursing'] ?? '') ?>">
-                <input type="hidden" name="birth_control" value="<?= esc($patient['birth_control'] ?? '') ?>">
-                <input type="hidden" name="other_conditions" value="<?= esc($patient['other_conditions'] ?? '') ?>">
-                <?php if (isset($patient['medical_conditions']) && is_array($patient['medical_conditions'])): ?>
-                    <?php foreach ($patient['medical_conditions'] as $condition): ?>
-                        <input type="hidden" name="medical_conditions[]" value="<?= esc($condition) ?>">
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            <?php endif; ?>
             
             <!-- Dental Chart Section -->
             <div class="bg-white rounded-xl shadow-lg">

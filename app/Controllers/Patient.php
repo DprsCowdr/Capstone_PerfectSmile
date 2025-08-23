@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Controllers\Auth;
+use App\Models\PatientModel;
+use App\Models\PatientMedicalHistoryModel;
 
 class Patient extends BaseController
 {
@@ -213,7 +215,6 @@ class Patient extends BaseController
             'appointments' => $appointments
         ]);
     }
-
     public function records()
     {
         if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'patient') {
