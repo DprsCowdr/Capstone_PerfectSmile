@@ -72,6 +72,8 @@ class Auth extends BaseController
                     return redirect()->to('/admin/dashboard');
                 case 'doctor':
                     return redirect()->to('/doctor/dashboard');
+                case 'dentist':
+                    return redirect()->to('/dentist/dashboard');
                 case 'patient':
                     return redirect()->to('/patient/dashboard');
                 case 'staff':

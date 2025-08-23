@@ -134,8 +134,10 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
 });
 
 // Dentist routes (protected)
-$routes->group('doctor', ['filter' => 'auth'], function($routes) {
+// Dentist routes (protected)
+$routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Dentist::dashboard');
+    $routes->get('stats', 'Dentist::stats');
     $routes->get('appointments', 'Dentist::appointments');
     $routes->post('availability/set', 'Dentist::setAvailability');
     $routes->post('appointments/approve/(:num)', 'Dentist::approveAppointment/$1');

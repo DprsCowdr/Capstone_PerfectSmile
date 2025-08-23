@@ -3,9 +3,8 @@
     <?= view('templates/sidebar', ['user' => $user]) ?>
     <div class="flex-1 flex flex-col min-h-screen bg-white">
         <main class="flex-1 px-6 py-8 bg-white">
-            <?= view('templates/patientsTable', ['patients' => $patients, 'user' => $user]) ?>
+            <?= view('templates/proceduresTable', ['procedures' => $procedures ?? [], 'user' => $user ?? []]) ?>
         </main>
     </div>
 </div>
 <?= view('templates/footer') ?>
-                         

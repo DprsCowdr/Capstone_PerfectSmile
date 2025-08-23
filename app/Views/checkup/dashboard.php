@@ -9,7 +9,7 @@
                 <i class="fa fa-bars"></i>
             </button>
             <div class="flex items-center ml-auto">
-                <span class="mr-4 hidden lg:inline text-gray-600 font-semibold"><?= $user['name'] ?? 'Doctor' ?></span>
+                <span class="mr-4 hidden lg:inline text-gray-600 font-semibold"><?= $user['name'] ?? 'Dentist' ?></span>
                 <div class="relative">
                     <button class="focus:outline-none">
                         <img class="w-10 h-10 rounded-full border-2 border-gray-200" src="<?= base_url('img/undraw_profile.svg') ?>" alt="Profile">
