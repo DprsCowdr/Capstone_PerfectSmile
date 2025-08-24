@@ -1413,4 +1413,193 @@ function getPHDate(dateStr) {
 window.userType = '<?= $user['user_type'] ?? 'admin' ?>';
 console.log('User type set to:', window.userType);
 
+// Patient Search Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const patientSearch = document.getElementById('patientSearch');
+    const patientSelect = document.getElementById('patientSelect');
+    const patientDropdown = document.getElementById('patientDropdown');
+    const selectedPatientDisplay = document.getElementById('selectedPatientDisplay');
+    const selectedPatientName = document.getElementById('selectedPatientName');
+    const clearPatientSelection = document.getElementById('clearPatientSelection');
+    const recentPatientsList = document.getElementById('recentPatientsList');
+    const allPatientsList = document.getElementById('allPatientsList');
+    const noResults = document.getElementById('noResults');
+    
+    if (!patientSearch || !patientSelect || !patientDropdown) {
+        return; // Elements not found, skip initialization
+    }
+    
+    // Load recent patients from localStorage
+    let recentPatients = JSON.parse(localStorage.getItem('recentPatients') || '[]');
+    
+    // Show dropdown on search focus
+    patientSearch.addEventListener('focus', function() {
+        showDropdown();
+        populateRecentPatients();
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!patientSearch.contains(e.target) && !patientDropdown.contains(e.target)) {
+            hideDropdown();
+        }
+    });
+    
+    // Search functionality
+    patientSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        showDropdown();
+        
+        if (searchTerm === '') {
+            populateRecentPatients();
+            showAllPatients();
+            return;
+        }
+        
+        // Filter patients
+        const patientOptions = allPatientsList.querySelectorAll('.patient-option');
+        let hasResults = false;
+        
+        patientOptions.forEach(option => {
+            const patientName = option.dataset.name;
+            if (patientName.includes(searchTerm)) {
+                option.style.display = 'block';
+                hasResults = true;
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        
+        // Show/hide sections based on search
+        if (searchTerm) {
+            document.getElementById('recentPatientsSection').style.display = 'none';
+        } else {
+            document.getElementById('recentPatientsSection').style.display = 'block';
+            populateRecentPatients();
+        }
+        
+        // Show no results message if needed
+        if (!hasResults) {
+            showNoResults();
+        } else {
+            hideNoResults();
+        }
+    });
+    
+    // Handle patient selection
+    patientDropdown.addEventListener('click', function(e) {
+        const patientOption = e.target.closest('.patient-option');
+        if (patientOption) {
+            selectPatient(patientOption);
+        }
+    });
+    
+    // Clear selection
+    if (clearPatientSelection) {
+        clearPatientSelection.addEventListener('click', function() {
+            clearSelection();
+        });
+    }
+    
+    function showDropdown() {
+        patientDropdown.classList.remove('hidden');
+    }
+    
+    function hideDropdown() {
+        patientDropdown.classList.add('hidden');
+    }
+    
+    function selectPatient(option) {
+        const patientId = option.dataset.id;
+        const patientName = option.dataset.display;
+        
+        // Update hidden select
+        patientSelect.value = patientId;
+        
+        // Update search input
+        patientSearch.value = patientName;
+        
+        // Show selected patient display
+        selectedPatientName.textContent = patientName;
+        selectedPatientDisplay.classList.remove('hidden');
+        
+        // Add to recent patients
+        addToRecentPatients(patientId, patientName);
+        
+        // Hide dropdown
+        hideDropdown();
+        
+        // Trigger change event for any listeners
+        const changeEvent = new Event('change', { bubbles: true });
+        patientSelect.dispatchEvent(changeEvent);
+    }
+    
+    function clearSelection() {
+        patientSelect.value = '';
+        patientSearch.value = '';
+        selectedPatientDisplay.classList.add('hidden');
+        
+        // Trigger change event
+        const changeEvent = new Event('change', { bubbles: true });
+        patientSelect.dispatchEvent(changeEvent);
+    }
+    
+    function addToRecentPatients(id, name) {
+        // Remove if already exists
+        recentPatients = recentPatients.filter(p => p.id !== id);
+        
+        // Add to beginning
+        recentPatients.unshift({ id, name });
+        
+        // Keep only last 5
+        recentPatients = recentPatients.slice(0, 5);
+        
+        // Save to localStorage
+        localStorage.setItem('recentPatients', JSON.stringify(recentPatients));
+    }
+    
+    function populateRecentPatients() {
+        if (recentPatients.length === 0) {
+            document.getElementById('recentPatientsSection').style.display = 'none';
+            return;
+        }
+        
+        document.getElementById('recentPatientsSection').style.display = 'block';
+        recentPatientsList.innerHTML = recentPatients.map(patient => `
+            <div class="patient-option px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-b-0" 
+                 data-id="${patient.id}" 
+                 data-name="${patient.name.toLowerCase()}"
+                 data-display="${patient.name}">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-clock text-green-600 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium text-gray-900">${patient.name}</div>
+                        <div class="text-xs text-green-600">Recent</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function showAllPatients() {
+        document.getElementById('allPatientsSection').style.display = 'block';
+        const patientOptions = allPatientsList.querySelectorAll('.patient-option');
+        patientOptions.forEach(option => {
+            option.style.display = 'block';
+        });
+    }
+    
+    function showNoResults() {
+        document.getElementById('allPatientsSection').style.display = 'none';
+        noResults.classList.remove('hidden');
+    }
+    
+    function hideNoResults() {
+        document.getElementById('allPatientsSection').style.display = 'block';
+        noResults.classList.add('hidden');
+    }
+});
+
 </script> 

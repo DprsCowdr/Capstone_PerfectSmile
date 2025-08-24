@@ -39,11 +39,17 @@ window.BASE_URL = '<?= base_url() ?>';
             <p class="text-sm text-gray-500">Comprehensive dental records management system</p>
         </header>
 
-        <!-- Main Content Area - Full Width Records Table -->
+        <!-- Main Content Area - Patient Folders View -->
         <section class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
             <div class="p-6 border-b border-gray-100">
-                <div class="flex items-center mb-3">
-                    <h2 class="text-sm font-semibold text-gray-700">Recent Records</h2>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-gray-700">Patient Records</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="viewToggle" onclick="toggleView()" class="px-3 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1">
+                            <i id="viewIcon" class="fas fa-list"></i>
+                            <span id="viewText">List View</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Advanced Search Bar -->
@@ -54,55 +60,158 @@ window.BASE_URL = '<?= base_url() ?>';
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-search text-gray-400"></i>
                             </div>
-                <input type="text" 
+                            <input type="text" 
                                    id="recordsSearchInput" 
-                    class="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm placeholder:text-gray-400"
-                                   placeholder="Search patient name, contact, date, type, allergies...">
+                                   class="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm placeholder:text-gray-400"
+                                   placeholder="Search patient name, email, phone...">
                         </div>
                         
                         <!-- Search Filters -->
-            <div class="flex gap-3 md:w-auto">
-                <select id="statusFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
+                        <div class="flex gap-3 md:w-auto">
+                            <select id="statusFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
                                 <option value="">All Status</option>
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
                             
-                <select id="typeFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
-                                <option value="">All Types</option>
-                                <option value="general">General</option>
-                                <option value="checkup">Checkup</option>
-                                <option value="treatment">Treatment</option>
-                                <option value="emergency">Emergency</option>
-                            </select>
-                            
-                <button id="clearSearch" class="px-3 py-2.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-medium transition-colors flex items-center gap-1 shadow-sm">
+                            <button id="clearSearch" class="px-3 py-2.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-medium transition-colors flex items-center gap-1 shadow-sm">
                                 <i class="fas fa-times text-[11px]"></i><span>Clear</span>
                             </button>
                         </div>
                     </div>
                     
-            <!-- Search Results Summary -->
-            <div id="searchSummary" class="mt-3 text-xs text-gray-600 hidden">
+                    <!-- Search Results Summary -->
+                    <div id="searchSummary" class="mt-3 text-xs text-gray-600 hidden">
                         <i class="fas fa-info-circle mr-1"></i>
-                        <span id="searchResultsCount">0</span> records found
+                        <span id="searchResultsCount">0</span> patient folders found
                         <span id="searchTermDisplay"></span>
                     </div>
                 </div>
             </div>
-            
-        <div class="overflow-x-auto scrollbar-thin">
-        <table class="min-w-full divide-y divide-gray-100">
-            <thead class="bg-gray-50/70">
+
+            <!-- Patient Folders View -->
+            <div id="foldersView" class="p-6 space-y-3">
+                <?php 
+                // Group records by patient
+                $patientGroups = [];
+                if (!empty($records)) {
+                    foreach ($records as $record) {
+                        $patientId = $record['user_id'];
+                        if (!isset($patientGroups[$patientId])) {
+                            $patientGroups[$patientId] = [
+                                'patient_info' => [
+                                    'id' => $patientId,
+                                    'name' => $record['patient_name'],
+                                    'email' => $record['patient_email'],
+                                    'phone' => $record['patient_phone'] ?? '',
+                                    'status' => $record['status'] ?? 'active'
+                                ],
+                                'records' => []
+                            ];
+                        }
+                        $patientGroups[$patientId]['records'][] = $record;
+                    }
+                }
+                ?>
+
+                <?php if (!empty($patientGroups)): ?>
+                    <?php foreach ($patientGroups as $patientId => $group): ?>
+                        <div class="patient-folder border border-gray-200 rounded-lg hover:border-gray-300 transition-colors" data-patient-id="<?= $patientId ?>">
+                            <!-- Folder Header -->
+                            <div class="folder-header flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors" onclick="toggleFolder(<?= $patientId ?>)">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-2">
+                                        <i class="folder-icon fas fa-folder text-blue-600 text-lg"></i>
+                                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+                                            <?= strtoupper(substr($group['patient_info']['name'], 0, 1)) ?>
+                                        </div>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-sm font-medium text-gray-900 truncate"><?= esc($group['patient_info']['name']) ?></h3>
+                                            <span class="px-2 py-0.5 inline-flex text-[10px] font-medium rounded-full tracking-wide <?= $group['patient_info']['status'] === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600' ?>">
+                                                <?= ucfirst($group['patient_info']['status']) ?>
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-0.5">
+                                            <?= esc($group['patient_info']['email']) ?>
+                                            <?php if (!empty($group['patient_info']['phone'])): ?>
+                                                • <?= esc($group['patient_info']['phone']) ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs text-gray-500">
+                                    <span class="bg-gray-100 px-2 py-1 rounded-full">
+                                        <?= count($group['records']) ?> record<?= count($group['records']) !== 1 ? 's' : '' ?>
+                                    </span>
+                                    <i class="folder-chevron fas fa-chevron-down text-gray-400 transition-transform"></i>
+                                </div>
+                            </div>
+
+                            <!-- Folder Content (Records) -->
+                            <div class="folder-content hidden border-t border-gray-100 bg-gray-50">
+                                <div class="p-4 space-y-2">
+                                    <?php foreach ($group['records'] as $record): ?>
+                                        <div class="record-item flex items-center justify-between p-3 bg-white rounded-md border border-gray-100 hover:border-gray-200 transition-colors">
+                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                <div class="flex-shrink-0">
+                                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                                        <i class="fas fa-file-medical text-gray-500 text-xs"></i>
+                                                    </div>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-sm font-medium text-gray-900"><?= ucfirst($record['record_type'] ?? 'General') ?> Record</span>
+                                                        <span class="text-xs text-gray-500">•</span>
+                                                        <span class="text-xs text-gray-500"><?= date('M j, Y', strtotime($record['record_date'])) ?></span>
+                                                    </div>
+                                                    <?php if (!empty($record['allergies'])): ?>
+                                                        <div class="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                                            <i class="fas fa-exclamation-triangle"></i>
+                                                            <span><?= esc($record['allergies']) ?></span>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2 ml-3">
+                                                <button onclick="window.recordsManager?.openPatientRecordsModal(<?= $record['user_id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors">
+                                                    View
+                                                </button>
+                                                <button onclick="deleteRecord(<?= $record['id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="text-center py-12">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-folder-open text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-sm font-medium text-gray-700">No patient records found</p>
+                            <p class="text-xs text-gray-500 mt-1">Create a new dental record to get started.</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Original Table View (Hidden by default) -->
+            <div id="tableView" class="hidden overflow-x-auto scrollbar-thin">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50/70">
                         <tr>
-                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Patient</th>
-                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Type</th>
-                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                            <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                            <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Patient</th>
+                            <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Type</th>
+                            <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                            <th class="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
                         </tr>
                     </thead>
-            <tbody class="bg-white divide-y divide-gray-100 text-sm">
+                    <tbody class="bg-white divide-y divide-gray-100 text-sm">
                         <?php if (!empty($records)): ?>
                             <?php foreach ($records as $record): ?>
                                 <tr class="hover:bg-gray-50 transition-colors">
@@ -153,16 +262,6 @@ window.BASE_URL = '<?= base_url() ?>';
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="5" class="px-6 py-14 text-center text-gray-500">
-                                    <div class="flex flex-col items-center">
-                                        <i class="fas fa-file-medical text-3xl text-gray-300 mb-3"></i>
-                                        <p class="text-sm font-medium">No records found</p>
-                                        <p class="text-xs">Create a new dental record to get started.</p>
-                                    </div>
-                                </td>
-                            </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -213,8 +312,117 @@ window.BASE_URL = '<?= base_url() ?>';
     </div>
 </div>
 
-<!-- Advanced Records Search Functionality -->
+<!-- Folder Management and Enhanced Search Functionality -->
 <script>
+let currentView = 'folders'; // 'folders' or 'table'
+
+// Toggle between folder and table view
+function toggleView() {
+    const foldersView = document.getElementById('foldersView');
+    const tableView = document.getElementById('tableView');
+    const viewIcon = document.getElementById('viewIcon');
+    const viewText = document.getElementById('viewText');
+    
+    if (currentView === 'folders') {
+        // Switch to table view
+        foldersView.classList.add('hidden');
+        tableView.classList.remove('hidden');
+        viewIcon.className = 'fas fa-folder';
+        viewText.textContent = 'Folder View';
+        currentView = 'table';
+    } else {
+        // Switch to folder view
+        tableView.classList.add('hidden');
+        foldersView.classList.remove('hidden');
+        viewIcon.className = 'fas fa-list';
+        viewText.textContent = 'List View';
+        currentView = 'folders';
+    }
+    
+    // Re-initialize search for the new view
+    initializeRecordsSearch();
+}
+
+// Toggle individual folder open/close
+function toggleFolder(patientId) {
+    const folder = document.querySelector(`[data-patient-id="${patientId}"]`);
+    if (!folder) return;
+    
+    const content = folder.querySelector('.folder-content');
+    const icon = folder.querySelector('.folder-icon');
+    const chevron = folder.querySelector('.folder-chevron');
+    
+    if (content.classList.contains('hidden')) {
+        // Open folder
+        content.classList.remove('hidden');
+        icon.className = 'folder-icon fas fa-folder-open text-blue-600 text-lg';
+        chevron.style.transform = 'rotate(180deg)';
+        
+        // Add smooth animation
+        content.style.maxHeight = '0px';
+        content.style.overflow = 'hidden';
+        content.style.transition = 'max-height 0.3s ease-out';
+        
+        // Calculate and set max height
+        setTimeout(() => {
+            const scrollHeight = content.scrollHeight;
+            content.style.maxHeight = `${scrollHeight}px`;
+        }, 10);
+        
+        // Remove inline styles after animation
+        setTimeout(() => {
+            content.style.maxHeight = '';
+            content.style.overflow = '';
+            content.style.transition = '';
+        }, 350);
+        
+    } else {
+        // Close folder
+        content.style.maxHeight = `${content.scrollHeight}px`;
+        content.style.overflow = 'hidden';
+        content.style.transition = 'max-height 0.3s ease-out';
+        
+        // Trigger reflow
+        content.offsetHeight;
+        
+        content.style.maxHeight = '0px';
+        icon.className = 'folder-icon fas fa-folder text-blue-600 text-lg';
+        chevron.style.transform = 'rotate(0deg)';
+        
+        // Hide after animation
+        setTimeout(() => {
+            content.classList.add('hidden');
+            content.style.maxHeight = '';
+            content.style.overflow = '';
+            content.style.transition = '';
+        }, 350);
+    }
+}
+
+// Expand all folders
+function expandAllFolders() {
+    const folders = document.querySelectorAll('.patient-folder');
+    folders.forEach(folder => {
+        const patientId = folder.dataset.patientId;
+        const content = folder.querySelector('.folder-content');
+        if (content.classList.contains('hidden')) {
+            toggleFolder(parseInt(patientId));
+        }
+    });
+}
+
+// Collapse all folders
+function collapseAllFolders() {
+    const folders = document.querySelectorAll('.patient-folder');
+    folders.forEach(folder => {
+        const patientId = folder.dataset.patientId;
+        const content = folder.querySelector('.folder-content');
+        if (!content.classList.contains('hidden')) {
+            toggleFolder(parseInt(patientId));
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize search functionality
     initializeRecordsSearch();
@@ -223,222 +431,250 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeRecordsSearch() {
     const searchInput = document.getElementById('recordsSearchInput');
     const statusFilter = document.getElementById('statusFilter');
-    const typeFilter = document.getElementById('typeFilter');
     const clearButton = document.getElementById('clearSearch');
     const searchSummary = document.getElementById('searchSummary');
     const searchResultsCount = document.getElementById('searchResultsCount');
     const searchTermDisplay = document.getElementById('searchTermDisplay');
     
-    // Get all table rows (excluding header and empty state)
-    const tableBody = document.querySelector('tbody');
-    const originalRows = Array.from(tableBody.querySelectorAll('tr')).filter(row => 
-        !row.querySelector('td[colspan]') // Exclude "no records found" row
-    );
-    
-    let searchTimeout;
-    
-    // Main search function
-    function performSearch() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            const statusValue = statusFilter.value.toLowerCase();
-            const typeValue = typeFilter.value.toLowerCase();
-            
-            let visibleCount = 0;
-            
-            originalRows.forEach(row => {
-                const shouldShow = matchesSearchCriteria(row, searchTerm, statusValue, typeValue);
+    if (currentView === 'folders') {
+        // Folder view search
+        const allFolders = Array.from(document.querySelectorAll('.patient-folder'));
+        
+        let searchTimeout;
+        
+        function performFolderSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                const statusValue = statusFilter.value.toLowerCase();
                 
-                if (shouldShow) {
-                    row.style.display = '';
-                    row.classList.add('search-match');
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                    row.classList.remove('search-match');
-                }
-            });
-            
-            // Update search summary
-            updateSearchSummary(visibleCount, searchTerm, statusValue, typeValue);
-            
-            // Handle empty results
-            handleEmptyResults(visibleCount);
-            
-        }, 300); // Debounce search for 300ms
-    }
-    
-    // Check if a row matches search criteria
-    function matchesSearchCriteria(row, searchTerm, statusValue, typeValue) {
-        // Get row data
-        const dateCell = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
-        const patientCell = row.querySelector('td:nth-child(2)');
-        const typeCell = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
-        const statusCell = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
-        
-        // Extract patient information
-        const patientName = patientCell?.querySelector('.font-medium')?.textContent.toLowerCase() || '';
-        const patientContact = patientCell?.querySelector('.text-gray-500')?.textContent.toLowerCase() || '';
-        const allergies = patientCell?.querySelector('.text-red-600')?.textContent.toLowerCase() || '';
-        
-        // Check search term (searches across multiple fields)
-        const matchesSearchTerm = !searchTerm || 
-            dateCell.includes(searchTerm) ||
-            patientName.includes(searchTerm) ||
-            patientContact.includes(searchTerm) ||
-            typeCell.includes(searchTerm) ||
-            statusCell.includes(searchTerm) ||
-            allergies.includes(searchTerm);
-        
-        // Check status filter
-        const matchesStatus = !statusValue || statusCell.includes(statusValue);
-        
-        // Check type filter
-        const matchesType = !typeValue || typeCell.includes(typeValue);
-        
-        return matchesSearchTerm && matchesStatus && matchesType;
-    }
-    
-    // Update search summary
-    function updateSearchSummary(visibleCount, searchTerm, statusValue, typeValue) {
-        const totalRecords = originalRows.length;
-        
-        if (searchTerm || statusValue || typeValue) {
-            searchSummary.classList.remove('hidden');
-            searchResultsCount.textContent = visibleCount;
-            
-            let summaryText = '';
-            if (searchTerm) summaryText += ` for "${searchTerm}"`;
-            if (statusValue) summaryText += ` • Status: ${statusValue}`;
-            if (typeValue) summaryText += ` • Type: ${typeValue}`;
-            
-            searchTermDisplay.textContent = summaryText;
-        } else {
-            searchSummary.classList.add('hidden');
+                let visibleCount = 0;
+                
+                allFolders.forEach(folder => {
+                    const shouldShow = matchesFolderCriteria(folder, searchTerm, statusValue);
+                    
+                    if (shouldShow) {
+                        folder.style.display = '';
+                        folder.classList.add('search-match');
+                        visibleCount++;
+                        
+                        // If searching, auto-expand matching folders
+                        if (searchTerm && !folder.querySelector('.folder-content').classList.contains('hidden') === false) {
+                            const patientId = parseInt(folder.dataset.patientId);
+                            const content = folder.querySelector('.folder-content');
+                            if (content.classList.contains('hidden')) {
+                                toggleFolder(patientId);
+                            }
+                        }
+                    } else {
+                        folder.style.display = 'none';
+                        folder.classList.remove('search-match');
+                    }
+                });
+                
+                updateSearchSummary(visibleCount, searchTerm, statusValue);
+                handleEmptyFolderResults(visibleCount);
+            }, 300);
         }
-    }
-    
-    // Handle empty search results
-    function handleEmptyResults(visibleCount) {
-        const existingEmptyRow = tableBody.querySelector('.search-empty-row');
         
-        if (visibleCount === 0 && originalRows.length > 0) {
-            // Show "No matching records" message
-            if (!existingEmptyRow) {
-                const emptyRow = document.createElement('tr');
-                emptyRow.className = 'search-empty-row';
-                emptyRow.innerHTML = `
-                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
-                        <div class="flex flex-col items-center">
-                            <i class="fas fa-search text-gray-300 text-3xl mb-3"></i>
-                            <p class="text-lg font-medium">No matching records found</p>
-                            <p class="text-sm">Try adjusting your search criteria or clearing the filters.</p>
-                        </div>
-                    </td>
-                `;
-                tableBody.appendChild(emptyRow);
+        function matchesFolderCriteria(folder, searchTerm, statusValue) {
+            const patientName = folder.querySelector('h3')?.textContent.toLowerCase() || '';
+            const patientEmail = folder.querySelector('.text-xs.text-gray-500')?.textContent.toLowerCase() || '';
+            const patientStatus = folder.querySelector('.rounded-full')?.textContent.toLowerCase() || '';
+            
+            const matchesSearchTerm = !searchTerm || 
+                patientName.includes(searchTerm) ||
+                patientEmail.includes(searchTerm);
+            
+            const matchesStatus = !statusValue || patientStatus.includes(statusValue);
+            
+            return matchesSearchTerm && matchesStatus;
+        }
+        
+        function updateSearchSummary(visibleCount, searchTerm, statusValue) {
+            if (searchTerm || statusValue) {
+                searchSummary.classList.remove('hidden');
+                searchResultsCount.textContent = visibleCount;
+                
+                let summaryText = '';
+                if (searchTerm) summaryText += ` for "${searchTerm}"`;
+                if (statusValue) summaryText += ` • Status: ${statusValue}`;
+                
+                searchTermDisplay.textContent = summaryText;
+            } else {
+                searchSummary.classList.add('hidden');
             }
-        } else if (existingEmptyRow) {
-            // Remove "No matching records" message
-            existingEmptyRow.remove();
-        }
-    }
-    
-    // Clear all filters and search
-    function clearAllFilters() {
-        searchInput.value = '';
-        statusFilter.value = '';
-        typeFilter.value = '';
-        
-        // Show all rows
-        originalRows.forEach(row => {
-            row.style.display = '';
-            row.classList.remove('search-match');
-        });
-        
-        // Hide search summary
-        searchSummary.classList.add('hidden');
-        
-        // Remove empty results message
-        const existingEmptyRow = tableBody.querySelector('.search-empty-row');
-        if (existingEmptyRow) {
-            existingEmptyRow.remove();
         }
         
-        // Focus back to search input
-        searchInput.focus();
-    }
-    
-    // Highlight search terms in results
-    function highlightSearchTerms(searchTerm) {
-        if (!searchTerm) {
-            // Remove existing highlights
-            document.querySelectorAll('.search-highlight').forEach(highlight => {
-                const parent = highlight.parentNode;
-                parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
-                parent.normalize();
-            });
-            return;
-        }
-        
-        const visibleRows = originalRows.filter(row => row.style.display !== 'none');
-        
-        visibleRows.forEach(row => {
-            const textNodes = getTextNodes(row);
-            textNodes.forEach(node => {
-                if (node.textContent.toLowerCase().includes(searchTerm)) {
-                    highlightText(node, searchTerm);
+        function handleEmptyFolderResults(visibleCount) {
+            const foldersContainer = document.getElementById('foldersView');
+            const existingEmptyMessage = foldersContainer.querySelector('.search-empty-message');
+            
+            if (visibleCount === 0 && allFolders.length > 0) {
+                if (!existingEmptyMessage) {
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'search-empty-message text-center py-12';
+                    emptyMessage.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-sm font-medium text-gray-700">No matching patient folders found</p>
+                            <p class="text-xs text-gray-500 mt-1">Try adjusting your search criteria or clearing the filters.</p>
+                        </div>
+                    `;
+                    foldersContainer.appendChild(emptyMessage);
                 }
+            } else if (existingEmptyMessage) {
+                existingEmptyMessage.remove();
+            }
+        }
+        
+        function clearAllFilters() {
+            searchInput.value = '';
+            statusFilter.value = '';
+            
+            allFolders.forEach(folder => {
+                folder.style.display = '';
+                folder.classList.remove('search-match');
             });
-        });
-    }
-    
-    // Helper function to get all text nodes
-    function getTextNodes(element) {
-        const textNodes = [];
-        const walker = document.createTreeWalker(
-            element,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
+            
+            searchSummary.classList.add('hidden');
+            
+            const existingEmptyMessage = document.getElementById('foldersView').querySelector('.search-empty-message');
+            if (existingEmptyMessage) {
+                existingEmptyMessage.remove();
+            }
+            
+            searchInput.focus();
+        }
+        
+        // Event listeners for folder search
+        searchInput.addEventListener('input', performFolderSearch);
+        statusFilter.addEventListener('change', performFolderSearch);
+        clearButton.addEventListener('click', clearAllFilters);
+        
+    } else {
+        // Table view search (original functionality)
+        const tableBody = document.querySelector('#tableView tbody');
+        const originalRows = Array.from(tableBody.querySelectorAll('tr')).filter(row => 
+            !row.querySelector('td[colspan]')
         );
         
-        let node;
-        while (node = walker.nextNode()) {
-            if (node.textContent.trim()) {
-                textNodes.push(node);
+        let searchTimeout;
+        
+        function performTableSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                const statusValue = statusFilter.value.toLowerCase();
+                
+                let visibleCount = 0;
+                
+                originalRows.forEach(row => {
+                    const shouldShow = matchesTableCriteria(row, searchTerm, statusValue);
+                    
+                    if (shouldShow) {
+                        row.style.display = '';
+                        row.classList.add('search-match');
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                        row.classList.remove('search-match');
+                    }
+                });
+                
+                updateTableSearchSummary(visibleCount, searchTerm, statusValue);
+                handleEmptyTableResults(visibleCount);
+            }, 300);
+        }
+        
+        function matchesTableCriteria(row, searchTerm, statusValue) {
+            const dateCell = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+            const patientCell = row.querySelector('td:nth-child(2)');
+            const typeCell = row.querySelector('td:nth-child(3)')?.textContent.toLowerCase() || '';
+            const statusCell = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+            
+            const patientName = patientCell?.querySelector('.font-medium')?.textContent.toLowerCase() || '';
+            const patientContact = patientCell?.querySelector('.text-gray-500')?.textContent.toLowerCase() || '';
+            const allergies = patientCell?.querySelector('.text-red-600')?.textContent.toLowerCase() || '';
+            
+            const matchesSearchTerm = !searchTerm || 
+                dateCell.includes(searchTerm) ||
+                patientName.includes(searchTerm) ||
+                patientContact.includes(searchTerm) ||
+                typeCell.includes(searchTerm) ||
+                statusCell.includes(searchTerm) ||
+                allergies.includes(searchTerm);
+            
+            const matchesStatus = !statusValue || statusCell.includes(statusValue);
+            
+            return matchesSearchTerm && matchesStatus;
+        }
+        
+        function updateTableSearchSummary(visibleCount, searchTerm, statusValue) {
+            if (searchTerm || statusValue) {
+                searchSummary.classList.remove('hidden');
+                searchResultsCount.textContent = visibleCount;
+                
+                let summaryText = '';
+                if (searchTerm) summaryText += ` for "${searchTerm}"`;
+                if (statusValue) summaryText += ` • Status: ${statusValue}`;
+                
+                searchTermDisplay.textContent = summaryText;
+            } else {
+                searchSummary.classList.add('hidden');
             }
         }
-        return textNodes;
-    }
-    
-    // Helper function to highlight text
-    function highlightText(textNode, searchTerm) {
-        const parent = textNode.parentNode;
-        const text = textNode.textContent;
-        const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
         
-        if (regex.test(text)) {
-            const highlightedHTML = text.replace(regex, '<span class="search-highlight bg-yellow-200 px-1 rounded">$1</span>');
-            const wrapper = document.createElement('span');
-            wrapper.innerHTML = highlightedHTML;
-            parent.replaceChild(wrapper, textNode);
+        function handleEmptyTableResults(visibleCount) {
+            const tableBody = document.querySelector('#tableView tbody');
+            const existingEmptyRow = tableBody.querySelector('.search-empty-row');
+            
+            if (visibleCount === 0 && originalRows.length > 0) {
+                if (!existingEmptyRow) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.className = 'search-empty-row';
+                    emptyRow.innerHTML = `
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-search text-gray-300 text-3xl mb-3"></i>
+                                <p class="text-lg font-medium">No matching records found</p>
+                                <p class="text-sm">Try adjusting your search criteria or clearing the filters.</p>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(emptyRow);
+                }
+            } else if (existingEmptyRow) {
+                existingEmptyRow.remove();
+            }
         }
+        
+        function clearAllFilters() {
+            searchInput.value = '';
+            statusFilter.value = '';
+            
+            originalRows.forEach(row => {
+                row.style.display = '';
+                row.classList.remove('search-match');
+            });
+            
+            searchSummary.classList.add('hidden');
+            
+            const existingEmptyRow = document.querySelector('#tableView tbody .search-empty-row');
+            if (existingEmptyRow) {
+                existingEmptyRow.remove();
+            }
+            
+            searchInput.focus();
+        }
+        
+        // Event listeners for table search
+        searchInput.addEventListener('input', performTableSearch);
+        statusFilter.addEventListener('change', performTableSearch);
+        clearButton.addEventListener('click', clearAllFilters);
     }
     
-    // Helper function to escape regex special characters
-    function escapeRegex(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-    
-    // Event listeners
-    searchInput.addEventListener('input', performSearch);
-    statusFilter.addEventListener('change', performSearch);
-    typeFilter.addEventListener('change', performSearch);
-    clearButton.addEventListener('click', clearAllFilters);
-    
-    // Keyboard shortcuts
+    // Keyboard shortcuts (works for both views)
     document.addEventListener('keydown', function(e) {
         // Ctrl/Cmd + F to focus search
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -449,7 +685,23 @@ function initializeRecordsSearch() {
         
         // Escape to clear search
         if (e.key === 'Escape' && document.activeElement === searchInput) {
-            clearAllFilters();
+            const clearButton = document.getElementById('clearSearch');
+            clearButton.click();
+        }
+        
+        // Folder view specific shortcuts
+        if (currentView === 'folders') {
+            // Ctrl/Cmd + E to expand all folders
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                expandAllFolders();
+            }
+            
+            // Ctrl/Cmd + R to collapse all folders
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                collapseAllFolders();
+            }
         }
     });
     
@@ -457,18 +709,15 @@ function initializeRecordsSearch() {
     searchInput.focus();
 }
 
-// Enhanced search with advanced features
+// Enhanced search suggestions
 function enhanceSearchExperience() {
     const searchInput = document.getElementById('recordsSearchInput');
     
-    // Add search suggestions/autocomplete
     const suggestions = [
-        'Active patients', 'Inactive patients', 'General records', 
-        'Checkup records', 'Treatment records', 'Emergency records',
-        'Patients with allergies', 'Recent records', 'This month', 'Last week'
+        'Active patients', 'Inactive patients', 'Recent records', 
+        'This month', 'Last week', 'Patients with allergies'
     ];
     
-    // Create suggestions dropdown
     const suggestionsContainer = document.createElement('div');
     suggestionsContainer.className = 'absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-lg shadow-lg z-10 hidden max-h-48 overflow-y-auto';
     suggestionsContainer.id = 'searchSuggestions';
@@ -476,7 +725,6 @@ function enhanceSearchExperience() {
     searchInput.parentNode.classList.add('relative');
     searchInput.parentNode.appendChild(suggestionsContainer);
     
-    // Show/hide suggestions
     searchInput.addEventListener('focus', () => {
         if (searchInput.value.length === 0) {
             showAllSuggestions();
