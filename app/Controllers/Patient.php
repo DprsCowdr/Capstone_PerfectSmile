@@ -286,4 +286,69 @@ class Patient extends BaseController
             echo "<p style='color: red;'>❌ <strong>No active dentists found!</strong> This is why dentist_id might be NULL.</p>";
         }
     }
+
+    public function saveMedicalHistory()
+    {
+        // Alternative authentication check using session
+        $session = session();
+        $userId = $session->get('user_id');
+        $userType = $session->get('user_type');
+        
+        // Debug: Log session information
+        log_message('debug', 'Medical History Save - Session User ID: ' . $userId . ', Type: ' . $userType);
+        
+        if (!$userId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Not authenticated - no session']);
+        }
+        
+        if ($userType !== 'patient') {
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Unauthorized access. Session user type: ' . $userType
+            ]);
+        }
+
+        try {
+            $medicalHistoryModel = new PatientMedicalHistoryModel();
+            
+            // Get form data
+            $data = [
+                'patient_id' => $userId, // Use session user ID instead
+                'allergies' => $this->request->getPost('allergies') ?: null,
+                'medical_conditions' => $this->request->getPost('medical_conditions') ?: null,
+                'medications' => $this->request->getPost('medications') ?: null,
+                'previous_surgeries' => $this->request->getPost('previous_surgeries') ?: null,
+                'family_history' => $this->request->getPost('family_history') ?: null,
+                'smoking_status' => $this->request->getPost('smoking_status') ?: null,
+                'alcohol_consumption' => $this->request->getPost('alcohol_consumption') ?: null,
+                'emergency_contact_name' => $this->request->getPost('emergency_contact_name') ?: null,
+                'emergency_contact_phone' => $this->request->getPost('emergency_contact_phone') ?: null,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Check if medical history already exists for this patient
+            $existing = $medicalHistoryModel->where('patient_id', $user['id'])->first();
+            
+            if ($existing) {
+                // Update existing record
+                $medicalHistoryModel->update($existing['id'], $data);
+            } else {
+                // Create new record
+                $data['created_at'] = date('Y-m-d H:i:s');
+                $medicalHistoryModel->insert($data);
+            }
+
+            return $this->response->setJSON([
+                'success' => true, 
+                'message' => 'Medical history saved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error saving medical history: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false, 
+                'message' => 'Error saving medical history: ' . $e->getMessage()
+            ]);
+        }
+    }
 } 

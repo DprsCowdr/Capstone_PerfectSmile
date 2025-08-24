@@ -90,7 +90,7 @@
 
 <!-- Admin Appointment Panel -->
 <?php elseif (in_array($user['user_type'], ['admin', 'staff'])): ?>
-<div id="addAppointmentPanel" class="slide-in-panel">
+<div id="addAppointmentPanel" class="slide-in-panel" style="width: 800px !important; max-width: 90vw !important;">
   <button class="close-btn" id="closeAddAppointmentPanel" aria-label="Close">&times;</button>
   <h5 class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold text-gray-600">
     <?php if ($user['user_type'] === 'staff'): ?>
@@ -124,14 +124,95 @@
 
     <div class="mb-3 sm:mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Patient</label>
-      <select name="patient" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
-        <option value="">Select Patient</option>
-        <?php if (isset($patients) && is_array($patients)): ?>
-          <?php foreach ($patients as $p): ?>
-            <option value="<?= $p['id'] ?>"><?= $p['name'] ?></option>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </select>
+      <div class="relative">
+        <!-- Search Input -->
+        <input 
+          type="text" 
+          id="patientSearch" 
+          placeholder="Search patients by name..." 
+          class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base"
+          autocomplete="off"
+        >
+        <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+        
+        <!-- Hidden select for form submission -->
+        <select name="patient" id="patientSelect" class="hidden" required>
+          <option value="">Select Patient</option>
+          <?php if (isset($patients) && is_array($patients)): ?>
+            <?php foreach ($patients as $p): ?>
+              <option value="<?= $p['id'] ?>" data-name="<?= esc(strtolower($p['name'])) ?>"><?= esc($p['name']) ?></option>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </select>
+        
+        <!-- Dropdown Results -->
+        <div id="patientDropdown" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+          <!-- Recent Patients Section -->
+          <div id="recentPatientsSection" class="border-b border-gray-100">
+            <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              <i class="fas fa-clock mr-1"></i> Recent Patients
+            </div>
+            <div id="recentPatientsList">
+              <!-- Recent patients will be populated here -->
+            </div>
+          </div>
+          
+          <!-- All Patients Section -->
+          <div id="allPatientsSection">
+            <div class="px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              <i class="fas fa-users mr-1"></i> All Patients
+            </div>
+            <div id="allPatientsList">
+              <?php if (isset($patients) && is_array($patients)): ?>
+                <?php foreach ($patients as $p): ?>
+                  <div class="patient-option px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-b-0" 
+                       data-id="<?= $p['id'] ?>" 
+                       data-name="<?= esc(strtolower($p['name'])) ?>"
+                       data-display="<?= esc($p['name']) ?>">
+                    <div class="flex items-center">
+                      <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-user text-blue-600 text-sm"></i>
+                      </div>
+                      <div>
+                        <div class="font-medium text-gray-900"><?= esc($p['name']) ?></div>
+                        <div class="text-xs text-gray-500">ID: <?= $p['id'] ?></div>
+                      </div>
+                    </div>
+                  </div>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <div class="px-3 py-4 text-center text-gray-500">
+                  <i class="fas fa-users text-2xl mb-2"></i>
+                  <div>No patients found</div>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+          
+          <!-- No Results Message -->
+          <div id="noResults" class="px-3 py-4 text-center text-gray-500 hidden">
+            <i class="fas fa-search text-2xl mb-2"></i>
+            <div>No patients found matching your search</div>
+          </div>
+        </div>
+        
+        <!-- Selected Patient Display -->
+        <div id="selectedPatientDisplay" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg hidden">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                <i class="fas fa-user text-blue-600 text-xs"></i>
+              </div>
+              <span id="selectedPatientName" class="text-sm font-medium text-blue-900"></span>
+            </div>
+            <button type="button" id="clearPatientSelection" class="text-blue-600 hover:text-blue-800">
+              <i class="fas fa-times text-sm"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="mb-3 sm:mb-4">
@@ -223,7 +304,7 @@
 <?php endif; ?>
 
 <!-- Appointment Information Panel -->
-<div id="appointmentInfoPanel" class="slide-in-panel">
+<div id="appointmentInfoPanel" class="slide-in-panel" style="width: 800px !important; max-width: 90vw !important;">
   <button class="close-btn" id="closeAppointmentInfoPanel" aria-label="Close">&times;</button>
   <h5 class="mb-4" style="font-weight:700; color:#888; font-size:1.35rem;">Appointment Information</h5>
   
@@ -238,7 +319,7 @@
 </div>
 
 <!-- Edit Appointment Panel -->
-<div id="editAppointmentPanel" class="slide-in-panel">
+<div id="editAppointmentPanel" class="slide-in-panel" style="width: 800px !important; max-width: 90vw !important;">
   <button class="close-btn" id="closeEditAppointmentPanel" aria-label="Close">&times;</button>
   <h5 class="mb-4" style="font-weight:700; color:#888; font-size:1.35rem;">Edit Appointment</h5>
   

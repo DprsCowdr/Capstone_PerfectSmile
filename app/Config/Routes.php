@@ -182,6 +182,7 @@ $routes->group('doctor', ['filter' => 'auth'], function($routes) {
       $routes->get('appointments', 'Patient::appointments');
       $routes->get('records', 'Patient::records');
       $routes->get('profile', 'Patient::profile');
+      $routes->post('save-medical-history', 'Patient::saveMedicalHistory');
       $routes->get('show-dentists', 'Patient::showDentists'); // Debug: Show all dentists
       $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
   });
