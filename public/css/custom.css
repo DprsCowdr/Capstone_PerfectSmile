@@ -146,15 +146,109 @@ body, html {
     box-shadow: -2px 0 24px rgba(0,0,0,0.1);
     border-radius: 16px 0 0 16px;
     padding: 32px 24px 24px 24px; /* Increased padding for more space */
-    z-index: 1050;
+    z-index: 9999; /* Increased z-index to ensure it's on top */
     transform: translateX(100%);
     transition: transform 0.4s cubic-bezier(.77,0,.18,1);
     overflow-y: auto;
     border-left: 1px solid #e2e8f0;
+    will-change: transform; /* Optimize for animations */
 }
 
 .slide-in-panel.active {
     transform: translateX(0) !important;
+}
+
+/* Ensure smooth scrolling within panel */
+.slide-in-panel {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+
+.slide-in-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.slide-in-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.slide-in-panel::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+
+.slide-in-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.3);
+}
+
+/* Overlay for slide-in panels - DISABLED */
+/* Z-INDEX HIERARCHY:
+   - Main content: default z-index
+   - All slide-in panels: 9999 (no overlay needed)
+*/
+.panel-overlay {
+    display: none !important; /* Completely hide overlay - no background shadow needed */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+}
+
+.panel-overlay.active {
+    display: none !important; /* Never show overlay */
+}
+
+/* Body class when panel is open - no overlay effects */
+body.panel-open .panel-overlay {
+    display: none !important; /* Never show overlay */
+}
+
+/* Mobile responsive improvements for slide-in panels */
+@media (max-width: 768px) {
+    .slide-in-panel {
+        width: 100vw;
+        border-radius: 0;
+        padding: 20px 16px 16px 16px;
+    }
+    
+    .slide-in-panel .dental-3d-viewer {
+        height: 300px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .slide-in-panel {
+        padding: 16px 12px 12px 12px;
+    }
+    
+    .slide-in-panel .dental-3d-viewer {
+        height: 250px !important;
+    }
+}
+
+/* Button states for panel triggers */
+.panel-trigger-active {
+    background-color: #dbeafe !important;
+    border-color: #3b82f6 !important;
+    color: #1d4ed8 !important;
+    transform: scale(0.95);
+}
+
+/* Smooth transitions for all panel trigger buttons */
+button[id$="Btn"] {
+    transition: all 0.2s ease;
+}
+
+button[id$="Btn"]:active {
+    transform: scale(0.95);
 }
 
 /* Patient Search Dropdown Styles */
@@ -188,25 +282,6 @@ body, html {
 
 #patientDropdown::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
-}
-
-/* Panel Overlay */
-.panel-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 1040;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.panel-overlay.active {
-    opacity: 1;
-    visibility: visible;
 }
 
 #viewPatientPanel.slide-in-panel { 
@@ -655,6 +730,269 @@ body, html {
 .slide-in-panel {
     visibility: visible;
     opacity: 1;
+}
+
+/* Specific styling for dental chart panel to ensure proper sliding */
+#dentalChartPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 650px;
+    max-width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -2px 0 24px rgba(0,0,0,0.1);
+    border-radius: 16px 0 0 16px;
+    z-index: 9999;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+    overflow-y: auto;
+    border-left: 1px solid #e2e8f0;
+    will-change: transform;
+}
+
+#dentalChartPanel.active {
+    transform: translateX(0) !important;
+}
+
+/* Specific styling for medical history panel - slide in like dental chart */
+#newActionPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 650px;
+    max-width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -2px 0 24px rgba(0,0,0,0.1);
+    border-radius: 16px 0 0 16px;
+    z-index: 9999;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+    overflow-y: auto;
+    border-left: 1px solid #e2e8f0;
+    will-change: transform;
+}
+
+#newActionPanel.active {
+    transform: translateX(0) !important;
+}
+
+/* Ensure medical history content has bright background */
+#newActionPanel .bg-white {
+    background-color: #ffffff !important;
+}
+
+#newActionPanel .rounded-lg {
+    background-color: #ffffff !important;
+}
+
+/* Ensure form elements in medical history are bright */
+#newActionPanel input[type="text"],
+#newActionPanel input[type="date"],
+#newActionPanel input[type="email"],
+#newActionPanel input[type="tel"],
+#newActionPanel textarea,
+#newActionPanel select {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+}
+
+#newActionPanel input[type="text"]:focus,
+#newActionPanel input[type="date"]:focus,
+#newActionPanel input[type="email"]:focus,
+#newActionPanel input[type="tel"]:focus,
+#newActionPanel textarea:focus,
+#newActionPanel select:focus {
+    background-color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Specific styling for patient view panel - same z-index as medical history */
+#viewPatientPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 650px;
+    max-width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -2px 0 24px rgba(0,0,0,0.1);
+    border-radius: 16px 0 0 16px;
+    z-index: 9999; /* Same as medical history panel - above overlay */
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+    overflow-y: auto;
+    border-left: 1px solid #e2e8f0;
+    will-change: transform;
+    filter: none !important; /* Never apply darkening filters */
+}
+
+/* Ensure patient panel is never darkened - no overlay effects */
+#viewPatientPanel,
+#addPatientPanel,
+#updatePatientPanel,
+#newActionPanel,
+#dentalChartPanel {
+    filter: none !important;
+    background: #ffffff !important;
+}
+
+/* Remove all background darkening effects - no longer needed */
+/* All panels maintain bright appearance */
+
+#viewPatientPanel.active {
+    transform: translateX(0) !important;
+}
+
+/* Remove shifting behavior - panels will overlay instead */
+/* #viewPatientPanel.shifted {
+    transform: translateX(-650px) !important;
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+} */
+
+/* Ensure patient view content has bright background */
+#viewPatientPanel .bg-white {
+    background-color: #ffffff !important;
+}
+
+#viewPatientPanel .rounded-lg {
+    background-color: #ffffff !important;
+}
+
+/* Ensure form elements in patient view are bright */
+#viewPatientPanel input[type="text"],
+#viewPatientPanel input[type="date"],
+#viewPatientPanel input[type="email"],
+#viewPatientPanel input[type="tel"],
+#viewPatientPanel textarea,
+#viewPatientPanel select {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+}
+
+#viewPatientPanel input[type="text"]:focus,
+#viewPatientPanel input[type="date"]:focus,
+#viewPatientPanel input[type="email"]:focus,
+#viewPatientPanel input[type="tel"]:focus,
+#viewPatientPanel textarea:focus,
+#viewPatientPanel select:focus {
+    background-color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Specific styling for add patient panel - same z-index as other panels */
+#addPatientPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 650px;
+    max-width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -2px 0 24px rgba(0,0,0,0.1);
+    border-radius: 16px 0 0 16px;
+    z-index: 9999; /* Same as other panels - above overlay */
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+    overflow-y: auto;
+    border-left: 1px solid #e2e8f0;
+    will-change: transform;
+}
+
+#addPatientPanel.active {
+    transform: translateX(0) !important;
+}
+
+/* Ensure add patient content has bright background */
+#addPatientPanel .bg-white {
+    background-color: #ffffff !important;
+}
+
+#addPatientPanel .rounded-lg {
+    background-color: #ffffff !important;
+}
+
+/* Ensure form elements in add patient are bright */
+#addPatientPanel input[type="text"],
+#addPatientPanel input[type="date"],
+#addPatientPanel input[type="email"],
+#addPatientPanel input[type="tel"],
+#addPatientPanel textarea,
+#addPatientPanel select {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+}
+
+#addPatientPanel input[type="text"]:focus,
+#addPatientPanel input[type="date"]:focus,
+#addPatientPanel input[type="email"]:focus,
+#addPatientPanel input[type="tel"]:focus,
+#addPatientPanel textarea:focus,
+#addPatientPanel select:focus {
+    background-color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Specific styling for update patient panel - same z-index as other panels */
+#updatePatientPanel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 650px;
+    max-width: 100vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -2px 0 24px rgba(0,0,0,0.1);
+    border-radius: 16px 0 0 16px;
+    z-index: 9999; /* Same as other panels - above overlay */
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(.77,0,.18,1);
+    overflow-y: auto;
+    border-left: 1px solid #e2e8f0;
+    will-change: transform;
+}
+
+#updatePatientPanel.active {
+    transform: translateX(0) !important;
+}
+
+/* Ensure update patient content has bright background */
+#updatePatientPanel .bg-white {
+    background-color: #ffffff !important;
+}
+
+#updatePatientPanel .rounded-lg {
+    background-color: #ffffff !important;
+}
+
+/* Ensure form elements in update patient are bright */
+#updatePatientPanel input[type="text"],
+#updatePatientPanel input[type="date"],
+#updatePatientPanel input[type="email"],
+#updatePatientPanel input[type="tel"],
+#updatePatientPanel textarea,
+#updatePatientPanel select {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+}
+
+#updatePatientPanel input[type="text"]:focus,
+#updatePatientPanel input[type="date"]:focus,
+#updatePatientPanel input[type="email"]:focus,
+#updatePatientPanel input[type="tel"]:focus,
+#updatePatientPanel textarea:focus,
+#updatePatientPanel select:focus {
+    background-color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
 @media (max-width: 991px) {
