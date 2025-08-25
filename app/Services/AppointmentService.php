@@ -254,13 +254,41 @@ class AppointmentService
     public function getPatientAppointments($patientId)
     {
         try {
-            $appointments = $this->appointmentModel->getPatientAppointments($patientId);
+            log_message('debug', "AppointmentService: Loading appointments for patient ID: {$patientId}");
             
-            return [
+            $appointments = $this->appointmentModel->getPatientAppointments($patientId);
+            log_message('debug', "AppointmentService: Found " . count($appointments) . " appointments");
+            log_message('debug', "AppointmentService: Raw appointments data: " . json_encode($appointments));
+            
+            // Categorize appointments into present (upcoming) and past
+            $currentDateTime = date('Y-m-d H:i:s');
+            $presentAppointments = [];
+            $pastAppointments = [];
+            
+            foreach ($appointments as $appointment) {
+                $appointmentDateTime = $appointment['appointment_datetime'] ?? ($appointment['appointment_date'] . ' ' . $appointment['appointment_time']);
+                
+                if ($appointmentDateTime >= $currentDateTime) {
+                    $presentAppointments[] = $appointment;
+                } else {
+                    $pastAppointments[] = $appointment;
+                }
+            }
+            
+            log_message('debug', "AppointmentService: Categorized into " . count($presentAppointments) . " present and " . count($pastAppointments) . " past appointments");
+            
+            $result = [
                 'success' => true,
-                'appointments' => $appointments
+                'present_appointments' => $presentAppointments,
+                'past_appointments' => $pastAppointments,
+                'total_appointments' => count($appointments)
             ];
+            
+            log_message('debug', "AppointmentService: Final result: " . json_encode($result));
+            return $result;
+            
         } catch (\Exception $e) {
+            log_message('error', "AppointmentService: Exception in getPatientAppointments: " . $e->getMessage());
             return ['success' => false, 'message' => 'Failed to load appointments'];
         }
     }

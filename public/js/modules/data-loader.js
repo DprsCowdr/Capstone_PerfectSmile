@@ -73,10 +73,83 @@ class DataLoader {
         console.log('Loading appointments for patient:', patientId);
         console.log('Base URL:', this.baseUrl);
         
-        const url = `${this.baseUrl}/admin/patient-appointments/${patientId}`;
+        // Try the admin endpoint first (categorized format)
+        let url = `${this.baseUrl}/admin/patient-appointments/${patientId}`;
         console.log('Fetching from URL:', url);
         
-        return await this.fetchWithErrorHandling(url);
+        try {
+            const result = await this.fetchWithErrorHandling(url);
+            
+            // Check if we got the expected categorized format
+            if (result.success && (result.present_appointments !== undefined || result.past_appointments !== undefined)) {
+                console.log('✅ Received categorized appointment data:', result);
+                return result;
+            }
+            
+            // If we got the old format with flat appointments array, convert it
+            if (result.success && result.appointments) {
+                console.log('🔄 Converting flat appointments to categorized format...');
+                const appointments = result.appointments;
+                const currentDateTime = new Date().toISOString();
+                
+                const presentAppointments = appointments.filter(apt => {
+                    const aptDateTime = apt.appointment_datetime || `${apt.appointment_date} ${apt.appointment_time}`;
+                    return aptDateTime >= currentDateTime;
+                });
+                
+                const pastAppointments = appointments.filter(apt => {
+                    const aptDateTime = apt.appointment_datetime || `${apt.appointment_date} ${apt.appointment_time}`;
+                    return aptDateTime < currentDateTime;
+                });
+                
+                return {
+                    success: true,
+                    present_appointments: presentAppointments,
+                    past_appointments: pastAppointments,
+                    total_appointments: appointments.length
+                };
+            }
+            
+            // Fallback to patient endpoint if admin endpoint fails
+            console.log('⚠️ Admin endpoint failed, trying patient endpoint...');
+            url = `${this.baseUrl}/patient/get-appointments/${patientId}`;
+            const fallbackResult = await this.fetchWithErrorHandling(url);
+            
+            if (fallbackResult.success && fallbackResult.appointments) {
+                console.log('✅ Received appointments from patient endpoint, converting...');
+                const appointments = fallbackResult.appointments;
+                const currentDateTime = new Date().toISOString();
+                
+                const presentAppointments = appointments.filter(apt => {
+                    const aptDateTime = apt.appointment_datetime || `${apt.appointment_date} ${apt.appointment_time}`;
+                    return aptDateTime >= currentDateTime;
+                });
+                
+                const pastAppointments = appointments.filter(apt => {
+                    const aptDateTime = apt.appointment_datetime || `${apt.appointment_date} ${apt.appointment_time}`;
+                    return aptDateTime < currentDateTime;
+                });
+                
+                return {
+                    success: true,
+                    present_appointments: presentAppointments,
+                    past_appointments: pastAppointments,
+                    total_appointments: appointments.length
+                };
+            }
+            
+            return result || fallbackResult;
+            
+        } catch (error) {
+            console.error('Error loading appointments:', error);
+            return {
+                success: false,
+                message: 'Failed to load appointments',
+                present_appointments: [],
+                past_appointments: [],
+                total_appointments: 0
+            };
+        }
     }
 
     async loadTreatments(patientId) {

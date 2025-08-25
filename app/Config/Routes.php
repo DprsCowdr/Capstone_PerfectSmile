@@ -56,14 +56,11 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('appointments', 'AdminController::appointments'); // → appointments/index.php
     $routes->post('appointments/create', 'AdminController::createAppointment');
     $routes->post('appointments/update/(:num)', 'AdminController::updateAppointment/$1');
-    $routes->put('appointments/update/(:num)', 'AdminController::updateAppointment/$1');
-    $routes->get('appointments/update/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->post('appointments/delete/(:num)', 'AdminController::deleteAppointment/$1');
     $routes->post('appointments/approve/(:num)', 'AdminController::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'AdminController::declineAppointment/$1');
-        // Calendar: fetch appointments by branch
-        $routes->get('appointments/by-branch/(:num)', 'AdminController::getAppointmentsByBranch/$1');
     $routes->post('appointments/available-dentists', 'AdminController::getAvailableDentists');
+    $routes->post('appointments/check-conflicts', 'AdminController::checkAppointmentConflicts');
     $routes->get('appointments/details/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->get('waitlist', 'AdminController::waitlist'); // → appointments/waitlist.php
     
@@ -148,6 +145,7 @@ $routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/update/(:num)', 'Dentist::updateAppointment/$1');
     $routes->post('appointments/delete/(:num)', 'Dentist::deleteAppointment/$1');
     $routes->post('appointments/available-dentists', 'Dentist::getAvailableDentists');
+    $routes->post('appointments/check-conflicts', 'Dentist::checkAppointmentConflicts');
     $routes->get('appointments/details/(:num)', 'Dentist::getAppointmentDetails/$1');
     
     // Patients Module (accessible by dentist)
@@ -175,19 +173,17 @@ $routes->group('dentist', ['filter' => 'auth'], function($routes) {
 });
 
 // Patient routes (protected)
-
-  $routes->group('patient', ['filter' => 'auth'], function($routes) {
-      $routes->get('dashboard', 'Patient::dashboard');
-      $routes->get('book-appointment', 'Patient::bookAppointment');
-      $routes->get('calendar', 'Patient::calendar');
-      $routes->post('book-appointment', 'Patient::submitAppointment');
-      $routes->get('appointments', 'Patient::appointments');
-      $routes->get('records', 'Patient::records');
-      $routes->get('profile', 'Patient::profile');
-      $routes->get('show-dentists', 'Patient::showDentists'); // Debug: Show all dentists
-      $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
-  });
-
+$routes->group('patient', ['filter' => 'auth'], function($routes) {
+    $routes->get('dashboard', 'Patient::dashboard');
+    $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
+    $routes->post('save-medical-history', 'Patient::saveMedicalHistory'); // Save medical history via AJAX
+    $routes->get('get-medical-history/(:num)', 'Patient::getMedicalHistory/$1'); // Get medical history via AJAX
+    $routes->get('get-treatments/(:num)', 'Patient::getPatientTreatments/$1'); // Get patient treatments via AJAX
+    $routes->get('get-appointments/(:num)', 'Patient::getPatientAppointments/$1'); // Get patient appointments via AJAX
+    $routes->get('get-bills/(:num)', 'Patient::getPatientBills/$1'); // Get patient bills via AJAX
+    $routes->get('test-treatments', 'Patient::testTreatmentsEndpoint'); // Test treatments endpoint
+    $routes->get('test-database', 'Patient::testDatabase'); // Test database connection
+});
 
 // Patient Check-in routes (for staff/reception)
 $routes->group('checkin', ['filter' => 'auth'], function($routes) {
@@ -217,7 +213,5 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('patients/update/(:num)', 'StaffController::updatePatient/$1');
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
-    $routes->post('appointments/approve/(:num)', 'StaffController::approveAppointment/$1');
-    $routes->post('appointments/decline/(:num)', 'StaffController::declineAppointment/$1');
-    $routes->get('waitlist', 'StaffController::waitlist');
+    $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
 });
