@@ -213,7 +213,11 @@ function openProcedureModal(id) {
         panel.style.padding = '0';
     }
 
-        fetch('<?= base_url('admin/procedures/show/') ?>' + id + '?modal=1')
+        <?php
+            // determine show url based on user type so the same template works for admin and dentist
+            $procedureShowBase = (isset($user['user_type']) && $user['user_type'] === 'admin') ? base_url('admin/procedures/show/') : base_url('dentist/procedures/');
+        ?>
+        fetch('<?= $procedureShowBase ?>' + id + '?modal=1')
             .then(res => res.text())
             .then(html => {
                 content.innerHTML = html;

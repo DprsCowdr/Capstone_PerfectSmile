@@ -18,7 +18,7 @@
                         <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-user mr-2 text-gray-400"></i>Profile</a>
                         <div class="border-t my-1"></div>
                         <a href="<?= base_url('auth/logout') ?>" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-sign-out-alt mr-2 text-gray-400"></i>Logout</a>
-                    </div>ted
+                    </div>
                 </div>
             </div>
         </nav>
