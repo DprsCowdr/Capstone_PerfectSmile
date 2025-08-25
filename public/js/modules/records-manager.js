@@ -130,15 +130,46 @@ class RecordsManager {
     async loadAppointments(patientId) {
         this.modalController.setLoadingState('Loading appointments...');
         try {
+            console.log('🔄 Records Manager: Loading appointments for patient:', patientId);
+            
             const data = await this.dataLoader.loadAppointments(patientId);
-            if (data.success) {
-                this.displayManager.displayAppointments(data);
+            console.log('📋 Records Manager: Received appointment data:', data);
+            
+            if (data && data.success) {
+                // Check if we have any appointments at all
+                const hasAppointments = (data.present_appointments && data.present_appointments.length > 0) ||
+                                      (data.past_appointments && data.past_appointments.length > 0) ||
+                                      (data.appointments && data.appointments.length > 0) ||
+                                      (data.total_appointments > 0);
+                
+                if (hasAppointments) {
+                    console.log('✅ Records Manager: Displaying appointments');
+                    this.displayManager.displayAppointments(data);
+                } else {
+                    console.log('ℹ️ Records Manager: No appointments found, showing empty state');
+                    this.displayManager.displayAppointments({
+                        success: true,
+                        present_appointments: [],
+                        past_appointments: [],
+                        total_appointments: 0,
+                        message: 'No appointments found for this patient'
+                    });
+                }
             } else {
-                this.utilities.showAlert(data.message || 'Failed to load appointments', 'error');
+                console.error('❌ Records Manager: Failed to load appointments:', data);
+                const errorMessage = data?.message || 'Failed to load appointments';
+                
+                // Show error state with retry option
+                this.modalController.setErrorState('Failed to Load Appointments', errorMessage, 
+                    () => this.loadAppointments(patientId));
             }
         } catch (error) {
-            console.error('Error loading appointments:', error);
-            this.utilities.showAlert('An error occurred while loading appointments', 'error');
+            console.error('💥 Records Manager: Exception loading appointments:', error);
+            
+            // Show a user-friendly error with retry option
+            this.modalController.setErrorState('Unable to Load Appointments', 
+                'There was a problem connecting to the server. Please try again.', 
+                () => this.loadAppointments(patientId));
         }
     }
 

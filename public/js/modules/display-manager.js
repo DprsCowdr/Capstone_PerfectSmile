@@ -397,83 +397,189 @@ class DisplayManager {
     generateAppointmentsHTML(appointmentData) {
         console.log('📋 Generating appointments HTML with data:', appointmentData);
         
-        if (!appointmentData || (!appointmentData.present_appointments && !appointmentData.past_appointments)) {
+        // Handle both old and new data formats
+        let presentAppointments = [];
+        let pastAppointments = [];
+        let totalAppointments = 0;
+        
+        if (appointmentData && appointmentData.success) {
+            // Check for categorized format (new)
+            if (appointmentData.present_appointments !== undefined || appointmentData.past_appointments !== undefined) {
+                presentAppointments = appointmentData.present_appointments || [];
+                pastAppointments = appointmentData.past_appointments || [];
+                totalAppointments = appointmentData.total_appointments || (presentAppointments.length + pastAppointments.length);
+            }
+            // Check for flat appointments array (old format)
+            else if (appointmentData.appointments && Array.isArray(appointmentData.appointments)) {
+                const appointments = appointmentData.appointments;
+                const currentDateTime = new Date().toISOString();
+                
+                presentAppointments = appointments.filter(apt => {
+                    const aptDateTime = apt.appointment_datetime || `${apt.appointment_date} ${apt.appointment_time}`;
+                    return aptDateTime >= currentDateTime;
+                });
+                
+                pastAppointments = appointments.filter(apt => {
+                    const aptDateTime = apt.appointment_datetime || `${apt.appointment_date} ${apt.appointment_time}`;
+                    return aptDateTime < currentDateTime;
+                });
+                
+                totalAppointments = appointments.length;
+            }
+        }
+        
+        // If no appointments found
+        if (totalAppointments === 0) {
             return `
                 <div class="bg-white p-6">
                     <h3 class="text-lg font-bold mb-4">
                         <i class="fas fa-calendar text-blue-600 mr-2"></i>Appointments
                     </h3>
-                    <p class="text-gray-500">No appointments found for this patient.</p>
+                    <div class="text-center py-8">
+                        <i class="far fa-calendar-alt text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-sm">No appointments found for this patient.</p>
+                        <p class="text-gray-400 text-xs mt-2">Appointments will appear here once scheduled.</p>
+                    </div>
                 </div>
             `;
         }
 
-        const presentAppointments = appointmentData.present_appointments || [];
-        const pastAppointments = appointmentData.past_appointments || [];
-        const totalAppointments = appointmentData.total_appointments || 0;
+        // Helper function for status styling (similar to patientsTable.js)
+        const getStatusClass = (status) => {
+            switch(status?.toLowerCase()) {
+                case 'completed':
+                    return 'bg-green-100 text-green-800';
+                case 'confirmed':
+                case 'scheduled':
+                    return 'bg-blue-100 text-blue-800';
+                case 'pending':
+                case 'pending_approval':
+                    return 'bg-yellow-100 text-yellow-800';
+                case 'ongoing':
+                    return 'bg-purple-100 text-purple-800';
+                case 'cancelled':
+                    return 'bg-red-100 text-red-800';
+                case 'no_show':
+                    return 'bg-orange-100 text-orange-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        };
+
+        // Helper function to format appointment card (enhanced version of patientsTable.js approach)
+        const formatAppointmentCard = (appointment, isUpcoming = true) => {
+            const date = appointment.appointment_datetime 
+                ? new Date(appointment.appointment_datetime).toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                })
+                : (appointment.appointment_date ? new Date(appointment.appointment_date).toLocaleDateString() : 'Date not specified');
+                
+            const time = appointment.appointment_datetime 
+                ? new Date(appointment.appointment_datetime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                : (appointment.appointment_time || 'Time not specified');
+                
+            const statusClass = getStatusClass(appointment.status);
+            const cardBorderClass = isUpcoming ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50';
+            
+            return `
+                <div class="border ${cardBorderClass} rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-calendar text-blue-600"></i>
+                            <h4 class="font-semibold text-gray-800">Appointment #${appointment.id}</h4>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full font-medium ${statusClass}">
+                            ${appointment.status || 'Scheduled'}
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2 text-gray-700">
+                            <i class="fas fa-clock text-gray-400 w-4"></i>
+                            <span><strong>Date:</strong> ${date} at ${time}</span>
+                        </div>
+                        
+                        ${appointment.appointment_type ? `
+                            <div class="flex items-center gap-2 text-gray-700">
+                                <i class="fas fa-tag text-gray-400 w-4"></i>
+                                <span><strong>Type:</strong> ${appointment.appointment_type.charAt(0).toUpperCase() + appointment.appointment_type.slice(1)}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${appointment.branch_name ? `
+                            <div class="flex items-center gap-2 text-gray-700">
+                                <i class="fas fa-building text-gray-400 w-4"></i>
+                                <span><strong>Branch:</strong> ${appointment.branch_name}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${appointment.dentist_name ? `
+                            <div class="flex items-center gap-2 text-gray-700">
+                                <i class="fas fa-user-md text-gray-400 w-4"></i>
+                                <span><strong>Dentist:</strong> Dr. ${appointment.dentist_name}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${appointment.remarks ? `
+                            <div class="flex items-start gap-2 text-gray-700 mt-3 pt-2 border-t border-gray-200">
+                                <i class="fas fa-comment text-gray-400 w-4 mt-0.5"></i>
+                                <span><strong>Notes:</strong> ${appointment.remarks}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        };
 
         return `
             <div class="bg-white p-6">
-                <h3 class="text-lg font-bold mb-4">
-                    <i class="fas fa-calendar text-blue-600 mr-2"></i>Appointments
-                    <span class="text-sm font-normal text-gray-500">(${totalAppointments} total)</span>
-                </h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-calendar text-blue-600 mr-2"></i>Appointments
+                    </h3>
+                    <span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        ${totalAppointments} total
+                    </span>
+                </div>
                 
                 ${presentAppointments.length > 0 ? `
                     <div class="mb-6">
-                        <h4 class="text-md font-semibold text-green-700 mb-3">
-                            <i class="fas fa-clock text-green-600 mr-2"></i>Upcoming Appointments
+                        <h4 class="text-md font-semibold text-green-700 mb-4 flex items-center gap-2">
+                            <i class="fas fa-clock text-green-600"></i>
+                            Upcoming Appointments
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                ${presentAppointments.length}
+                            </span>
                         </h4>
                         <div class="space-y-3">
-                            ${presentAppointments.map(appointment => `
-                                <div class="border border-green-200 rounded-lg p-4 bg-green-50">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <div class="font-medium text-gray-900">${appointment.service_name || 'General Consultation'}</div>
-                                            <div class="text-sm text-gray-600">
-                                                <i class="fas fa-calendar mr-1"></i>${this.utilities.formatDate(appointment.appointment_date)}
-                                                <i class="fas fa-clock ml-3 mr-1"></i>${appointment.appointment_time || 'Not specified'}
-                                            </div>
-                                            <div class="text-sm text-gray-600">
-                                                <i class="fas fa-user-md mr-1"></i>Dr. ${appointment.dentist_name || 'Not assigned'}
-                                            </div>
-                                        </div>
-                                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                            ${appointment.status || 'Scheduled'}
-                                        </span>
-                                    </div>
-                                </div>
-                            `).join('')}
+                            ${presentAppointments.map(appointment => formatAppointmentCard(appointment, true)).join('')}
                         </div>
                     </div>
                 ` : ''}
 
                 ${pastAppointments.length > 0 ? `
                     <div class="mb-4">
-                        <h4 class="text-md font-semibold text-gray-700 mb-3">
-                            <i class="fas fa-history text-gray-600 mr-2"></i>Past Appointments
+                        <h4 class="text-md font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                            <i class="fas fa-history text-gray-600"></i>
+                            Past Appointments
+                            <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                                ${pastAppointments.length}
+                            </span>
                         </h4>
-                        <div class="space-y-3">
-                            ${pastAppointments.map(appointment => `
-                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <div class="font-medium text-gray-900">${appointment.service_name || 'General Consultation'}</div>
-                                            <div class="text-sm text-gray-600">
-                                                <i class="fas fa-calendar mr-1"></i>${this.utilities.formatDate(appointment.appointment_date)}
-                                                <i class="fas fa-clock ml-3 mr-1"></i>${appointment.appointment_time || 'Not specified'}
-                                            </div>
-                                            <div class="text-sm text-gray-600">
-                                                <i class="fas fa-user-md mr-1"></i>Dr. ${appointment.dentist_name || 'Not assigned'}
-                                            </div>
-                                        </div>
-                                        <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                                            ${appointment.status || 'Completed'}
-                                        </span>
-                                    </div>
-                                </div>
-                            `).join('')}
+                        <div class="space-y-3 max-h-80 overflow-y-auto">
+                            ${pastAppointments.map(appointment => formatAppointmentCard(appointment, false)).join('')}
                         </div>
+                    </div>
+                ` : ''}
+                
+                ${presentAppointments.length === 0 && pastAppointments.length === 0 ? `
+                    <div class="text-center py-8">
+                        <i class="far fa-calendar-alt text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-sm">No appointments found for this patient.</p>
+                        <p class="text-gray-400 text-xs mt-2">Appointments will appear here once scheduled.</p>
                     </div>
                 ` : ''}
             </div>

@@ -11,7 +11,6 @@ class Dental3DViewer {
         this.showControls = options.showControls !== false;
         this.onToothClick = options.onToothClick || null;
         this.onModelLoaded = options.onModelLoaded || null;
-        this.highlightOnClick = options.highlightOnClick !== false; // default true
         
         // Three.js objects
         this.scene = null;
@@ -29,14 +28,22 @@ class Dental3DViewer {
         this.isLoaded = false;
         this.isWireframe = false;
         this.autoRotate = false;
+        this.isDestroyed = false;
+        this.animationId = null;
         
-        // Tooth mapping - mesh index to Universal Numbering System
-        this.toothMapping = [
-            24, 23, 22, 21, 20, 19, 18, 17, // 0-7: Lower left
-            32, 31, 30, 28, 29, 27, 26, 25, // 8-15: Lower right
-            8, 9, 10, 11, 12, 13, 7, 2,     // 16-23: Upper left/right mix
-            15, 5, 4, 6, 3, 1, 14, 13, 16   // 24-32: Upper mix (index 30 set to 14)
-        ];
+        // Tooth mapping configuration
+        this.toothMapping = null; // Will be set to manual mapping or auto-generated
+        this.mappingMethod = 'manual'; // 'auto', 'position', or 'manual'
+        this.debugMapping = true; // Enable detailed mapping debug output
+        
+        // Manual mapping from user - integrated tooth mapping data
+        this.manualToothMapping = {
+            0: 24, 1: 23, 2: 22, 3: 21, 4: 20, 5: 19, 6: 18, 7: 17,
+            8: 32, 9: 31, 10: 30, 11: 28, 12: 29, 13: 27, 14: 26, 15: 25,
+            16: 9, 17: 8, 18: 7, 19: 6, 21: 3, 22: 10, 23: 15, 24: 2,
+            25: 12, 26: 13, 27: 11, 28: 14, 29: 16, 30: 5, 31: 4, 32: 1
+            // Note: mesh index 20 is unmapped (likely gum tissue or non-tooth structure)
+        };
         
         // Tooth names mapping
         this.toothNames = {
@@ -180,7 +187,6 @@ class Dental3DViewer {
                 this.model = gltf.scene;
                 this.processModel();
                 this.scene.add(this.model);
-                this.isLoaded = true;
                 if (loadingDiv) loadingDiv.classList.add('hidden');
                 if (this.onModelLoaded) {
                     this.onModelLoaded();
@@ -225,14 +231,270 @@ class Dental3DViewer {
     
     processTeethForClickDetection() {
         this.toothMeshes = [];
+        const meshAnalysis = [];
         
         this.model.traverse((child) => {
             if (child.isMesh) {
                 this.toothMeshes.push(child);
+                
+                // Analyze mesh properties for auto-mapping
+                const boundingBox = new THREE.Box3().setFromObject(child);
+                const center = boundingBox.getCenter(new THREE.Vector3());
+                const size = boundingBox.getSize(new THREE.Vector3());
+                
+                meshAnalysis.push({
+                    index: this.toothMeshes.length - 1,
+                    mesh: child,
+                    name: child.name || `mesh_${this.toothMeshes.length - 1}`,
+                    position: center.clone(),
+                    size: size.clone(),
+                    volume: size.x * size.y * size.z
+                });
             }
         });
         
         console.log(`Found ${this.toothMeshes.length} tooth meshes for click detection`);
+        
+        // Use manual mapping if available, otherwise generate auto-mapping
+        if (this.mappingMethod === 'manual' && Object.keys(this.manualToothMapping).length > 0) {
+            this.applyManualMapping();
+        } else {
+            // Generate tooth mapping based on analysis
+            this.generateToothMapping(meshAnalysis);
+        }
+    }
+    
+    applyManualMapping() {
+        if (this.debugMapping) {
+            console.group('🦷 Applying Manual Tooth Mapping');
+        }
+        
+        // Create array-based mapping from the manual mapping object
+        this.toothMapping = new Array(this.toothMeshes.length).fill(null);
+        
+        // Apply manual mappings
+        Object.entries(this.manualToothMapping).forEach(([meshIndex, toothNumber]) => {
+            const index = parseInt(meshIndex);
+            if (index >= 0 && index < this.toothMapping.length) {
+                this.toothMapping[index] = toothNumber;
+            }
+        });
+        
+        if (this.debugMapping) {
+            console.log(`✅ Applied ${Object.keys(this.manualToothMapping).length} manual mappings`);
+            this.logManualMappingResults();
+            console.groupEnd();
+        }
+    }
+    
+    logManualMappingResults() {
+        console.log('📋 Manual Tooth Mapping Applied:');
+        console.table(this.toothMapping.map((toothNum, meshIndex) => ({
+            MeshIndex: meshIndex,
+            ToothNumber: toothNum,
+            ToothName: this.toothNames[toothNum] || 'Unknown',
+            MeshName: this.toothMeshes[meshIndex]?.name || 'unnamed',
+            MappingSource: toothNum ? 'Manual' : 'Unmapped'
+        })));
+        
+        // Validation
+        const issues = this.validateToothMapping();
+        if (issues.length > 0) {
+            console.warn('⚠️ Manual Mapping Issues:', issues);
+        } else {
+            console.log('✅ Manual mapping validation passed');
+        }
+        
+        // Statistics
+        const mappedCount = this.toothMapping.filter(t => t !== null).length;
+        const uniqueTeeth = new Set(this.toothMapping.filter(t => t !== null)).size;
+        console.log(`📊 Mapping Statistics:
+        - Total Meshes: ${this.toothMeshes.length}
+        - Mapped Meshes: ${mappedCount}
+        - Unique Teeth: ${uniqueTeeth}
+        - Coverage: ${((mappedCount / this.toothMeshes.length) * 100).toFixed(1)}%`);
+    }
+    
+    generateToothMapping(meshAnalysis) {
+        if (this.debugMapping) {
+            console.group('🦷 Dental Model Analysis & Mapping Generation');
+        }
+        
+        // Sort meshes by position to create logical mapping
+        const sortedMeshes = this.analyzeMeshPositions(meshAnalysis);
+        
+        // Generate mapping based on dental anatomy
+        this.toothMapping = this.createPositionBasedMapping(sortedMeshes);
+        
+        if (this.debugMapping) {
+            this.logMappingResults(sortedMeshes);
+            console.groupEnd();
+        }
+    }
+    
+    analyzeMeshPositions(meshAnalysis) {
+        if (this.debugMapping) {
+            console.log('📊 Analyzing mesh positions...');
+        }
+        
+        // Separate upper and lower teeth based on Y position
+        const upperTeeth = meshAnalysis.filter(mesh => mesh.position.y > 0);
+        const lowerTeeth = meshAnalysis.filter(mesh => mesh.position.y <= 0);
+        
+        // Sort by X position (left to right from patient's perspective)
+        const sortUpper = upperTeeth.sort((a, b) => b.position.x - a.position.x); // Right to left
+        const sortLower = lowerTeeth.sort((a, b) => a.position.x - b.position.x); // Left to right
+        
+        if (this.debugMapping) {
+            console.log(`Upper teeth detected: ${upperTeeth.length}`);
+            console.log(`Lower teeth detected: ${lowerTeeth.length}`);
+        }
+        
+        return {
+            upper: sortUpper,
+            lower: sortLower,
+            all: meshAnalysis
+        };
+    }
+    
+    createPositionBasedMapping(sortedMeshes) {
+        const mapping = new Array(this.toothMeshes.length).fill(null);
+        
+        // Universal Numbering System:
+        // Upper Right: 1-8 (from back to front)
+        // Upper Left: 9-16 (from front to back)  
+        // Lower Left: 17-24 (from front to back)
+        // Lower Right: 25-32 (from back to front)
+        
+        // Map upper teeth (1-16)
+        this.mapUpperTeeth(sortedMeshes.upper, mapping);
+        
+        // Map lower teeth (17-32)
+        this.mapLowerTeeth(sortedMeshes.lower, mapping);
+        
+        // Fill any unmapped meshes with sequential numbers
+        this.fillUnmappedMeshes(mapping);
+        
+        return mapping;
+    }
+    
+    mapUpperTeeth(upperTeeth, mapping) {
+        const midline = 0; // X=0 is the center line
+        const rightSide = upperTeeth.filter(tooth => tooth.position.x > midline);
+        const leftSide = upperTeeth.filter(tooth => tooth.position.x <= midline);
+        
+        // Upper Right (1-8): from posterior to anterior
+        rightSide.sort((a, b) => a.position.x - b.position.x); // furthest right first
+        rightSide.forEach((tooth, index) => {
+            if (index < 8) {
+                mapping[tooth.index] = index + 1; // Teeth 1-8
+            }
+        });
+        
+        // Upper Left (9-16): from anterior to posterior  
+        leftSide.sort((a, b) => b.position.x - a.position.x); // closest to center first
+        leftSide.forEach((tooth, index) => {
+            if (index < 8) {
+                mapping[tooth.index] = index + 9; // Teeth 9-16
+            }
+        });
+    }
+    
+    mapLowerTeeth(lowerTeeth, mapping) {
+        const midline = 0; // X=0 is the center line
+        const leftSide = lowerTeeth.filter(tooth => tooth.position.x <= midline);
+        const rightSide = lowerTeeth.filter(tooth => tooth.position.x > midline);
+        
+        // Lower Left (17-24): from anterior to posterior
+        leftSide.sort((a, b) => b.position.x - a.position.x); // closest to center first
+        leftSide.forEach((tooth, index) => {
+            if (index < 8) {
+                mapping[tooth.index] = index + 17; // Teeth 17-24
+            }
+        });
+        
+        // Lower Right (25-32): from posterior to anterior
+        rightSide.sort((a, b) => a.position.x - b.position.x); // furthest right first  
+        rightSide.forEach((tooth, index) => {
+            if (index < 8) {
+                mapping[tooth.index] = index + 25; // Teeth 25-32
+            }
+        });
+    }
+    
+    fillUnmappedMeshes(mapping) {
+        // Find unmapped indices and assign sequential tooth numbers
+        const usedNumbers = new Set(mapping.filter(n => n !== null));
+        let nextNumber = 1;
+        
+        for (let i = 0; i < mapping.length; i++) {
+            if (mapping[i] === null) {
+                // Find next available tooth number
+                while (usedNumbers.has(nextNumber) && nextNumber <= 32) {
+                    nextNumber++;
+                }
+                if (nextNumber <= 32) {
+                    mapping[i] = nextNumber;
+                    usedNumbers.add(nextNumber);
+                    nextNumber++;
+                }
+            }
+        }
+    }
+    
+    logMappingResults(sortedMeshes) {
+        console.table(this.toothMapping.map((toothNum, meshIndex) => ({
+            MeshIndex: meshIndex,
+            ToothNumber: toothNum,
+            ToothName: this.toothNames[toothNum] || 'Unknown',
+            MeshName: this.toothMeshes[meshIndex]?.name || 'unnamed',
+            Position: this.toothMeshes[meshIndex] ? 
+                `(${this.toothMeshes[meshIndex].position.x.toFixed(2)}, ${this.toothMeshes[meshIndex].position.y.toFixed(2)}, ${this.toothMeshes[meshIndex].position.z.toFixed(2)})` : 
+                'N/A'
+        })));
+        
+        // Check for mapping issues
+        const issues = this.validateToothMapping();
+        if (issues.length > 0) {
+            console.warn('⚠️ Mapping Issues Detected:', issues);
+        } else {
+            console.log('✅ Mapping validation passed');
+        }
+    }
+    
+    validateToothMapping() {
+        const issues = [];
+        const usedNumbers = new Set();
+        const unmapped = [];
+        
+        this.toothMapping.forEach((toothNum, meshIndex) => {
+            if (toothNum === null || toothNum === undefined) {
+                unmapped.push(meshIndex);
+            } else if (usedNumbers.has(toothNum)) {
+                issues.push(`Duplicate tooth number ${toothNum} at mesh indices`);
+            } else if (toothNum < 1 || toothNum > 32) {
+                issues.push(`Invalid tooth number ${toothNum} at mesh index ${meshIndex}`);
+            } else {
+                usedNumbers.add(toothNum);
+            }
+        });
+        
+        if (unmapped.length > 0) {
+            issues.push(`Unmapped mesh indices: ${unmapped.join(', ')}`);
+        }
+        
+        // Check for missing standard tooth numbers
+        const missing = [];
+        for (let i = 1; i <= 32; i++) {
+            if (!usedNumbers.has(i)) {
+                missing.push(i);
+            }
+        }
+        if (missing.length > 0) {
+            issues.push(`Missing tooth numbers: ${missing.join(', ')}`);
+        }
+        
+        return issues;
     }
     
     onCanvasClick(event) {
@@ -254,9 +516,7 @@ class Dental3DViewer {
             const toothNumber = this.mapMeshIndexToToothNumber(meshIndex);
             
             if (toothNumber) {
-                if (this.highlightOnClick) {
-                    this.highlightTooth(meshIndex);
-                }
+                this.highlightTooth(meshIndex);
                 
                 if (this.onToothClick) {
                     this.onToothClick(toothNumber, clickPoint, event, {
@@ -272,17 +532,132 @@ class Dental3DViewer {
     }
     
     mapMeshIndexToToothNumber(meshIndex) {
-        if (Array.isArray(this.toothMapping) && meshIndex >= 0 && meshIndex < this.toothMapping.length) {
-            const mapped = this.toothMapping[meshIndex];
-            if (mapped && Number.isInteger(mapped)) return mapped;
+        // Validate input
+        if (meshIndex < 0 || !this.toothMapping || meshIndex >= this.toothMapping.length) {
+            if (this.debugMapping) {
+                console.warn(`⚠️ Invalid mesh index ${meshIndex}, using fallback mapping`);
+            }
+            return this.getFallbackToothNumber(meshIndex);
         }
-
-        // Fallback: if mapping doesn't contain this index, attempt a modulo heuristic
+        
+        const toothNumber = this.toothMapping[meshIndex];
+        
+        // Validate mapped tooth number
+        if (toothNumber === null || toothNumber === undefined || toothNumber < 1 || toothNumber > 32) {
+            if (this.debugMapping) {
+                console.warn(`⚠️ Invalid tooth number ${toothNumber} for mesh ${meshIndex}, using fallback`);
+            }
+            return this.getFallbackToothNumber(meshIndex);
+        }
+        
+        return toothNumber;
+    }
+    
+    getFallbackToothNumber(meshIndex) {
+        // Simple fallback: assume sequential mapping
+        const fallbackNumber = (meshIndex % 32) + 1;
+        if (this.debugMapping) {
+            console.log(`🔄 Using fallback mapping: mesh ${meshIndex} -> tooth ${fallbackNumber}`);
+        }
+        return fallbackNumber;
+    }
+    
+    // Enhanced method to find mesh indices for a given tooth number
+    getToothMeshIndices(toothNumber) {
+        if (!this.toothMapping || toothNumber < 1 || toothNumber > 32) {
+            return [];
+        }
+        
+        const indices = [];
+        this.toothMapping.forEach((mappedNumber, meshIndex) => {
+            if (mappedNumber === toothNumber) {
+                indices.push(meshIndex);
+            }
+        });
+        
+        return indices;
+    }
+    
+    // Method to switch mapping methods
+    setMappingMethod(method) {
+        const validMethods = ['auto', 'position', 'manual'];
+        if (!validMethods.includes(method)) {
+            console.error(`❌ Invalid mapping method: ${method}. Valid options: ${validMethods.join(', ')}`);
+            return false;
+        }
+        
+        const previousMethod = this.mappingMethod;
+        this.mappingMethod = method;
+        
+        console.log(`🔧 Switching mapping method from '${previousMethod}' to '${method}'`);
+        
+        // Reprocess teeth with new mapping method
         if (this.toothMeshes && this.toothMeshes.length > 0) {
-            return (meshIndex % 32) + 1;
+            this.processTeethForClickDetection();
         }
-
-        return null;
+        
+        return true;
+    }
+    
+    // Method to update manual mapping at runtime
+    updateManualMapping(newMappings) {
+        console.log('🔄 Updating manual tooth mapping...');
+        
+        // Merge new mappings with existing ones
+        this.manualToothMapping = { ...this.manualToothMapping, ...newMappings };
+        
+        // If currently using manual mapping, reapply it
+        if (this.mappingMethod === 'manual') {
+            this.applyManualMapping();
+        }
+        
+        console.log('✅ Manual mapping updated successfully');
+    }
+    
+    // Method to get current mapping information
+    getCurrentMappingInfo() {
+        return {
+            method: this.mappingMethod,
+            totalMeshes: this.toothMeshes ? this.toothMeshes.length : 0,
+            mappingArray: this.toothMapping ? [...this.toothMapping] : null,
+            manualMappings: { ...this.manualToothMapping },
+            mappedCount: this.toothMapping ? this.toothMapping.filter(t => t !== null).length : 0,
+            uniqueTeeth: this.toothMapping ? new Set(this.toothMapping.filter(t => t !== null)).size : 0
+        };
+    }
+    
+    // Method to manually override tooth mapping for specific meshes
+    setManualToothMapping(meshIndex, toothNumber) {
+        if (!this.toothMapping) {
+            this.toothMapping = new Array(this.toothMeshes.length).fill(null);
+        }
+        
+        if (meshIndex >= 0 && meshIndex < this.toothMapping.length && toothNumber >= 1 && toothNumber <= 32) {
+            this.toothMapping[meshIndex] = toothNumber;
+            // Also update the manual mapping object
+            this.manualToothMapping[meshIndex] = toothNumber;
+            if (this.debugMapping) {
+                console.log(`🔧 Manual mapping set: mesh ${meshIndex} -> tooth ${toothNumber}`);
+            }
+            return true;
+        }
+        
+        console.error(`❌ Invalid manual mapping: mesh ${meshIndex} -> tooth ${toothNumber}`);
+        return false;
+    }
+    
+    // Method to recalibrate mapping based on user corrections
+    recalibrateMapping(corrections = []) {
+        if (corrections.length > 0) {
+            console.log('🔄 Recalibrating tooth mapping with user corrections...');
+            corrections.forEach(({ meshIndex, toothNumber }) => {
+                this.setManualToothMapping(meshIndex, toothNumber);
+            });
+            
+            if (this.debugMapping) {
+                this.debugLogToothMapping();
+            }
+        }
     }
     
     highlightTooth(toothIndex) {
@@ -317,13 +692,23 @@ class Dental3DViewer {
         }
     }
     
-    setToothColor(toothNumber, color) {
-        if (!this.toothMeshes) return;
+    setToothColor(toothNumber, color, isMissing = false) {
+        if (!this.toothMeshes) {
+            console.warn('⚠️ No tooth meshes available for coloring');
+            return false;
+        }
 
-        // Find all mesh indices that map to this tooth number (handles duplicate parts)
-        const meshIndices = this.getMeshIndicesFromToothNumber(toothNumber);
-        if (!meshIndices || meshIndices.length === 0) return;
+        // Find all mesh indices that map to this tooth number
+        const meshIndices = this.getToothMeshIndices(toothNumber);
+        
+        if (meshIndices.length === 0) {
+            if (this.debugMapping) {
+                console.warn(`⚠️ No mesh found for tooth ${toothNumber}`);
+            }
+            return false;
+        }
 
+        let success = false;
         meshIndices.forEach((meshIndex) => {
             const mesh = this.toothMeshes[meshIndex];
             if (!mesh || !mesh.material) return;
@@ -333,32 +718,102 @@ class Dental3DViewer {
                 mesh.userData.originalMaterial = mesh.material.clone();
             }
 
-            if (color) {
-                // Check if this is a missing tooth (black color = missing)
-                const isMissingTooth = color.r === 0.0 && color.g === 0.0 && color.b === 0.0;
-
-                // Create permanent condition color material
+            if (isMissing) {
+                // Handle missing teeth - make completely invisible
+                const missingMaterial = new THREE.MeshStandardMaterial({
+                    transparent: true,
+                    opacity: 0.0,
+                    visible: false
+                });
+                mesh.material = missingMaterial;
+                mesh.visible = false;
+                mesh.userData.conditionMaterial = missingMaterial.clone();
+                
+                if (this.debugMapping) {
+                    console.log(`👻 Set tooth ${toothNumber} as missing (mesh ${meshIndex})`);
+                }
+            } else if (color) {
+                // Apply condition color with enhanced material properties
                 const conditionMaterial = new THREE.MeshStandardMaterial({
                     color: new THREE.Color(color.r, color.g, color.b),
-                    transparent: isMissingTooth || (color.r === 0.3 && color.g === 0.3 && color.b === 0.3),
-                    opacity: isMissingTooth ? 0.0 : 1.0, // Completely invisible for missing teeth
+                    transparent: false,
+                    opacity: 1.0,
                     metalness: 0.1,
                     roughness: 0.4,
-                    emissive: isMissingTooth ? new THREE.Color(0, 0, 0) : new THREE.Color(color.r * 0.1, color.g * 0.1, color.b * 0.1),
-                    depthWrite: !isMissingTooth
+                    emissive: new THREE.Color(color.r * 0.1, color.g * 0.1, color.b * 0.1),
+                    depthWrite: true
                 });
 
                 mesh.material = conditionMaterial;
-                // Store this as the condition material
+                mesh.visible = true;
                 mesh.userData.conditionMaterial = conditionMaterial.clone();
+                
+                if (this.debugMapping) {
+                    console.log(`🎨 Applied color to tooth ${toothNumber} (mesh ${meshIndex}): RGB(${color.r}, ${color.g}, ${color.b})`);
+                }
             } else {
                 // Reset to original material
                 if (mesh.userData.originalMaterial) {
                     mesh.material = mesh.userData.originalMaterial.clone();
+                    mesh.visible = true;
                     mesh.userData.conditionMaterial = null;
+                    
+                    if (this.debugMapping) {
+                        console.log(`🔄 Reset tooth ${toothNumber} to original color (mesh ${meshIndex})`);
+                    }
                 }
             }
+            
+            success = true;
         });
+
+        return success;
+    }
+    
+    // Method to reset all teeth to original colors
+    resetAllTeethColor() {
+        this.toothMeshes.forEach((mesh, index) => {
+            if (mesh && mesh.material && mesh.userData.originalMaterial) {
+                mesh.material = mesh.userData.originalMaterial.clone();
+                mesh.visible = true;
+                mesh.userData.conditionMaterial = null;
+            }
+        });
+        
+        if (this.debugMapping) {
+            console.log('🔄 Reset all teeth to original colors');
+        }
+    }
+    
+    // Enhanced method to get detailed tooth information
+    getToothInfo(toothNumber) {
+        const meshIndices = this.getToothMeshIndices(toothNumber);
+        
+        if (meshIndices.length === 0) {
+            return null;
+        }
+        
+        const meshInfo = meshIndices.map(index => {
+            const mesh = this.toothMeshes[index];
+            return {
+                meshIndex: index,
+                meshName: mesh?.name || `mesh_${index}`,
+                position: mesh ? {
+                    x: parseFloat(mesh.position.x.toFixed(3)),
+                    y: parseFloat(mesh.position.y.toFixed(3)),
+                    z: parseFloat(mesh.position.z.toFixed(3))
+                } : null,
+                hasConditionColor: !!(mesh?.userData.conditionMaterial),
+                isVisible: mesh?.visible !== false
+            };
+        });
+        
+        return {
+            toothNumber,
+            toothName: this.toothNames[toothNumber] || 'Unknown',
+            meshCount: meshIndices.length,
+            meshes: meshInfo
+        };
     }
     
     resetHighlights() {
@@ -389,63 +844,165 @@ class Dental3DViewer {
         });
     }
     
-    getMeshIndicesFromToothNumber(toothNumber) {
-        // Use the shared this.toothMapping to find all mesh indices that correspond to a tooth number
-        const indices = [];
-
-        if (Array.isArray(this.toothMapping) && this.toothMapping.length > 0) {
-            this.toothMapping.forEach((mappedNumber, idx) => {
-                if (mappedNumber === toothNumber) indices.push(idx);
-            });
-        }
-
-        // Fallback: modulo heuristic if no explicit mapping found
-        if (indices.length === 0 && this.toothMeshes && this.toothMeshes.length > 0) {
-            for (let i = 0; i < this.toothMeshes.length; i++) {
-                if ((i % 32) + 1 === toothNumber) indices.push(i);
+    resetHighlights() {
+        // Reset only the highlight effects, keep condition colors
+        this.toothMeshes.forEach((tooth) => {
+            // If tooth has a condition color, restore it
+            if (tooth.userData.conditionMaterial) {
+                tooth.material = tooth.userData.conditionMaterial.clone();
+            } else if (tooth.userData.originalMaterial) {
+                tooth.material = tooth.userData.originalMaterial.clone();
             }
-        }
-
-        return indices;
+            
+            // Clear temporary highlight material
+            if (tooth.userData.tempMaterial) {
+                tooth.userData.tempMaterial = null;
+            }
+        });
     }
 
-    // Debug helper: logs mapping and reports duplicates/missing tooth numbers
+    // Enhanced debug method with detailed analysis
     debugLogToothMapping() {
-        if (!Array.isArray(this.toothMapping)) {
-            console.warn('toothMapping is not defined as array');
+        if (!this.toothMapping) {
+            console.warn('⚠️ No tooth mapping available to debug');
             return;
         }
 
-        console.group('Dental3DViewer Tooth Mapping');
-        const seen = {};
-        this.toothMapping.forEach((num, idx) => {
-            console.log(`meshIndex ${idx} -> tooth ${num}`);
-            if (!seen[num]) seen[num] = [];
-            seen[num].push(idx);
-        });
-
-        // Report duplicates
-        const duplicates = Object.entries(seen).filter(([num, arr]) => arr.length > 1);
-        if (duplicates.length) {
-            console.warn('Duplicate tooth mappings found:');
-            duplicates.forEach(([num, arr]) => console.warn(`tooth ${num} -> mesh indices ${arr.join(', ')}`));
+        console.group('🦷 Dental3DViewer Detailed Tooth Mapping Debug');
+        
+        // Basic mapping table
+        console.log('📋 Current Tooth Mapping:');
+        console.table(this.toothMapping.map((toothNum, meshIndex) => ({
+            MeshIndex: meshIndex,
+            ToothNumber: toothNum,
+            ToothName: this.toothNames[toothNum] || 'Unknown',
+            MeshName: this.toothMeshes[meshIndex]?.name || 'unnamed',
+            Position: this.toothMeshes[meshIndex] ? 
+                `X:${this.toothMeshes[meshIndex].position.x.toFixed(2)} Y:${this.toothMeshes[meshIndex].position.y.toFixed(2)} Z:${this.toothMeshes[meshIndex].position.z.toFixed(2)}` : 
+                'N/A'
+        })));
+        
+        // Validation results
+        const issues = this.validateToothMapping();
+        if (issues.length > 0) {
+            console.group('⚠️ Mapping Issues');
+            issues.forEach(issue => console.warn(issue));
+            console.groupEnd();
         } else {
-            console.log('No duplicate mappings detected');
+            console.log('✅ Mapping validation passed - no issues detected');
         }
-
-        // Report missing tooth numbers 1..32
-        const missing = [];
-        for (let t = 1; t <= 32; t++) {
-            if (!seen[t]) missing.push(t);
-        }
-        if (missing.length) console.warn('Missing tooth numbers in mapping:', missing);
-        else console.log('All tooth numbers 1..32 present in mapping');
-
+        
+        // Quadrant analysis
+        this.analyzeQuadrants();
+        
+        // Coverage analysis
+        this.analyzeCoverage();
+        
         console.groupEnd();
     }
     
+    analyzeQuadrants() {
+        console.group('🗂️ Quadrant Analysis');
+        
+        const quadrants = {
+            'Upper Right (1-8)': [],
+            'Upper Left (9-16)': [],
+            'Lower Left (17-24)': [],
+            'Lower Right (25-32)': []
+        };
+        
+        this.toothMapping.forEach((toothNum, meshIndex) => {
+            if (toothNum >= 1 && toothNum <= 8) {
+                quadrants['Upper Right (1-8)'].push({ meshIndex, toothNum });
+            } else if (toothNum >= 9 && toothNum <= 16) {
+                quadrants['Upper Left (9-16)'].push({ meshIndex, toothNum });
+            } else if (toothNum >= 17 && toothNum <= 24) {
+                quadrants['Lower Left (17-24)'].push({ meshIndex, toothNum });
+            } else if (toothNum >= 25 && toothNum <= 32) {
+                quadrants['Lower Right (25-32)'].push({ meshIndex, toothNum });
+            }
+        });
+        
+        Object.entries(quadrants).forEach(([quadrant, teeth]) => {
+            console.log(`${quadrant}: ${teeth.length} teeth mapped`);
+            if (teeth.length > 0) {
+                console.log(`  Teeth: ${teeth.map(t => t.toothNum).sort((a, b) => a - b).join(', ')}`);
+            }
+        });
+        
+        console.groupEnd();
+    }
+    
+    analyzeCoverage() {
+        console.group('📊 Coverage Analysis');
+        
+        const mappedNumbers = new Set(this.toothMapping.filter(n => n !== null && n !== undefined));
+        const totalMeshes = this.toothMeshes.length;
+        const mappedMeshes = this.toothMapping.filter(n => n !== null && n !== undefined).length;
+        
+        console.log(`Total meshes: ${totalMeshes}`);
+        console.log(`Mapped meshes: ${mappedMeshes}`);
+        console.log(`Mapping coverage: ${((mappedMeshes / totalMeshes) * 100).toFixed(1)}%`);
+        console.log(`Unique tooth numbers: ${mappedNumbers.size}`);
+        
+        // Find gaps in tooth numbering
+        const missingNumbers = [];
+        for (let i = 1; i <= 32; i++) {
+            if (!mappedNumbers.has(i)) {
+                missingNumbers.push(i);
+            }
+        }
+        
+        if (missingNumbers.length > 0) {
+            console.warn(`Missing tooth numbers: ${missingNumbers.join(', ')}`);
+        }
+        
+        // Find duplicates
+        const numberCounts = {};
+        this.toothMapping.forEach(num => {
+            if (num !== null && num !== undefined) {
+                numberCounts[num] = (numberCounts[num] || 0) + 1;
+            }
+        });
+        
+        const duplicates = Object.entries(numberCounts).filter(([num, count]) => count > 1);
+        if (duplicates.length > 0) {
+            console.warn('Duplicate mappings:');
+            duplicates.forEach(([num, count]) => {
+                console.warn(`  Tooth ${num}: ${count} meshes`);
+            });
+        }
+        
+        console.groupEnd();
+    }
+    
+    // Method to export current mapping for manual correction
+    exportMappingForCorrection() {
+        const exportData = this.toothMapping.map((toothNum, meshIndex) => ({
+            meshIndex,
+            currentToothNumber: toothNum,
+            meshName: this.toothMeshes[meshIndex]?.name || `mesh_${meshIndex}`,
+            position: this.toothMeshes[meshIndex] ? {
+                x: parseFloat(this.toothMeshes[meshIndex].position.x.toFixed(3)),
+                y: parseFloat(this.toothMeshes[meshIndex].position.y.toFixed(3)),
+                z: parseFloat(this.toothMeshes[meshIndex].position.z.toFixed(3))
+            } : null,
+            suggestedToothNumber: toothNum // Can be manually corrected
+        }));
+        
+        console.log('📤 Tooth mapping export data:');
+        console.log(JSON.stringify(exportData, null, 2));
+        
+        return exportData;
+    }
+    
     animate() {
-        requestAnimationFrame(() => this.animate());
+        // Check if viewer has been destroyed
+        if (this.isDestroyed) {
+            return;
+        }
+        
+        this.animationId = requestAnimationFrame(() => this.animate());
         
         if (this.controls) {
             this.controls.update();
@@ -491,18 +1048,98 @@ class Dental3DViewer {
         }
     }
     
+    // Public mapping control methods
+    debugMapping() {
+        this.debugLogToothMapping();
+    }
+    
+    exportMapping() {
+        return this.exportMappingForCorrection();
+    }
+    
+    // Method to apply mapping corrections from external source
+    applyMappingCorrections(corrections) {
+        this.recalibrateMapping(corrections);
+    }
+    
+    // Method to get detailed information about a specific tooth
+    getToothDetails(toothNumber) {
+        return this.getToothInfo(toothNumber);
+    }
+    
+    // Method to manually map a mesh to a tooth number
+    mapMeshToTooth(meshIndex, toothNumber) {
+        return this.setManualToothMapping(meshIndex, toothNumber);
+    }
+    
+    // Method to get current mapping configuration
+    getMappingConfig() {
+        return this.getCurrentMappingInfo();
+    }
+    
+    // Method to enable/disable debug output
+    setDebugMode(enabled) {
+        this.debugMapping = enabled;
+        console.log(`🔧 Debug mode ${enabled ? 'enabled' : 'disabled'} for tooth mapping`);
+    }
+    
+    // Method to switch between mapping methods
+    switchMappingMethod(method) {
+        return this.setMappingMethod(method);
+    }
+    
+    // Method to apply new manual mappings
+    applyManualMappings(mappings) {
+        this.updateManualMapping(mappings);
+    }
+    
     getToothName(toothNumber) {
         return this.toothNames[toothNumber] || 'Unknown';
     }
     
     destroy() {
+        console.log('🧹 Destroying 3D viewer...');
+        
+        // Stop animation loop
+        this.isDestroyed = true;
+        
+        // Clear any timeout/interval references
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        
+        // Dispose of Three.js objects
         if (this.renderer) {
             this.renderer.dispose();
+            this.renderer.forceContextLoss();
+            this.renderer = null;
         }
+        
         if (this.controls) {
             this.controls.dispose();
+            this.controls = null;
         }
-        window.removeEventListener('resize', this.onWindowResize);
+        
+        // Clear scene
+        if (this.scene) {
+            this.scene.clear();
+            this.scene = null;
+        }
+        
+        // Clear references
+        this.camera = null;
+        this.model = null;
+        this.toothMeshes = [];
+        this.raycaster = null;
+        this.mouse = null;
+        
+        // Remove event listeners
+        if (this.onWindowResize) {
+            window.removeEventListener('resize', this.onWindowResize);
+        }
+        
+        console.log('✅ 3D viewer destroyed');
     }
 }
 

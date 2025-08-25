@@ -23,11 +23,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (addBtn && addPanel && addCloseBtn) {
         addBtn.addEventListener('click', function() {
             console.log('Add Patient button clicked');
+            
             addPanel.classList.add('active');
+            // Remove overlay activation - no background shadow needed
             document.body.classList.add('panel-open');
         });
         addCloseBtn.addEventListener('click', function() {
+            
             addPanel.classList.remove('active');
+            // Remove overlay deactivation - no background shadow needed
             document.body.classList.remove('panel-open');
         });
     }
@@ -52,6 +56,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
                 viewPanel.classList.add('active');
+                
+                // Remove overlay activation - no background shadow needed
+                
                 document.body.classList.add('panel-open');
             }
         });
@@ -68,6 +75,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const patient = JSON.parse(patientData);
                 populatePatientViewPanel(patient);
                 viewPanel.classList.add('active');
+                
+                // Remove overlay activation - no background shadow needed
+                
                 document.body.classList.add('panel-open');
             } catch (err) {
                 console.error('Error parsing row patient data:', err);
@@ -78,11 +88,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (viewCloseBtn) {
         viewCloseBtn.addEventListener('click', function() {
             var viewPanel = document.getElementById('viewPatientPanel');
+            const panelOverlay = document.getElementById('panelOverlay');
+            
             if (viewPanel) {
                 viewPanel.classList.remove('active');
-                viewPanel.classList.remove('shifted');
-                document.body.classList.remove('panel-open');
+                // Remove shifted class removal - no longer using shifting behavior
             }
+            // Remove overlay deactivation - no background shadow needed
+            document.body.classList.remove('panel-open');
+            
             if (newActionPanel) {
                 newActionPanel.classList.remove('active');
             }
@@ -104,14 +118,18 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 // Fallback: just open editable if no id yet
                 setMedicalHistoryReadOnly(false);
+                const panelOverlay = document.getElementById('panelOverlay');
+                
                 newActionPanel.classList.add('active');
-                if (viewPanel) viewPanel.classList.add('shifted');
+                // Remove overlay activation - no background shadow needed
                 document.body.classList.add('panel-open');
             }
         });
         newActionCloseBtn.addEventListener('click', function() {
+            
             newActionPanel.classList.remove('active');
-            if (viewPanel) viewPanel.classList.remove('shifted');
+            // Remove overlay deactivation - no background shadow needed
+            document.body.classList.remove('panel-open');
             document.body.classList.remove('panel-open');
         });
     }
@@ -136,28 +154,78 @@ document.addEventListener('DOMContentLoaded', function () {
     var dentalChartBtn = document.getElementById('showDentalChartBtn');
     var dentalChartPanel = document.getElementById('dentalChartPanel');
     var dentalChartClose = document.getElementById('closeDentalChartPanel');
+    var panelOverlay = document.getElementById('panelOverlay');
+    
     if (dentalChartBtn && dentalChartPanel) {
         dentalChartBtn.addEventListener('click', function() {
+            console.log('🦷 Dental chart button clicked');
+            
             const patientId = getCurrentPatientId();
             if (!patientId) {
                 showNotification('Patient ID not found. Please select a patient first.', 'error');
                 return;
             }
+            
+            console.log('📋 Opening dental chart for patient:', patientId);
+            
+            // Add visual feedback to button
+            dentalChartBtn.classList.add('panel-trigger-active');
+            
             openDentalChart(patientId);
         });
     }
+    
     if (dentalChartClose) {
         dentalChartClose.addEventListener('click', function() {
-            dentalChartPanel.classList.remove('active');
-            document.body.classList.remove('panel-open');
-            // Cleanup 3D viewer to stop loading/animations
-            try {
-                if (window._chart3DViewer) {
-                    window._chart3DViewer.destroy();
-                    window._chart3DViewer = null;
-                }
-            } catch (e) { /* ignore */ }
+            closeDentalChartPanel();
         });
+    }
+    
+    // Close panel when clicking overlay
+    if (panelOverlay) {
+        panelOverlay.addEventListener('click', function() {
+            closeDentalChartPanel();
+        });
+    }
+    
+    // Function to close dental chart panel
+    function closeDentalChartPanel() {
+        const dentalChartBtn = document.getElementById('showDentalChartBtn');
+        const content = document.getElementById('dental-chart-content');
+        
+        if (dentalChartPanel) {
+            dentalChartPanel.classList.remove('active');
+        }
+        // Remove overlay deactivation - no background shadow needed
+        if (dentalChartBtn) {
+            dentalChartBtn.classList.remove('panel-trigger-active');
+        }
+        
+        // Remove darkening from patient panel when dental chart closes
+        const viewPanel = document.getElementById('viewPatientPanel');
+        if (viewPanel) {
+            viewPanel.classList.remove('in-background');
+        }
+        
+        document.body.classList.remove('panel-open');
+        
+        // Cleanup 3D viewer to stop loading/animations
+        try {
+            if (window._chart3DViewer) {
+                window._chart3DViewer.destroy();
+                window._chart3DViewer = null;
+            }
+        } catch (e) { /* ignore */ }
+        
+        // Reset content to prevent loading state issues on reopen
+        if (content) {
+            content.innerHTML = '';
+        }
+        
+        // Clear any cached chart data
+        if (window._latestChartDataMap) {
+            window._latestChartDataMap = null;
+        }
     }
 
     // Update Patient (open panels)
@@ -176,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
                 updatePanel.classList.add('active');
+                // Remove overlay activation - no background shadow needed
                 document.body.classList.add('panel-open');
             }
         });
@@ -204,7 +273,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     loadPatientForUpdate(patientId);
                 }
                 
+                const panelOverlay = document.getElementById('panelOverlay');
                 updatePanel.classList.add('active');
+                if (panelOverlay) {
+                    panelOverlay.classList.add('active');
+                }
                 document.body.classList.add('panel-open');
                 console.log('Panel should be open now');
             } else {
@@ -217,14 +290,41 @@ document.addEventListener('DOMContentLoaded', function () {
     if (updateCloseBtn) {
         updateCloseBtn.addEventListener('click', function() {
             var updatePanel = document.getElementById('updatePatientPanel');
+            
             if (updatePanel) {
                 updatePanel.classList.remove('active');
-                document.body.classList.remove('panel-open');
             }
+            // Remove overlay deactivation - no background shadow needed
+            document.body.classList.remove('panel-open');
         });
     }
 
     // Close panels when clicking outside (mobile)
+    // Handle ESC key and overlay clicks
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // Close any active panels
+            const activePanels = document.querySelectorAll('.slide-in-panel.active');
+            if (activePanels.length > 0) {
+                // Close dental chart panel specifically
+                const dentalPanel = document.getElementById('dentalChartPanel');
+                if (dentalPanel && dentalPanel.classList.contains('active')) {
+                    closeDentalChartPanel();
+                } else {
+                    // Close other panels
+                    activePanels.forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    const overlay = document.getElementById('panelOverlay');
+                    if (overlay) {
+                        overlay.classList.remove('active');
+                    }
+                    document.body.classList.remove('panel-open');
+                }
+            }
+        }
+    });
+
     document.addEventListener('click', function(e) {
         if (e.target.classList && e.target.classList.contains('slide-in-panel')) {
             e.target.classList.remove('active');
@@ -529,9 +629,7 @@ function saveMedicalHistory() {
                 if (newActionPanel) {
                     newActionPanel.classList.remove('active');
                 }
-                if (viewPanel) {
-                    viewPanel.classList.remove('shifted');
-                }
+                // Remove shifted class removal - no longer using shifting behavior
                 document.body.classList.remove('panel-open');
             }, 1500);
         } else {
@@ -745,9 +843,29 @@ function loadTabContent(tabName, patientId) {
 
 // Open dental chart panel and load latest chart
 function openDentalChart(patientId) {
+    console.log('🔄 Opening dental chart panel...');
+    
     const panel = document.getElementById('dentalChartPanel');
     const content = document.getElementById('dental-chart-content');
-    if (!panel || !content) return;
+    const overlay = document.getElementById('panelOverlay');
+    
+    if (!panel || !content) {
+        console.error('❌ Panel or content element not found');
+        return;
+    }
+    
+    console.log('✅ Panel elements found, building content...');
+    
+    // Ensure any existing 3D viewer is properly cleaned up first
+    try {
+        if (window._chart3DViewer) {
+            console.log('🧹 Cleaning up existing 3D viewer...');
+            window._chart3DViewer.destroy();
+            window._chart3DViewer = null;
+        }
+    } catch (e) { 
+        console.warn('Warning during 3D viewer cleanup:', e);
+    }
     
     // Build skeleton with header, list, and 3D viewer (kept in DOM during updates)
     content.innerHTML = `
@@ -769,8 +887,36 @@ function openDentalChart(patientId) {
         </div>
     `;
     
+    console.log('🎬 Showing panel...');
+    
+    // Show panel with debug logging
+    console.log('🔍 Panel element before activation:', panel);
+    console.log('🔍 Panel classes before:', panel.className);
+    
     panel.classList.add('active');
+    console.log('🔍 Panel classes after adding active:', panel.className);
+    
+    // Remove overlay activation - no background shadow needed
+    console.log('✅ Panel activated without overlay');
+    
+    // Darken any open patient panel when dental chart opens
+    const viewPanel = document.getElementById('viewPatientPanel');
+    if (viewPanel && viewPanel.classList.contains('active')) {
+        viewPanel.classList.add('in-background');
+    }
+    
     document.body.classList.add('panel-open');
+    
+    console.log('✅ Panel should now be visible and sliding in from the right');
+    
+    // Force a layout reflow to ensure the transition happens
+    panel.offsetHeight; // This forces a reflow
+    
+    // Double-check the panel is properly styled
+    const computedStyle = window.getComputedStyle(panel);
+    console.log('🔍 Panel computed transform:', computedStyle.transform);
+    console.log('🔍 Panel computed z-index:', computedStyle.zIndex);
+    console.log('🔍 Panel computed position:', computedStyle.position);
     
     // Fetch latest chart for this patient
     fetch(`/admin/patient-dental-chart/${patientId}`)
@@ -833,47 +979,94 @@ function renderDentalChart(container, data) {
     // Also color the 3D model using chart data
     try {
         if (window.Dental3DViewer) {
-            // Initialize once per open
-            if (!window._chart3DViewer) {
-                window._chart3DViewer = new window.Dental3DViewer('dentalChart3DViewer', {
-                    enableToothSelection: true,
-                    showControls: true,
-                    highlightOnClick: false,
-                    onToothClick: (toothNumber, clickPoint, event, meta) => {
-                        showChartToothPopup(toothNumber, clickPoint, event, meta);
-                    }
-                });
-                window._chart3DViewer.init();
-            } else {
-                // Reset any prior colors
-                window._chart3DViewer.resetAllTeethColor();
+            console.log('🎯 Initializing 3D viewer for dental chart...');
+            
+            // Ensure proper cleanup before creating new instance
+            if (window._chart3DViewer) {
+                console.log('⚠️ Existing 3D viewer found, cleaning up...');
+                try {
+                    window._chart3DViewer.destroy();
+                } catch (e) {
+                    console.warn('Warning during existing viewer cleanup:', e);
+                }
+                window._chart3DViewer = null;
             }
-
-            // Map conditions to colors
-            const colorMap = {
-                healthy: { r: 0.0, g: 0.8, b: 0.2 },
-                cavity: { r: 0.9, g: 0.0, b: 0.0 },
-                filled: { r: 0.2, g: 0.4, b: 0.9 },
-                crown: { r: 0.9, g: 0.9, b: 0.9 },
-                root_canal: { r: 1.0, g: 0.5, b: 0.0 },
-                extraction_needed: { r: 0.6, g: 0.0, b: 0.0 },
-                other: { r: 0.6, g: 0.6, b: 0.6 },
-                missing: { r: 0.0, g: 0.0, b: 0.0 } // special: invisible
-            };
-
-            // Apply chart colors
-            chart.forEach(tooth => {
-                const condition = (tooth.condition || '').replace(' ', '_') || 'healthy';
-                const color = colorMap[condition] || colorMap.other;
-                window._chart3DViewer.setToothColor(parseInt(tooth.tooth_number), color);
+            
+            // Initialize new instance
+            window._chart3DViewer = new window.Dental3DViewer('dentalChart3DViewer', {
+                enableToothSelection: true,
+                showControls: true,
+                highlightOnClick: false,
+                onToothClick: (toothNumber, clickPoint, event, meta) => {
+                    showChartToothPopup(toothNumber, clickPoint, event, meta);
+                },
+                onModelLoaded: () => {
+                    console.log('✅ 3D model loaded successfully');
+                    // Apply colors after model is loaded
+                    applyChartColors(chart);
+                }
             });
-
-            // Save chart data map for popup lookups
-            window._latestChartDataMap = {};
-            chart.forEach(t => { window._latestChartDataMap[parseInt(t.tooth_number)] = t; });
+            
+            const initResult = window._chart3DViewer.init();
+            if (!initResult) {
+                console.error('❌ Failed to initialize 3D viewer');
+                return;
+            }
+            
+            console.log('✅ 3D viewer initialized, waiting for model to load...');
+        } else {
+            console.warn('⚠️ Dental3DViewer class not available');
         }
     } catch (e) {
-        console.warn('3D chart color mapping failed:', e);
+        console.error('❌ Error initializing 3D viewer:', e);
+        // Show error message in loading div
+        const loadingDiv = container.querySelector('#chart3dLoading');
+        if (loadingDiv) {
+            loadingDiv.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Error loading 3D viewer';
+            loadingDiv.classList.add('text-red-600');
+        }
+    }
+}
+
+// Separate function to apply colors to avoid timing issues
+function applyChartColors(chart) {
+    try {
+        if (!window._chart3DViewer) {
+            console.warn('⚠️ No 3D viewer available for coloring');
+            return;
+        }
+        
+        console.log('🎨 Applying colors to 3D model...');
+        
+        // Reset any prior colors first
+        window._chart3DViewer.resetAllTeethColor();
+
+        // Map conditions to colors
+        const colorMap = {
+            healthy: { r: 0.0, g: 0.8, b: 0.2 },
+            cavity: { r: 0.9, g: 0.0, b: 0.0 },
+            filled: { r: 0.2, g: 0.4, b: 0.9 },
+            crown: { r: 0.9, g: 0.9, b: 0.9 },
+            root_canal: { r: 1.0, g: 0.5, b: 0.0 },
+            extraction_needed: { r: 0.6, g: 0.0, b: 0.0 },
+            other: { r: 0.6, g: 0.6, b: 0.6 },
+            missing: { r: 0.0, g: 0.0, b: 0.0 } // special: invisible
+        };
+
+        // Apply chart colors
+        chart.forEach(tooth => {
+            const condition = (tooth.condition || '').replace(' ', '_') || 'healthy';
+            const color = colorMap[condition] || colorMap.other;
+            window._chart3DViewer.setToothColor(parseInt(tooth.tooth_number), color);
+        });
+
+        // Save chart data map for popup lookups
+        window._latestChartDataMap = {};
+        chart.forEach(t => { window._latestChartDataMap[parseInt(t.tooth_number)] = t; });
+        
+        console.log('✅ Chart colors applied successfully');
+    } catch (e) {
+        console.error('❌ Error applying chart colors:', e);
     }
 }
 // Load patient treatments
@@ -1240,13 +1433,11 @@ function loadPatientMedicalHistory(patientId, options = { readOnly: false }) {
                 
                 // Open the medical history panel
                 const newActionPanel = document.getElementById('newActionPanel');
-                const viewPanel = document.getElementById('viewPatientPanel');
+                
                 if (newActionPanel) {
                     newActionPanel.classList.add('active');
                 }
-                if (viewPanel) {
-                    viewPanel.classList.add('shifted');
-                }
+                // Remove overlay activation - no background shadow needed
                 document.body.classList.add('panel-open');
 
                 // Apply read-only state if requested
@@ -1257,13 +1448,11 @@ function loadPatientMedicalHistory(patientId, options = { readOnly: false }) {
                 showNotification('No medical history found for this patient.', 'info');
                 // Still open the panel but with empty form
                 const newActionPanel = document.getElementById('newActionPanel');
-                const viewPanel = document.getElementById('viewPatientPanel');
+                
                 if (newActionPanel) {
                     newActionPanel.classList.add('active');
                 }
-                if (viewPanel) {
-                    viewPanel.classList.add('shifted');
-                }
+                // Remove overlay activation - no background shadow needed
                 document.body.classList.add('panel-open');
 
                 // If no data, respect requested mode (readOnly/editable)

@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="<?= base_url('css/style.css'); ?>">
     <!-- Admin Panel Styles -->
     <link rel="stylesheet" href="<?= base_url('css/admin.css'); ?>">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="<?= base_url('css/custom.css'); ?>">
     <style>
         body, html {
             margin: 0 !important;

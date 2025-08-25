@@ -21,7 +21,7 @@ class PatientCheckup {
     }
     
     initDental3D() {
-        // Initialize 3D dental model viewer
+        // Initialize 3D dental model viewer with enhanced mapping
         this.dental3DViewer = new Dental3DViewer('dentalModelViewer', {
             modelUrl: '/img/permanent_dentition-2.glb',
             enableToothSelection: true,
@@ -30,14 +30,32 @@ class PatientCheckup {
                 this.handleToothClick(toothNumber, clickPoint, event, data);
             },
             onModelLoaded: () => {
+                console.log('🦷 3D Dental model loaded successfully');
+                
+                // Enable debug mode for detailed mapping information
+                this.dental3DViewer.setDebugMode(true);
+                
+                // Log mapping configuration
+                const config = this.dental3DViewer.getMappingConfig();
+                console.log('📋 Mapping Configuration:', config);
+                
+                // Debug the current tooth mapping
+                this.dental3DViewer.debugMapping();
+                
                 // Update 3D model colors when model is loaded
                 this.update3DModelColors();
+                
+                // Log successful initialization
+                console.log('✅ 3D Dental viewer initialization complete');
             }
         });
         
         // Initialize after DOM is ready
         setTimeout(() => {
-            this.dental3DViewer.init();
+            const success = this.dental3DViewer.init();
+            if (!success) {
+                console.error('❌ Failed to initialize 3D dental viewer');
+            }
         }, 100);
     }
     
@@ -138,6 +156,32 @@ class PatientCheckup {
     }
     
     handleToothClick(toothNumber, clickPoint, event, data) {
+        console.group(`🦷 Tooth Click Debug - Tooth #${toothNumber}`);
+        console.log('📍 Click Details:', {
+            toothNumber,
+            toothName: data.toothName,
+            meshIndex: data.meshIndex,
+            clickPoint: {
+                x: clickPoint.x.toFixed(3),
+                y: clickPoint.y.toFixed(3),
+                z: clickPoint.z.toFixed(3)
+            }
+        });
+        
+        // Get detailed tooth information
+        if (this.dental3DViewer) {
+            const toothInfo = this.dental3DViewer.getToothDetails(toothNumber);
+            if (toothInfo) {
+                console.log('🔍 Tooth Details:', toothInfo);
+            }
+        }
+        
+        // Get current form data for this tooth
+        const formData = this.getToothConditionFromDatabase(toothNumber);
+        console.log('📋 Current Form Data:', formData);
+        
+        console.groupEnd();
+        
         this.selectedTooth = toothNumber;
         this.showTreatmentPopup(toothNumber, clickPoint, event, data);
     }
@@ -361,47 +405,56 @@ class PatientCheckup {
     }
     
     update3DToothColor(toothNumber) {
-        if (!this.dental3DViewer) return;
+        if (!this.dental3DViewer) {
+            console.warn('⚠️ 3D viewer not available for tooth coloring');
+            return;
+        }
         
         const conditionSelect = document.querySelector(`select[name="dental_chart[${toothNumber}][condition]"]`);
-        if (!conditionSelect) return;
+        if (!conditionSelect) {
+            console.warn(`⚠️ No condition select found for tooth ${toothNumber}`);
+            return;
+        }
         
         const condition = conditionSelect.value;
         let color = null;
+        let isMissing = false;
         
-        // Define colors based on tooth condition - more vibrant to match chart colors
+        // Define colors based on tooth condition with enhanced visual distinction
         switch (condition) {
             case 'healthy':
-                color = { r: 0.4, g: 0.9, b: 0.4 }; // Bright green
+                color = { r: 0.2, g: 0.8, b: 0.2 }; // Bright green
                 break;
             case 'cavity':
-                color = { r: 0.9, g: 0.2, b: 0.2 }; // Bright red
+                color = { r: 0.9, g: 0.1, b: 0.1 }; // Bright red
                 break;
             case 'filled':
-                color = { r: 0.3, g: 0.6, b: 1.0 }; // Bright blue
+                color = { r: 0.2, g: 0.5, b: 0.9 }; // Bright blue
                 break;
             case 'crown':
-                color = { r: 1.0, g: 0.8, b: 0.2 }; // Gold/yellow
+                color = { r: 1.0, g: 0.8, b: 0.1 }; // Gold/yellow
                 break;
             case 'missing':
-                color = { r: 0.0, g: 0.0, b: 0.0 }; // Black with full transparency (will be invisible)
+                isMissing = true; // Special handling for missing teeth
                 break;
             case 'root_canal':
-                color = { r: 1.0, g: 0.6, b: 0.2 }; // Orange
+                color = { r: 1.0, g: 0.5, b: 0.1 }; // Orange
                 break;
             case 'extraction_needed':
-                color = { r: 0.8, g: 0.1, b: 0.1 }; // Dark red
+                color = { r: 0.7, g: 0.1, b: 0.1 }; // Dark red
                 break;
-            case 'missing':
-                // For missing teeth, pass null color and missing flag
-                this.dental3DViewer.setToothColor(toothNumber, null, true);
-                return; // Exit early for missing teeth
             default:
                 color = null; // Default tooth color
         }
         
-        // Apply color to the 3D model tooth (non-missing teeth)
-        this.dental3DViewer.setToothColor(toothNumber, color, false);
+        // Apply color/missing status to the 3D model tooth
+        const success = this.dental3DViewer.setToothColor(toothNumber, color, isMissing);
+        
+        if (!success) {
+            console.warn(`⚠️ Failed to apply color to tooth ${toothNumber} in 3D model`);
+        } else {
+            console.log(`✅ Applied ${condition} styling to tooth ${toothNumber}`);
+        }
     }
     
     getToothConditionFromDatabase(toothNumber) {
@@ -587,15 +640,134 @@ class PatientCheckup {
     }
     
     debugToothMapping() {
-        console.log('=== TOOTH MAPPING DEBUG ===');
-        if (this.dental3DViewer && this.dental3DViewer.toothMeshes) {
-            console.log(`Total tooth meshes found: ${this.dental3DViewer.toothMeshes.length}`);
+        console.log('=== ENHANCED TOOTH MAPPING DEBUG ===');
+        if (this.dental3DViewer) {
+            // Use the enhanced debug functionality
+            this.dental3DViewer.debugMapping();
             
-            this.dental3DViewer.toothMeshes.forEach((mesh, index) => {
-                const position = mesh.position;
-                console.log(`Mesh ${index}: Position (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) -> Name: "${mesh.name}"`);
+            // Show mapping configuration
+            const config = this.dental3DViewer.getMappingConfig();
+            console.log('🔧 Current Configuration:', config);
+            
+            // Export mapping data for analysis
+            console.log('📤 Exporting mapping data for analysis...');
+            const exportData = this.dental3DViewer.exportMapping();
+            
+            // Test a few specific teeth
+            console.log('🧪 Testing specific tooth information:');
+            [1, 8, 9, 16, 17, 24, 25, 32].forEach(toothNum => {
+                const info = this.dental3DViewer.getToothDetails(toothNum);
+                if (info) {
+                    console.log(`Tooth ${toothNum} (${info.toothName}):`, info);
+                } else {
+                    console.warn(`⚠️ No information found for tooth ${toothNum}`);
+                }
             });
+        } else {
+            console.error('❌ 3D viewer not available for debugging');
         }
+    }
+    
+    // Method to apply manual mapping data from external source
+    applyManualMapping(mappingData) {
+        if (!this.dental3DViewer) {
+            console.error('❌ 3D viewer not available for applying manual mapping');
+            return false;
+        }
+        
+        console.group('🔧 Applying Manual Tooth Mapping');
+        
+        try {
+            // Validate mapping data structure
+            if (!mappingData.manualMapping || typeof mappingData.manualMapping !== 'object') {
+                throw new Error('Invalid mapping data structure');
+            }
+            
+            const corrections = [];
+            
+            // Convert manual mapping to corrections format
+            Object.entries(mappingData.manualMapping).forEach(([meshIndex, toothNumber]) => {
+                corrections.push({
+                    meshIndex: parseInt(meshIndex),
+                    toothNumber: parseInt(toothNumber)
+                });
+            });
+            
+            console.log(`📋 Applying ${corrections.length} manual mappings`);
+            
+            // Apply corrections to the 3D viewer
+            this.dental3DViewer.recalibrateMapping(corrections);
+            
+            // Update the 3D model colors based on current conditions
+            this.update3DModelColors();
+            
+            console.log('✅ Manual mapping applied successfully');
+            console.groupEnd();
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to apply manual mapping:', error);
+            console.groupEnd();
+            return false;
+        }
+    }
+    
+    // Method to load manual mapping from JSON string
+    loadManualMappingFromJSON(jsonString) {
+        try {
+            const mappingData = JSON.parse(jsonString);
+            return this.applyManualMapping(mappingData);
+        } catch (error) {
+            console.error('❌ Failed to parse manual mapping JSON:', error);
+            return false;
+        }
+    }
+    
+    // Method to test all tooth mappings by applying test colors
+    testToothMappings() {
+        if (!this.dental3DViewer) {
+            console.error('❌ 3D viewer not available for testing');
+            return;
+        }
+        
+        console.log('🎨 Testing tooth mappings with test colors...');
+        
+        // Define test colors for each quadrant
+        const testColors = {
+            'upper_right': { r: 1.0, g: 0.0, b: 0.0 }, // Red for teeth 1-8
+            'upper_left': { r: 0.0, g: 1.0, b: 0.0 },  // Green for teeth 9-16
+            'lower_left': { r: 0.0, g: 0.0, b: 1.0 },  // Blue for teeth 17-24
+            'lower_right': { r: 1.0, g: 1.0, b: 0.0 }  // Yellow for teeth 25-32
+        };
+        
+        // Apply test colors
+        for (let tooth = 1; tooth <= 32; tooth++) {
+            let color;
+            if (tooth >= 1 && tooth <= 8) {
+                color = testColors.upper_right;
+            } else if (tooth >= 9 && tooth <= 16) {
+                color = testColors.upper_left;
+            } else if (tooth >= 17 && tooth <= 24) {
+                color = testColors.lower_left;
+            } else {
+                color = testColors.lower_right;
+            }
+            
+            this.dental3DViewer.setToothColor(tooth, color, false);
+        }
+        
+        console.log('🎨 Test colors applied:');
+        console.log('  🔴 Red: Upper Right (1-8)');
+        console.log('  🟢 Green: Upper Left (9-16)');
+        console.log('  🔵 Blue: Lower Left (17-24)');
+        console.log('  🟡 Yellow: Lower Right (25-32)');
+        
+        // Reset colors after 5 seconds
+        setTimeout(() => {
+            this.dental3DViewer.resetAllTeethColor();
+            this.update3DModelColors(); // Restore actual condition colors
+            console.log('🔄 Test colors reset, restored original colors');
+        }, 5000);
     }
     
     destroy() {
@@ -645,6 +817,71 @@ function debugToothMapping() {
     }
 }
 
+function testToothMappings() {
+    if (patientCheckup) {
+        patientCheckup.testToothMappings();
+    }
+}
+
+function correctToothMapping(meshIndex, toothNumber) {
+    if (patientCheckup) {
+        return patientCheckup.dental3DViewer.mapMeshToTooth(meshIndex, toothNumber);
+    }
+    return false;
+}
+
+function applyManualMapping(mappingData) {
+    if (patientCheckup) {
+        return patientCheckup.applyManualMapping(mappingData);
+    }
+    return false;
+}
+
+function loadManualMappingFromJSON(jsonString) {
+    if (patientCheckup) {
+        return patientCheckup.loadManualMappingFromJSON(jsonString);
+    }
+    return false;
+}
+
+function switchToManualMapping() {
+    if (patientCheckup && patientCheckup.dental3DViewer) {
+        return patientCheckup.dental3DViewer.switchMappingMethod('manual');
+    }
+    return false;
+}
+
+function switchToAutoMapping() {
+    if (patientCheckup && patientCheckup.dental3DViewer) {
+        return patientCheckup.dental3DViewer.switchMappingMethod('auto');
+    }
+    return false;
+}
+
+function verifyManualMapping() {
+    if (patientCheckup && patientCheckup.dental3DViewer) {
+        console.log('🔍 Verifying Manual Mapping Integration...');
+        const config = patientCheckup.dental3DViewer.getCurrentMappingInfo();
+        console.table(config);
+        
+        // Test a few specific mappings
+        const testMappings = [
+            { mesh: 0, expectedTooth: 24 },
+            { mesh: 17, expectedTooth: 8 },
+            { mesh: 32, expectedTooth: 1 }
+        ];
+        
+        testMappings.forEach(test => {
+            const actualTooth = patientCheckup.dental3DViewer.mapMeshIndexToToothNumber(test.mesh);
+            const status = actualTooth === test.expectedTooth ? '✅' : '❌';
+            console.log(`${status} Mesh ${test.mesh}: Expected tooth ${test.expectedTooth}, Got tooth ${actualTooth}`);
+        });
+        
+        return config;
+    }
+    return null;
+}
+
 function closeTreatmentPopup() {
     if (patientCheckup) {
         patientCheckup.closeTreatmentPopup();
@@ -660,4 +897,46 @@ function addTreatment() {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     patientCheckup = new PatientCheckup();
+    
+    // Add helpful console commands for debugging
+    console.log(`
+🦷 DENTAL 3D VIEWER DEBUG COMMANDS
+=====================================
+Use these commands in the browser console:
+
+📋 Basic Debugging:
+- debugToothMapping()     : Show detailed mapping analysis
+- testToothMappings()     : Apply test colors to verify mapping
+- patientCheckup.dental3DViewer.debugMapping() : Raw mapping debug
+
+🔧 Mapping Control:
+- patientCheckup.dental3DViewer.switchMappingMethod('manual') : Use manual mapping
+- patientCheckup.dental3DViewer.switchMappingMethod('auto') : Use auto mapping
+- patientCheckup.dental3DViewer.getMappingConfig() : Get current mapping info
+
+🎨 Visual Testing:
+- patientCheckup.testToothMappings() : Apply quadrant colors for 5 seconds
+- patientCheckup.dental3DViewer.resetAllTeethColor() : Reset all colors
+
+📊 Information:
+- patientCheckup.dental3DViewer.getCurrentMappingInfo() : Detailed mapping info
+- patientCheckup.dental3DViewer.getToothDetails(N) : Get tooth N details
+
+📥 Manual Mapping Integration:
+- loadManualMappingFromJSON('{"manualMapping":{...}}') : Load manual mapping
+- applyManualMapping(mappingData) : Apply mapping data object
+
+🔗 Access Manual Mapping Tool:
+- Visit: http://localhost:8083/manual-tooth-mapping.html
+
+✅ MANUAL MAPPING ACTIVE:
+Your manual tooth mapping has been integrated and is now the default!
+Use 'manual' mapping method for best results.
+
+Example Usage:
+- debugToothMapping()
+- testToothMappings()
+- patientCheckup.dental3DViewer.switchMappingMethod('manual')
+=====================================
+    `);
 }); 

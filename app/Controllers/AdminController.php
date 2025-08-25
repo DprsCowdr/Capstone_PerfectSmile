@@ -987,11 +987,12 @@ class AdminController extends BaseAdminController
         if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
-        // Attempt to reuse existing service method if available
-        $appointments = method_exists($this->appointmentService, 'getPatientAppointmentsData')
-            ? ($this->appointmentService->getPatientAppointmentsData($id) ?? [])
-            : ($this->appointmentService->getPatientAppointments($id)['appointments'] ?? []);
-        return $this->response->setJSON(['success' => true, 'appointments' => $appointments]);
+        
+        // Use the updated appointment service that returns categorized format
+        $result = $this->appointmentService->getPatientAppointments($id);
+        
+        // Return the full result (which now includes present_appointments, past_appointments, etc.)
+        return $this->response->setJSON($result);
     }
 
     public function getPatientTreatments($id)

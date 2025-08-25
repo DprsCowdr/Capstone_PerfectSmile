@@ -260,19 +260,8 @@
     
     <!-- Patient Header Section -->
     <div class="bg-white rounded-lg shadow-sm p-4 mb-4 relative">
-        <div class="flex flex-col items-center text-center gap-4">
+        <div class="flex items-center gap-4">
             <div class="flex flex-col items-center gap-2">
-                <div class="flex gap-2">
-                    <button id="showNewActionPanelBtn" class="bg-indigo-50 rounded-full w-8 h-8 flex items-center justify-center text-indigo-400 hover:bg-indigo-100 transition" title="Medical History">
-                    <i class="fas fa-plus text-sm"></i>
-                </button>
-                    <button id="showPatientRecordsBtn" class="bg-green-50 rounded-full w-8 h-8 flex items-center justify-center text-green-400 hover:bg-green-100 transition" title="View Records">
-                        <i class="fas fa-folder-open text-sm"></i>
-                    </button>
-                    <button id="showDentalChartBtn" class="bg-blue-50 rounded-full w-8 h-8 flex items-center justify-center text-blue-400 hover:bg-blue-100 transition" title="View Latest Dental Chart">
-                        <i class="fas fa-tooth text-sm"></i>
-                    </button>
-                </div>
                 <div class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl text-indigo-300">
                     <i class="fas fa-user"></i>
                 </div>
@@ -280,7 +269,7 @@
                     <i class="fas fa-file-invoice-dollar text-sm"></i>
                 </button>
             </div>
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 text-center">
                 <div class="flex items-center justify-center gap-2 mb-1">
                     <span class="font-semibold text-lg text-black truncate" id="view-patient-name"></span>
                     <i class="fas fa-pen showUpdatePatientPanelBtn text-indigo-300 cursor-pointer hover:text-indigo-500 transition" data-patient-id=""></i>
@@ -296,6 +285,18 @@
                         <span>Spent: <b>$0</b></span>
                     </div>
                 </div>
+            </div>
+            <!-- Action Buttons positioned on the right side -->
+            <div class="flex flex-col gap-2">
+                <button id="showNewActionPanelBtn" class="bg-indigo-50 rounded-full w-10 h-10 flex items-center justify-center text-indigo-400 hover:bg-indigo-100 transition" title="Medical History">
+                    <i class="fas fa-plus text-sm"></i>
+                </button>
+                <button id="showPatientRecordsBtn" class="bg-green-50 rounded-full w-10 h-10 flex items-center justify-center text-green-400 hover:bg-green-100 transition" title="View Records">
+                    <i class="fas fa-folder-open text-sm"></i>
+                </button>
+                <button id="showDentalChartBtn" class="bg-blue-50 rounded-full w-10 h-10 flex items-center justify-center text-blue-400 hover:bg-blue-100 transition" title="View Latest Dental Chart">
+                    <i class="fas fa-tooth text-sm"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -668,6 +669,9 @@ body.panel-open {
 .treatment-popup-close { color: #6b7280; }
 .treatment-popup-content { padding: 0.75rem; font-size: 0.85rem; color: #111827; }
 </style>
+
+<!-- Panel Overlay -->
+<div id="panelOverlay" class="panel-overlay"></div>
 
 <!-- Dental Chart Slide-in Panel (view latest) -->
 <div id="dentalChartPanel" class="slide-in-panel p-4 lg:p-6 flex flex-col gap-4">

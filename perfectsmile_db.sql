@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:8889
--- Generation Time: Aug 09, 2025 at 11:38 AM
+-- Generation Time: Aug 23, 2025 at 08:50 AM
 -- Server version: 5.7.39
 -- PHP Version: 8.2.0
 
@@ -39,30 +39,18 @@ CREATE TABLE `appointments` (
   `decline_reason` text,
   `remarks` text,
   `created_at` datetime DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL,
-  `checked_in_at` datetime DEFAULT NULL COMMENT 'When patient checked in',
-  `checked_in_by` int(11) DEFAULT NULL COMMENT 'Staff who checked in the patient',
-  `self_checkin` tinyint(1) DEFAULT '0' COMMENT 'Whether patient checked in themselves',
-  `started_at` datetime DEFAULT NULL COMMENT 'When treatment started',
-  `called_by` int(11) DEFAULT NULL COMMENT 'Dentist who called the patient',
-  `treatment_status` varchar(50) DEFAULT NULL COMMENT 'Current treatment status',
-  `treatment_notes` text COMMENT 'Treatment progress notes',
-  `payment_status` enum('pending','paid','partial','waived') DEFAULT 'pending' COMMENT 'Payment status',
-  `payment_method` varchar(50) DEFAULT NULL COMMENT 'Payment method used',
-  `payment_amount` decimal(10,2) DEFAULT NULL COMMENT 'Amount paid',
-  `payment_date` datetime DEFAULT NULL COMMENT 'When payment was made',
-  `payment_received_by` int(11) DEFAULT NULL COMMENT 'Staff who received payment',
-  `payment_notes` text COMMENT 'Payment notes'
+  `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`id`, `branch_id`, `dentist_id`, `user_id`, `appointment_datetime`, `status`, `appointment_type`, `approval_status`, `decline_reason`, `remarks`, `created_at`, `updated_at`, `checked_in_at`, `checked_in_by`, `self_checkin`, `started_at`, `called_by`, `treatment_status`, `treatment_notes`, `payment_status`, `payment_method`, `payment_amount`, `payment_date`, `payment_received_by`, `payment_notes`) VALUES
-(45, 1, 16, 15, '2025-08-09 08:19:00', 'completed', 'scheduled', 'approved', NULL, 'nnnnnnnnnnnnnnnnn', '2025-08-09 03:14:39', '2025-08-09 03:19:20', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(46, 1, 16, 15, '2025-08-09 13:30:00', 'pending_approval', 'scheduled', 'pending', NULL, 'jjjjjjjjjj', '2025-08-09 05:29:30', '2025-08-09 05:29:30', NULL, NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL),
-(47, 1, 16, 15, '2025-08-09 09:00:00', 'checked_in', 'scheduled', 'approved', NULL, 'mmmmmmmmmmmm', '2025-08-09 05:30:22', '2025-08-09 05:30:38', '2025-08-09 05:30:38', 1, 0, NULL, NULL, NULL, NULL, 'pending', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `appointments` (`id`, `branch_id`, `dentist_id`, `user_id`, `appointment_datetime`, `status`, `appointment_type`, `approval_status`, `decline_reason`, `remarks`, `created_at`, `updated_at`) VALUES
+(87, 2, 18, 15, '2025-08-23 08:30:00', 'completed', 'scheduled', 'approved', NULL, 'ooooooooooo', '2025-08-22 19:22:46', '2025-08-23 00:51:02'),
+(88, 1, 16, 5, '2025-08-23 08:40:00', 'ongoing', 'scheduled', 'approved', NULL, 'kkkk', '2025-08-22 19:40:41', '2025-08-23 00:51:08'),
+(89, 1, 16, 22, '2025-08-23 09:00:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-08-22 19:52:42', '2025-08-22 19:52:42'),
+(92, 2, 18, 15, '2025-08-23 09:30:00', 'confirmed', 'scheduled', 'approved', NULL, '2\r\n18\r\n15\r\n2025-08-23 09:00:00\r\npending\r\nscheduled\r\npending\r\nNULL\r\nbook po ako\r\n2025-08-23 00:26:53\r\n2025-08-23 00:26:53\r\n', '2025-08-23 00:30:17', '2025-08-23 00:30:37');
 
 -- --------------------------------------------------------
 
@@ -130,7 +118,12 @@ CREATE TABLE `branch_user` (
 
 INSERT INTO `branch_user` (`id`, `user_id`, `branch_id`, `position`) VALUES
 (1, 10, 1, 'Administrator'),
-(4, 16, 1, 'nabua@perfectsmile.com');
+(4, 16, 1, 'nabua@perfectsmile.com'),
+(5, 18, 1, 'Dentist'),
+(6, 20, 1, 'nnnnnn'),
+(7, 21, 1, 'jogn@gmail.com'),
+(8, 23, 1, 'receptionist'),
+(9, 24, 2, 'receptionist');
 
 -- --------------------------------------------------------
 
@@ -140,7 +133,7 @@ INSERT INTO `branch_user` (`id`, `user_id`, `branch_id`, `position`) VALUES
 
 CREATE TABLE `dental_chart` (
   `id` int(11) UNSIGNED NOT NULL,
-  `dental_record_id` int(11) UNSIGNED NOT NULL,
+  `dental_record_id` int(11) NOT NULL,
   `tooth_number` int(2) NOT NULL COMMENT 'Tooth number (1-32 for permanent teeth, 51-85 for primary teeth)',
   `tooth_type` enum('permanent','primary') NOT NULL DEFAULT 'permanent',
   `condition` varchar(255) DEFAULT NULL COMMENT 'Dental condition (cavity, filling, crown, etc.)',
@@ -158,80 +151,19 @@ CREATE TABLE `dental_chart` (
 --
 
 INSERT INTO `dental_chart` (`id`, `dental_record_id`, `tooth_number`, `tooth_type`, `condition`, `status`, `notes`, `recommended_service_id`, `priority`, `estimated_cost`, `created_at`, `updated_at`) VALUES
-(1, 3, 1, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-21 10:30:22', '2025-07-21 10:30:22'),
-(2, 4, 1, 'permanent', 'healthy', '', 'wala naman', NULL, 'medium', NULL, '2025-07-21 11:09:28', '2025-07-21 11:09:28'),
-(3, 4, 2, 'permanent', 'healthy', '', 'wala', NULL, 'low', NULL, '2025-07-21 11:09:28', '2025-07-21 11:09:28'),
-(4, 4, 3, 'permanent', 'extraction_needed', '', 'non', NULL, 'low', NULL, '2025-07-21 11:09:28', '2025-07-21 11:09:28'),
-(5, 5, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(6, 5, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(7, 5, 3, 'permanent', 'healthy', '', '', NULL, 'medium', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(8, 5, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(9, 5, 18, 'permanent', 'cavity', '', '', NULL, 'medium', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(10, 5, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-21 11:37:10', '2025-07-21 11:37:10'),
-(11, 6, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
-(12, 6, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
-(13, 6, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
-(14, 6, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
-(15, 6, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
-(16, 6, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:32', '2025-07-22 07:15:32'),
-(17, 7, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
-(18, 7, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
-(19, 7, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
-(20, 7, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
-(21, 7, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
-(22, 7, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:15:40', '2025-07-22 07:15:40'),
-(23, 8, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(24, 8, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(25, 8, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(26, 8, 16, 'permanent', 'root_canal', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(27, 8, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(28, 8, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(29, 8, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(30, 8, 32, 'permanent', 'root_canal', '', '', NULL, 'low', NULL, '2025-07-22 07:16:09', '2025-07-22 07:16:09'),
-(31, 9, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
-(32, 9, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
-(33, 9, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
-(34, 9, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
-(35, 9, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
-(36, 9, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-22 07:25:30', '2025-07-22 07:25:30'),
-(37, 10, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(38, 10, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(39, 10, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(40, 10, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(41, 10, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(42, 10, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(43, 10, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(44, 10, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-23 05:15:10', '2025-07-23 05:15:10'),
-(45, 11, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(46, 11, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(47, 11, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(48, 11, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(49, 11, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(50, 11, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(51, 11, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(52, 11, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 03:15:17', '2025-07-27 03:15:17'),
-(53, 12, 1, 'permanent', 'missing', 'none', 'idk', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(54, 12, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(55, 12, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(56, 12, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(57, 12, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(58, 12, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(59, 12, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(60, 12, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:20:14', '2025-07-27 14:20:14'),
-(61, 13, 1, 'permanent', 'crown', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(62, 13, 2, 'permanent', 'healthy', 'none', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(63, 13, 3, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(64, 13, 5, 'permanent', 'missing', 'none', 'wala', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(65, 13, 16, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(66, 13, 17, 'permanent', 'filled', 'none', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(67, 13, 18, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(68, 13, 20, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(69, 13, 32, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:21:55', '2025-07-27 14:21:55'),
-(70, 14, 1, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:27:05', '2025-07-27 14:27:05'),
-(71, 14, 2, 'permanent', 'missing', '', 'wala', NULL, 'low', NULL, '2025-07-27 14:27:05', '2025-07-27 14:27:05'),
-(72, 15, 1, 'permanent', 'crown', 'none', '', NULL, 'low', NULL, '2025-07-27 14:54:43', '2025-07-27 14:54:43'),
-(73, 15, 2, 'permanent', 'filled', '', 'wala', NULL, 'low', NULL, '2025-07-27 14:54:43', '2025-07-27 14:54:43'),
-(74, 15, 3, 'permanent', 'cavity', 'none', '', NULL, 'low', NULL, '2025-07-27 14:54:43', '2025-07-27 14:54:43');
+(119, 32, 6, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-17 06:39:42', '2025-08-17 06:39:42'),
+(120, 32, 7, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-17 06:39:42', '2025-08-17 06:39:42'),
+(121, 33, 1, 'permanent', 'extraction_needed', '', '', NULL, 'high', NULL, '2025-08-18 06:53:57', '2025-08-18 06:53:57'),
+(122, 33, 15, 'permanent', 'missing', '', '', NULL, 'low', NULL, '2025-08-18 06:53:57', '2025-08-18 06:53:57'),
+(123, 34, 6, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-22 16:25:06', '2025-08-22 16:25:06'),
+(124, 34, 7, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-22 16:25:06', '2025-08-22 16:25:06'),
+(125, 34, 8, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-22 16:25:06', '2025-08-22 16:25:06'),
+(126, 35, 6, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-23 09:09:22', '2025-08-23 09:09:22'),
+(127, 35, 7, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-23 09:09:22', '2025-08-23 09:09:22'),
+(128, 35, 8, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-23 09:09:22', '2025-08-23 09:09:22'),
+(129, 35, 9, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-08-23 09:09:22', '2025-08-23 09:09:22'),
+(130, 36, 1, 'permanent', 'healthy', '', '', NULL, 'low', NULL, '2025-08-23 00:51:02', '2025-08-23 00:51:02'),
+(131, 36, 16, 'permanent', 'cavity', '', '', NULL, 'low', NULL, '2025-08-23 00:51:02', '2025-08-23 00:51:02');
 
 -- --------------------------------------------------------
 
@@ -249,6 +181,7 @@ CREATE TABLE `dental_record` (
   `notes` text,
   `xray_image_url` varchar(255) DEFAULT NULL,
   `next_appointment_date` date DEFAULT NULL,
+  `next_appointment_id` int(11) DEFAULT NULL,
   `dentist_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -256,23 +189,27 @@ CREATE TABLE `dental_record` (
 -- Dumping data for table `dental_record`
 --
 
-INSERT INTO `dental_record` (`id`, `user_id`, `appointment_id`, `record_date`, `diagnosis`, `treatment`, `notes`, `xray_image_url`, `next_appointment_date`, `dentist_id`) VALUES
-(1, 5, NULL, '2025-07-20', 'dddddddddddmdfoidvidfnoi', 'ddddddddwefmdfewflmkwefklmwfeklm', 'lllllm;mk;m;mkm;mk;', NULL, NULL, 1),
-(2, 5, NULL, '2025-07-21', '2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee', '2nd2nd timeee2nd timeee2nd timeee2nd timeee', 'time2nd timeee2nd timeee2nd timeee', NULL, NULL, 1),
-(3, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, 1),
-(4, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, 1),
-(5, 5, NULL, '2025-07-21', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', NULL, NULL, 1),
-(6, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, '2025-07-22', 1),
-(7, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, '2025-07-22', 1),
-(8, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, NULL, 1),
-(9, 5, NULL, '2025-07-22', 'kookkokokookok', 'kokookookokok', 'kokookko', NULL, NULL, 1),
-(10, 5, NULL, '2025-07-23', 'https://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.htmlhttps://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.html', 'https://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.html', 'https://web.archive.org/web/20200220222607/http://www.meshmixer.com/download.html', NULL, NULL, 1),
-(11, 5, NULL, '2025-07-27', 'kjljkllkjkl', 'kl;kl;kll;k', ';kl;kkl;kl;', NULL, NULL, 1),
-(12, 5, NULL, '2025-07-27', 'testing 3d 101', '3d testing 101', 'wld naman 1411242412', NULL, NULL, 1),
-(13, 5, NULL, '2025-07-27', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', NULL, NULL, 1),
-(14, 3, NULL, '2025-07-27', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', NULL, NULL, 1),
-(15, 3, NULL, '2025-07-27', 'mlmm;;mlmlm;', '\r\nCondition: [dropdown]\r\nTreatment: [dropdown]  \r\nNotes: [textarea]', '', NULL, NULL, 1),
-(16, 15, NULL, '2025-08-09', 'missing tooth needs pustiso', 'missing tooth needs pustiso', 'wala namn', NULL, NULL, 1);
+INSERT INTO `dental_record` (`id`, `user_id`, `appointment_id`, `record_date`, `diagnosis`, `treatment`, `notes`, `xray_image_url`, `next_appointment_date`, `next_appointment_id`, `dentist_id`) VALUES
+(1, 5, NULL, '2025-07-20', 'dddddddddddmdfoidvidfnoi', 'ddddddddwefmdfewflmkwefklmwfeklm', 'lllllm;mk;m;mkm;mk;', NULL, NULL, NULL, 1),
+(2, 5, NULL, '2025-07-21', '2nd timeee2nd timeee2nd timeee2nd timeee2nd timeee', '2nd2nd timeee2nd timeee2nd timeee2nd timeee', 'time2nd timeee2nd timeee2nd timeee', NULL, NULL, NULL, 1),
+(3, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, NULL, 1),
+(4, 3, NULL, '2025-07-21', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', 'ffwdeefffeknfeefn', NULL, NULL, NULL, 1),
+(5, 5, NULL, '2025-07-21', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', 'SELECT * FROM dental_chart WHERE dental_record_id IN (SELECT id FROM dental_record WHERE user_id = 5);', NULL, NULL, NULL, 1),
+(6, 5, NULL, '2025-07-22', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', 'balik ka mamaya 330pm', NULL, '2025-07-22', NULL, 1),
+(18, 22, NULL, '2025-08-16', 'ioiljijijoij', 'lm;l;l;kkl;', '', NULL, NULL, NULL, 1),
+(24, 3, NULL, '2025-08-16', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', 'TestingTesting', NULL, '2025-08-17', NULL, 1),
+(25, 5, NULL, '2025-08-17', 'KupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupal', 'KupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupal', 'KupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupal', NULL, NULL, NULL, 1),
+(26, 22, NULL, '2025-08-17', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', 'KupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupalKupal', NULL, NULL, NULL, 1),
+(27, 22, NULL, '2025-08-17', 'Tooth sensitivity reported by patient.Professional cleaning completed. Use sensitive toothpaste as recommended.', 'Professional cleaning completed. Use sensitive toothpaste as recommended.', 'Professional cleaning completed. Use sensitive toothpaste as recommended.', NULL, NULL, NULL, 1),
+(28, 3, NULL, '2025-08-17', 'testing lang. too testing lang. tootesting lang. tootesting lang. tootesting lang. tootesting lang. too', 'testing lang. too testing lang. tootesting lang. tootesting lang. tootesting lang. tootesting lang. too', 'testing lang. too testing lang. tootesting lang. tootesting lang. tootesting lang. tootesting lang. too', NULL, NULL, NULL, 1),
+(29, 3, NULL, '2025-08-17', '1111111Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1),
+(30, 3, NULL, '2025-08-17', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', 'patient_medical_history', NULL, NULL, NULL, 1),
+(31, 3, NULL, '2025-08-17', 'wewefewfewfefwRoutine dental cleaning completed. No cavities or issues detected.ewwefwefweew', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1),
+(32, 3, NULL, '2025-08-17', '123123123Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '123123123Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '123123123Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', NULL, NULL, NULL, 1),
+(33, 17, NULL, '2025-08-18', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1),
+(34, 3, NULL, '2025-08-22', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1),
+(35, 3, NULL, '2025-08-23', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1),
+(36, 15, 87, '2025-08-23', 'Routine dental cleaning completed. No cavities or issues detected.', 'Continue regular oral hygiene routine. Return in 6 months for routine cleaning.', '', NULL, NULL, NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -314,7 +251,38 @@ INSERT INTO `migrations` (`id`, `version`, `class`, `group`, `namespace`, `time`
 (3, '2025-07-11-195213', 'App\\Database\\Migrations\\RemoveSeparateNameFields', 'default', 'App', 1752263588, 3),
 (4, '2025-07-18-022629', 'App\\Database\\Migrations\\AddDentistApprovalFieldsToAppointments', 'default', 'App', 1752805772, 4),
 (5, '2025-07-18-201213', 'App\\Database\\Migrations\\MergeAppointmentDateTimeMigration', 'default', 'App', 1752869622, 5),
-(6, '2025-07-20-065031', 'App\\Database\\Migrations\\AddWorkflowColumnsToAppointments', 'default', 'App', 1752994261, 6);
+(6, '2025-07-20-065031', 'App\\Database\\Migrations\\AddWorkflowColumnsToAppointments', 'default', 'App', 1752994261, 6),
+(7, '2025-07-20-063644', 'App\\Database\\Migrations\\CreateDentalChartTable', 'default', 'App', 1755398850, 7),
+(8, '2025-08-12-000001', 'App\\Database\\Migrations\\AddMedicalHistoryFields', 'default', 'App', 1755398850, 7),
+(9, '2025-08-16-153200', 'App\\Database\\Migrations\\AddNextAppointmentIdToDentalRecord', 'default', 'App', 1755398928, 8),
+(10, '2025-08-17-000000', 'App\\Database\\Migrations\\SlimUserMedicalColumns', 'default', 'App', 1755398929, 8),
+(11, '2025-08-17-010100', 'App\\Database\\Migrations\\CreatePatientMedicalHistory', 'default', 'App', 1755399602, 9),
+(12, '2025-08-17-031500', 'App\\Database\\Migrations\\PatchPatientMedicalHistoryColumns', 'default', 'App', 1755399988, 10),
+(13, '2025-08-17-003700', 'App\\Database\\Migrations\\ClearUserMedicalConditions', 'default', 'App', 1755391082, 11),
+(14, '2025-08-17-070000', 'App\\Database\\Migrations\\CreatePatientCheckinsTable', 'default', 'App', 1755413553, 12),
+(15, '2025-08-17-070100', 'App\\Database\\Migrations\\CreateTreatmentSessionsTable', 'default', 'App', 1755413553, 12),
+(16, '2025-08-17-070200', 'App\\Database\\Migrations\\CreatePaymentsTable', 'default', 'App', 1755414334, 13),
+(17, '2025-08-17-070300', 'App\\Database\\Migrations\\MigrateAppointmentDataToNewTables', 'default', 'App', 1755414334, 13),
+(18, '2025-08-17-070400', 'App\\Database\\Migrations\\CleanupAppointmentsTable', 'default', 'App', 1755414335, 13),
+(19, '2025-01-15-000000', 'App\\Database\\Migrations\\EnhanceProceduresTable', 'default', 'App', 1755719537, 14);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patient_checkins`
+--
+
+CREATE TABLE `patient_checkins` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `checked_in_at` datetime NOT NULL,
+  `checked_in_by` int(11) DEFAULT NULL COMMENT 'Staff who checked in the patient (null if self check-in)',
+  `self_checkin` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Whether patient checked in themselves',
+  `checkin_method` enum('staff','self','kiosk') NOT NULL DEFAULT 'staff',
+  `notes` text COMMENT 'Check-in notes or special instructions',
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -328,6 +296,80 @@ CREATE TABLE `patient_guardian` (
   `guardian_name` varchar(255) DEFAULT NULL,
   `relationship` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patient_medical_history`
+--
+
+CREATE TABLE `patient_medical_history` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `good_health` enum('yes','no') DEFAULT NULL,
+  `under_treatment` enum('yes','no') DEFAULT NULL,
+  `treatment_condition` text,
+  `serious_illness` enum('yes','no') DEFAULT NULL,
+  `illness_details` text,
+  `hospitalized` enum('yes','no') DEFAULT NULL,
+  `hospitalization_where` varchar(255) DEFAULT NULL,
+  `hospitalization_when` varchar(255) DEFAULT NULL,
+  `hospitalization_why` varchar(255) DEFAULT NULL,
+  `tobacco_use` enum('yes','no') DEFAULT NULL,
+  `blood_pressure` varchar(20) DEFAULT NULL,
+  `allergies` text,
+  `pregnant` enum('yes','no','na') DEFAULT NULL,
+  `nursing` enum('yes','no','na') DEFAULT NULL,
+  `birth_control` enum('yes','no','na') DEFAULT NULL,
+  `medical_conditions` text,
+  `other_conditions` text,
+  `previous_dentist` varchar(255) DEFAULT NULL,
+  `last_dental_visit` date DEFAULT NULL,
+  `physician_name` varchar(255) DEFAULT NULL,
+  `physician_specialty` varchar(255) DEFAULT NULL,
+  `physician_phone` varchar(20) DEFAULT NULL,
+  `physician_address` text,
+  `current_treatment` text,
+  `hospitalization_details` text,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `patient_medical_history`
+--
+
+INSERT INTO `patient_medical_history` (`id`, `user_id`, `good_health`, `under_treatment`, `treatment_condition`, `serious_illness`, `illness_details`, `hospitalized`, `hospitalization_where`, `hospitalization_when`, `hospitalization_why`, `tobacco_use`, `blood_pressure`, `allergies`, `pregnant`, `nursing`, `birth_control`, `medical_conditions`, `other_conditions`, `previous_dentist`, `last_dental_visit`, `physician_name`, `physician_specialty`, `physician_phone`, `physician_address`, `current_treatment`, `hospitalization_details`, `created_at`, `updated_at`) VALUES
+(2, 3, 'yes', 'no', NULL, 'no', NULL, 'no', NULL, NULL, NULL, 'no', NULL, NULL, 'yes', NULL, NULL, '\"[\\\"aids_hiv\\\",\\\"fainting\\\"]\"', NULL, 'patient_medical_history', NULL, 'patient_medical_history', 'patient_medical_history', 'patient_medical_hist', 'patient_medical_history', NULL, NULL, '2025-08-17 00:19:06', '2025-08-17 00:19:06'),
+(3, 17, 'yes', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-08-18 06:53:57', '2025-08-18 06:53:57'),
+(4, 15, 'no', 'no', NULL, 'no', NULL, 'no', NULL, NULL, NULL, 'no', NULL, NULL, 'no', 'yes', 'yes', '[\"anemia\",\"angina\",\"asthma\",\"emphysema\",\"bleeding_problem\",\"blood_disease\",\"head_injuries\",\"arthritis\"]', 'BRandonBRandonBRandonBRandonBRandon', 'nabua', '2025-08-12', 'BRandon', 'BRandon', '908098089809809', 'BRandon', NULL, NULL, '2025-08-20 19:49:51', '2025-08-22 15:09:06');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payments`
+--
+
+CREATE TABLE `payments` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `patient_id` int(11) NOT NULL,
+  `payment_status` enum('pending','paid','partial','waived','refunded') NOT NULL DEFAULT 'pending' COMMENT 'Payment status',
+  `payment_method` enum('cash','card','bank_transfer','gcash','paymaya','insurance') DEFAULT NULL COMMENT 'Payment method used',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Total amount due',
+  `paid_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Amount actually paid',
+  `balance_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Remaining balance',
+  `payment_date` datetime DEFAULT NULL COMMENT 'When payment was made',
+  `payment_received_by` int(11) DEFAULT NULL COMMENT 'Staff who received payment',
+  `payment_notes` text COMMENT 'Payment notes',
+  `invoice_number` varchar(50) DEFAULT NULL,
+  `receipt_number` varchar(50) DEFAULT NULL,
+  `transaction_reference` varchar(100) DEFAULT NULL COMMENT 'External payment reference (e.g., bank transaction ID)',
+  `discount_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `discount_reason` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -371,8 +413,16 @@ CREATE TABLE `procedures` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `procedure_name` varchar(255) DEFAULT NULL,
+  `title` varchar(255) DEFAULT NULL,
   `description` text,
-  `procedure_date` date DEFAULT NULL
+  `category` varchar(100) DEFAULT 'none',
+  `fee` decimal(10,2) DEFAULT NULL,
+  `treatment_area` varchar(100) DEFAULT 'Surface',
+  `status` enum('scheduled','in_progress','completed','cancelled') DEFAULT 'scheduled',
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `procedure_date` date DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -415,6 +465,28 @@ INSERT INTO `services` (`id`, `name`, `description`, `price`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `treatment_sessions`
+--
+
+CREATE TABLE `treatment_sessions` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `started_at` datetime NOT NULL COMMENT 'When treatment started',
+  `ended_at` datetime DEFAULT NULL COMMENT 'When treatment ended',
+  `called_by` int(11) DEFAULT NULL COMMENT 'Dentist who called the patient',
+  `dentist_id` int(11) DEFAULT NULL COMMENT 'Primary dentist for this session',
+  `treatment_status` enum('in_progress','completed','paused','cancelled') NOT NULL DEFAULT 'in_progress' COMMENT 'Current treatment status',
+  `treatment_notes` text COMMENT 'Treatment progress notes',
+  `priority` enum('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  `room_number` varchar(20) DEFAULT NULL,
+  `duration_minutes` int(11) DEFAULT NULL COMMENT 'Actual treatment duration in minutes',
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `user`
 --
 
@@ -443,11 +515,18 @@ CREATE TABLE `user` (
 INSERT INTO `user` (`id`, `user_type`, `name`, `address`, `email`, `gender`, `password`, `phone`, `created_at`, `updated_at`, `occupation`, `nationality`, `date_of_birth`, `age`, `status`) VALUES
 (1, 'admin', 'Admin User', '123 Admin Street', 'admin@perfectsmile.com', 'male', '$2y$12$Tau0ciyH4Ny3A/P0I.qEbO5i63Ja4AtTPBd4OblwwAnoQLCYokErS', '1234567890', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
 (3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$12$IT16i/hQXaqPB4bgvBy23.isY3vix20H5snsASckANyzP3HcwpJ0e', '1234567892', '2025-06-28 16:02:14', '2025-08-08 11:10:37', 'hh', 'oo', '2025-07-08', 9, 'active'),
-(5, 'patient', 'Brandon Brandon Brandon', 'Brandon@gmail.com', 'Brandon@gmail.com', 'Male', '$2y$12$3225/eB6Cz2MGgN3eHsp6.26RK/q0nmDVEvBkvGubuBiyWpCNG3Sm', '89078007077', '2025-07-08 13:39:16', '2025-07-10 10:45:58', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'active'),
+(5, 'patient', 'Brandon Brandon Brandon', 'Brandon@gmail.com', 'Brandon@gmail.com', 'Male', '$2y$12$WBK7ZzUAxGcqO2DFmKaqaOxwAGqIrMa3EXdY3kVvZtpAOB2Te8PbS', '89078007077', '2025-07-08 13:39:16', '2025-08-18 06:57:50', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'inactive'),
 (10, 'admin', 'Brandon Dentist', NULL, 'don@gmail.com', 'male', '$2y$12$9BzUNUBkE5idKzb1qdz78ePPo8HsVRgCMm9ZJnjaZDIvRIqcnYW8S', '09150540702', '2025-08-07 05:30:50', '2025-08-07 07:25:15', 'na', 'na', NULL, NULL, 'active'),
-(15, 'patient', 'Eden Caritos', 'PIli Camsur', 'eden@gmail.com', 'Female', '$2y$12$iDQqqaHABtNBdRA3ZrC/EeqDZ/L5cPE4HzaKj84mufo/mLGS7qNgi', '099150540702', '2025-08-08 11:06:41', '2025-08-08 11:39:27', 'Nurse', 'Filipino', '2001-09-11', 23, 'active'),
+(15, 'patient', 'Eden Caritos', 'PIli Camsur', 'eden@gmail.com', 'Female', '$2y$12$UCxvaWFzAwxJSjK2LBqTGuRXUJaDYbc7rtU9culVbP2SqV/pV/DeS', '099150540702', '2025-08-08 11:06:41', '2025-08-22 20:00:49', 'Nurse', 'Filipino', '2001-09-11', 23, 'active'),
 (16, 'dentist', 'Nabua Dentist', NULL, 'nabua@perfectsmile.com', 'Male', '$2y$12$saFau/p7z3Tu6x/vMg6Q4OkN8o34aUQTMj3Do.zwIVU0l/ii1QVw2', '09150540702', '2025-08-09 03:14:00', '2025-08-09 03:14:00', 'na', 'na', '2000-09-23', 24, 'active'),
-(17, 'patient', 'Johnbert', 'jjjjjj', 'jb2g@gmail.com', 'Male', NULL, '412812482148', '2025-08-09 05:43:01', '2025-08-09 05:43:01', 'jjj', 'jjj', '2003-08-07', 22, 'active');
+(17, 'patient', 'Johnbert', 'jjjjjj', 'jb2g@gmail.com', 'Female', NULL, '412812482148', '2025-08-09 05:43:01', '2025-08-22 15:32:02', 'jjj', 'jjj', '2003-08-07', 22, 'active'),
+(18, 'dentist', 'Iriga Dentist', NULL, 'iriga@gmail.com', '', '$2y$12$1X4TeOBfzyXYR8rjHrLU4.ifGgz3mJS.KtW4Hr9h5mI3s.wODqGfy', '3903983098809', '2025-08-09 11:43:06', '2025-08-09 11:43:06', 'nnn', 'nnn', '2000-08-23', 24, 'active'),
+(19, 'patient', 'johnberto', 'na', 'jb@gmail.com', 'Male', '$2y$12$oIZqfK2HqB4WK1drwxyqjunhzz7MUnjtTKsugV/QHkiAhu90FA.iC', '789789789978', '2025-08-11 03:19:20', '2025-08-13 03:28:26', 'na', 'na', '2003-08-30', 21, 'active'),
+(20, 'staff', 'Brandon Dentist', NULL, 'adminn@perfectsmile.com', 'Male', '$2y$12$nw2ocoPA/fAScG/vvSSO..H0AmbVOV.K6WY2YULYbX9hMFuUCekkW', '09150540702', '2025-08-13 04:12:57', '2025-08-13 04:12:57', 'nnnn', 'nnnnn', '2007-05-11', 18, 'active'),
+(21, 'staff', 'werwewer', NULL, 'jogn@gmail.com', 'Male', '$2y$12$NttcnqQe/BNTOGOjx6o1auet5SBybDsHkE92EGcvj89LcUx963Cra', '2412124142124', '2025-08-13 04:29:26', '2025-08-13 04:29:26', 'jogn@gmail.com', 'jogn@gmail.com', '2000-07-31', NULL, 'active'),
+(22, 'patient', 'Testing 001 ', 'testing', 'testing@gmail.com', 'Male', NULL, '123456789', '2025-08-16 13:07:00', '2025-08-16 13:07:00', 'testing', 'testing', '2003-08-08', 22, 'active'),
+(23, 'staff', 'Johnbert', NULL, 'jbb@gmail.com', 'Female', '$2y$12$n7lJ7mnvO4GeV/REQQpzMOpSGRc.d0lW324pY13fc5twu2F5mq4iK', '09150540702', '2025-08-20 02:07:02', '2025-08-20 02:07:02', '', '', '2000-02-03', 25, 'active'),
+(24, 'staff', 'diana ', NULL, 'd@gmail.com', 'Female', '$2y$12$WrH1I/NedwIb4JwJ3TE2Ou5hT0DHF1nJjqg5TlKUWzPSJHZWtb09S', '09150540702', '2025-08-22 17:40:48', '2025-08-22 17:40:48', 'd@gmail.com', 'd@gmail.com', '1992-01-08', 33, 'active');
 
 --
 -- Indexes for dumped tables
@@ -506,7 +585,8 @@ ALTER TABLE `dental_record`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `dentist_id` (`dentist_id`),
-  ADD KEY `fk_dental_record_appointment` (`appointment_id`);
+  ADD KEY `fk_dental_record_appointment` (`appointment_id`),
+  ADD KEY `fk_dental_record_next_appointment` (`next_appointment_id`);
 
 --
 -- Indexes for table `invoices`
@@ -522,11 +602,38 @@ ALTER TABLE `migrations`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `patient_checkins`
+--
+ALTER TABLE `patient_checkins`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `appointment_id` (`appointment_id`),
+  ADD KEY `checked_in_by` (`checked_in_by`);
+
+--
 -- Indexes for table `patient_guardian`
 --
 ALTER TABLE `patient_guardian`
   ADD PRIMARY KEY (`id`),
   ADD KEY `patient_id` (`patient_id`);
+
+--
+-- Indexes for table `patient_medical_history`
+--
+ALTER TABLE `patient_medical_history`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_id_unique` (`user_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `payments`
+--
+ALTER TABLE `payments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `appointment_id` (`appointment_id`),
+  ADD KEY `patient_id` (`patient_id`),
+  ADD KEY `payment_received_by` (`payment_received_by`),
+  ADD KEY `payment_status` (`payment_status`),
+  ADD KEY `invoice_number` (`invoice_number`);
 
 --
 -- Indexes for table `prescriptions`
@@ -549,7 +656,10 @@ ALTER TABLE `prescription_items`
 --
 ALTER TABLE `procedures`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_procedure_date` (`procedure_date`);
 
 --
 -- Indexes for table `procedure_service`
@@ -566,6 +676,16 @@ ALTER TABLE `services`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `treatment_sessions`
+--
+ALTER TABLE `treatment_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `appointment_id` (`appointment_id`),
+  ADD KEY `called_by` (`called_by`),
+  ADD KEY `dentist_id` (`dentist_id`),
+  ADD KEY `treatment_status` (`treatment_status`);
+
+--
 -- Indexes for table `user`
 --
 ALTER TABLE `user`
@@ -579,7 +699,7 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
 
 --
 -- AUTO_INCREMENT for table `appointment_service`
@@ -603,19 +723,19 @@ ALTER TABLE `branches`
 -- AUTO_INCREMENT for table `branch_user`
 --
 ALTER TABLE `branch_user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `dental_chart`
 --
 ALTER TABLE `dental_chart`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=132;
 
 --
 -- AUTO_INCREMENT for table `dental_record`
 --
 ALTER TABLE `dental_record`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `invoices`
@@ -627,13 +747,31 @@ ALTER TABLE `invoices`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+
+--
+-- AUTO_INCREMENT for table `patient_checkins`
+--
+ALTER TABLE `patient_checkins`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `patient_guardian`
 --
 ALTER TABLE `patient_guardian`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `patient_medical_history`
+--
+ALTER TABLE `patient_medical_history`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `payments`
+--
+ALTER TABLE `payments`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
@@ -666,10 +804,16 @@ ALTER TABLE `services`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
+-- AUTO_INCREMENT for table `treatment_sessions`
+--
+ALTER TABLE `treatment_sessions`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- Constraints for dumped tables
@@ -704,12 +848,19 @@ ALTER TABLE `branch_user`
   ADD CONSTRAINT `branch_user_ibfk_2` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`);
 
 --
+-- Constraints for table `dental_chart`
+--
+ALTER TABLE `dental_chart`
+  ADD CONSTRAINT `fk_dental_chart_record` FOREIGN KEY (`dental_record_id`) REFERENCES `dental_record` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `dental_record`
 --
 ALTER TABLE `dental_record`
   ADD CONSTRAINT `dental_record_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
   ADD CONSTRAINT `dental_record_ibfk_2` FOREIGN KEY (`dentist_id`) REFERENCES `user` (`id`),
-  ADD CONSTRAINT `fk_dental_record_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_dental_record_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_dental_record_next_appointment` FOREIGN KEY (`next_appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `invoices`
@@ -718,10 +869,31 @@ ALTER TABLE `invoices`
   ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`procedure_id`) REFERENCES `procedures` (`id`);
 
 --
+-- Constraints for table `patient_checkins`
+--
+ALTER TABLE `patient_checkins`
+  ADD CONSTRAINT `patient_checkins_appointment_id_foreign` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `patient_checkins_checked_in_by_foreign` FOREIGN KEY (`checked_in_by`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL;
+
+--
 -- Constraints for table `patient_guardian`
 --
 ALTER TABLE `patient_guardian`
   ADD CONSTRAINT `patient_guardian_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `user` (`id`);
+
+--
+-- Constraints for table `patient_medical_history`
+--
+ALTER TABLE `patient_medical_history`
+  ADD CONSTRAINT `fk_pmh_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `payments`
+--
+ALTER TABLE `payments`
+  ADD CONSTRAINT `payments_appointment_id_foreign` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `payments_patient_id_foreign` FOREIGN KEY (`patient_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `payments_payment_received_by_foreign` FOREIGN KEY (`payment_received_by`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL;
 
 --
 -- Constraints for table `prescriptions`
@@ -749,6 +921,14 @@ ALTER TABLE `procedures`
 ALTER TABLE `procedure_service`
   ADD CONSTRAINT `procedure_service_ibfk_1` FOREIGN KEY (`procedure_id`) REFERENCES `procedures` (`id`),
   ADD CONSTRAINT `procedure_service_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`);
+
+--
+-- Constraints for table `treatment_sessions`
+--
+ALTER TABLE `treatment_sessions`
+  ADD CONSTRAINT `treatment_sessions_appointment_id_foreign` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `treatment_sessions_called_by_foreign` FOREIGN KEY (`called_by`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL,
+  ADD CONSTRAINT `treatment_sessions_dentist_id_foreign` FOREIGN KEY (`dentist_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
