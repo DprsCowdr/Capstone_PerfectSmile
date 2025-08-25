@@ -393,6 +393,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (mobileSidebarToggle) {
         mobileSidebarToggle.addEventListener('click', openSidebar);
     }
+    // Also allow the topbar toggle button to open the mobile sidebar on small screens
+    const topbarSidebarToggle = document.getElementById('sidebarToggleTop');
+    if (topbarSidebarToggle) {
+        topbarSidebarToggle.addEventListener('click', openSidebar);
+    }
     
     if (closeSidebar) {
         closeSidebar.addEventListener('click', closeSidebarFn);

@@ -209,6 +209,10 @@ $routes->group('queue', ['filter' => 'auth'], function($routes) {
 // Staff routes (protected)
 $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'StaffController::dashboard');
+    // Branch-scoped totals for staff dashboard (AJAX)
+    $routes->get('totals', 'StaffController::totals');
+    // Optional richer timeseries endpoint for staff dashboards
+    $routes->get('stats', 'StaffController::stats');
     $routes->get('patients', 'StaffController::patients');
     $routes->get('patients/add', 'StaffController::addPatient');
     $routes->post('patients/store', 'StaffController::storePatient');

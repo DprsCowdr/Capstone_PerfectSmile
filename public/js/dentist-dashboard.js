@@ -98,9 +98,19 @@
                 }
             }
 
-            const labels = data.labels || [];
-            const counts = data.counts || [];
-            const patientCounts = data.patientCounts || [];
+            const labels = Array.isArray(data.labels) ? data.labels.slice() : [];
+            const counts = Array.isArray(data.counts) ? data.counts.slice() : [];
+            let patientCounts = Array.isArray(data.patientCounts) ? data.patientCounts.slice() : [];
+
+            // Ensure patientCounts aligns with labels length. If it doesn't, normalize/pad to avoid Chart.js rendering issues.
+            if (labels.length && patientCounts.length !== labels.length) {
+                console && console.warn && console.warn('dentist-dashboard: patientCounts length mismatch, normalizing to labels length');
+                const normalized = [];
+                for (let i = 0; i < labels.length; i++) {
+                    normalized.push(Number(patientCounts[i]) || 0);
+                }
+                patientCounts = normalized;
+            }
 
             const avg = counts.length ? (counts.reduce((a,b)=>a+b,0)/counts.length).toFixed(1) : 0;
             const avgEl = document.getElementById('avgPerDayTop') || document.getElementById('avgPerDay');
@@ -115,7 +125,14 @@
             }
 
             const currentChart = document.getElementById('chartSelectorTop') ? document.getElementById('chartSelectorTop').value : 'appointments';
-            const primaryData = currentChart === 'patients' ? patientCounts : counts;
+            let primaryData = currentChart === 'patients' ? patientCounts : counts;
+            // Make sure primaryData has same length as labels (pad with zeros if necessary)
+            if (labels.length && primaryData.length !== labels.length) {
+                console && console.warn && console.warn('dentist-dashboard: primaryData length mismatch, padding to labels length');
+                const padded = [];
+                for (let i = 0; i < labels.length; i++) padded.push(Number(primaryData[i]) || 0);
+                primaryData = padded;
+            }
             const primaryLabel = currentChart === 'patients' ? 'Patients' : 'Appointments';
 
             // appointments chart

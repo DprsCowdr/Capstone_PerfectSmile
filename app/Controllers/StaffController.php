@@ -57,6 +57,22 @@ class StaffController extends BaseAdminController
             $pendingAppointments = [];
         }
 
+        // Derive a friendly assigned branch name for the staff user (used in the UI).
+        // Assumption: if the staff user is assigned to multiple branches, show the first branch with a small +N hint.
+        $assignedBranchName = 'All Branches';
+        if (!empty($branchIds)) {
+            $branchModel = new \App\Models\BranchModel();
+            $branches = $branchModel->whereIn('id', $branchIds)->findAll();
+            $names = array_values(array_filter(array_column($branches, 'name')));
+            if (count($names) === 1) {
+                $assignedBranchName = $names[0];
+            } elseif (count($names) > 1) {
+                $assignedBranchName = $names[0] . ' (+' . (count($names) - 1) . ')';
+            }
+        } else {
+            $branches = [];
+        }
+
         return view('staff/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
@@ -65,6 +81,134 @@ class StaffController extends BaseAdminController
             'totalDentists' => $userStats['total_dentists'],
             'totalBranches' => $totalBranches,
             'recentPatients' => $recentPatients
+            ,'assignedBranchName' => $assignedBranchName
+            ,'assignedBranches' => $branches
+        ]);
+    }
+
+    /**
+     * AJAX API: return branch-scoped totals for current staff user
+     */
+    public function totals()
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if (!is_array($user)) {
+            return $user; // auth helper returns JSON response on failure
+        }
+
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        // Get branches assigned to this staff user
+        $branchUserModel = new \App\Models\BranchUserModel();
+        $userBranches = $branchUserModel->getUserBranches($user['id']);
+        $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
+
+        $dashboardService = new \App\Services\DashboardService();
+        $totals = $dashboardService->getBranchTotals($branchIds);
+
+        return $this->response->setJSON(['success' => true, 'totals' => $totals, 'fetched_at' => date('c')]);
+    }
+
+    /**
+     * Optional richer timeseries endpoint for staff dashboards.
+     * Returns labels, counts, patientCounts, statusCounts and nextAppointment similar to Dentist::stats()
+     */
+    public function stats()
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if (!is_array($user)) return $user;
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden']);
+        }
+
+        $scope = $this->request->getGet('scope') ?? 'mine';
+
+        // branches assigned to this staff user
+        $branchUserModel = new \App\Models\BranchUserModel();
+        $userBranches = $branchUserModel->getUserBranches($user['id']);
+        $branchIds = array_map(function($b){ return (int) $b['branch_id']; }, $userBranches ?: []);
+
+        $db = \Config\Database::connect();
+        $labels = [];
+        $counts = [];
+        $patientCounts = [];
+    $treatmentCounts = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-{$i} days"));
+            $labels[] = date('D M j', strtotime($d));
+
+            // appointments per day (branch-scoped)
+            $qb = $db->table('appointments');
+            $qb->where('DATE(appointment_datetime)', $d)
+               ->whereIn('status', ['confirmed','scheduled','ongoing','checked_in']);
+            if (!empty($branchIds)) $qb->whereIn('branch_id', $branchIds);
+            $counts[] = (int) $qb->countAllResults();
+
+            // distinct patients per day
+            $pb = $db->table('appointments');
+            $pb->select('COUNT(DISTINCT user_id) as cnt')
+               ->where('DATE(appointment_datetime)', $d)
+               ->whereIn('status', ['confirmed','scheduled','ongoing','checked_in']);
+            if (!empty($branchIds)) $pb->whereIn('branch_id', $branchIds);
+            $row = $pb->get()->getRowArray();
+            $patientCounts[] = (int) ($row['cnt'] ?? 0);
+
+            // treatments per day (count treatment_sessions where appointment date matches)
+            $tb = $db->table('treatment_sessions ts')
+                     ->select('COUNT(ts.id) as cnt')
+                     ->join('appointments a', 'a.id = ts.appointment_id', 'left')
+                     ->where('DATE(a.appointment_datetime)', $d);
+            if (!empty($branchIds)) $tb->whereIn('a.branch_id', $branchIds);
+            $trow = $tb->get()->getRowArray();
+            $treatmentCounts[] = (int) ($trow['cnt'] ?? 0);
+        }
+
+        // statusCounts for last 7 days
+        $statusList = ['confirmed','scheduled','ongoing','completed','no_show','cancelled'];
+        $statusCounts = [];
+        foreach ($statusList as $s) {
+            $sb = $db->table('appointments');
+            $sb->where('status', $s)
+               ->where('DATE(appointment_datetime) >=', date('Y-m-d', strtotime('-6 days')))
+               ->where('DATE(appointment_datetime) <=', date('Y-m-d'));
+            if (!empty($branchIds)) $sb->whereIn('branch_id', $branchIds);
+            $statusCounts[$s] = (int) $sb->countAllResults();
+        }
+
+        // next upcoming appointment for these branches
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $nextQ = $appointmentModel->select('appointments.*, user.name as patient_name')
+                                 ->join('user', 'user.id = appointments.user_id')
+                                 ->where('DATE(appointment_datetime) >=', date('Y-m-d'))
+                                 ->whereIn('appointments.status', ['confirmed','scheduled'])
+                                 ->orderBy('appointments.appointment_datetime', 'ASC');
+        if (!empty($branchIds)) $nextQ->whereIn('appointments.branch_id', $branchIds);
+        $next = $nextQ->first();
+
+        $nextAppointment = null;
+        if ($next) {
+            $nextAppointment = [ 'id' => $next['id'], 'patient_name' => $next['patient_name'] ?? null, 'datetime' => $next['appointment_datetime'] ?? null ];
+        }
+
+        // total distinct patients in last 7 days for branches
+        $tb = $db->table('appointments');
+        $tb->select('COUNT(DISTINCT appointments.user_id) as total')
+           ->where('DATE(appointment_datetime) >=', date('Y-m-d', strtotime('-6 days')))
+           ->where('DATE(appointment_datetime) <=', date('Y-m-d'));
+        if (!empty($branchIds)) $tb->whereIn('appointments.branch_id', $branchIds);
+        $totalRow = $tb->get()->getRowArray();
+        $patientTotal = (int) ($totalRow['total'] ?? 0);
+
+        return $this->response->setJSON([
+            'labels' => $labels,
+            'counts' => $counts,
+            'treatmentCounts' => $treatmentCounts,
+            'patientCounts' => $patientCounts,
+            'statusCounts' => $statusCounts,
+            'nextAppointment' => $nextAppointment,
+            'patientTotal' => $patientTotal
         ]);
     }
 
