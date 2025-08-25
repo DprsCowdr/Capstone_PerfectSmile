@@ -7,7 +7,7 @@ use App\Controllers\Auth;
 class AuthService
 {
     /**
-     * Check admin authentication
+     * Check admin authentication (web)
      */
     public static function checkAdminAuth()
     {
@@ -16,16 +16,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if ($user['user_type'] !== 'admin') {
             return redirect()->to('/dashboard');
         }
 
         return $user;
     }
-    
+
     /**
-     * Check staff authentication
+     * Check staff authentication (web)
      */
     public static function checkStaffAuth()
     {
@@ -34,16 +33,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if ($user['user_type'] !== 'staff') {
             return redirect()->to('/dashboard');
         }
 
         return $user;
     }
-    
+
     /**
-     * Check dentist authentication
+     * Check dentist authentication (web)
      */
     public static function checkDentistAuth()
     {
@@ -52,16 +50,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if ($user['user_type'] !== 'doctor') {
             return redirect()->to('/dashboard');
         }
 
         return $user;
     }
-    
+
     /**
-     * Check patient authentication
+     * Check patient authentication (web)
      */
     public static function checkPatientAuth()
     {
@@ -70,16 +67,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if ($user['user_type'] !== 'patient') {
             return redirect()->to('/dashboard');
         }
 
         return $user;
     }
-    
+
     /**
-     * Check API authentication for admin
+     * Check API authentication for admin (JSON)
      */
     public static function checkAdminAuthApi()
     {
@@ -88,16 +84,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if ($user['user_type'] !== 'admin') {
             return response()->setJSON(['error' => 'Forbidden'])->setStatusCode(403);
         }
 
         return $user;
     }
-    
+
     /**
-     * Check API authentication for staff
+     * Check API authentication for staff (JSON)
      */
     public static function checkStaffAuthApi()
     {
@@ -106,20 +101,40 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if (!$user) {
             return response()->setJSON(['error' => 'User not found'])->setStatusCode(401);
         }
-        
+
         if ($user['user_type'] !== 'staff') {
             return response()->setJSON(['error' => 'Forbidden'])->setStatusCode(403);
         }
 
         return $user;
     }
-    
+
     /**
-     * Check if user has admin or staff privileges
+     * Check API authentication for admin OR staff (JSON)
+     */
+    public static function checkAdminOrStaffAuthApi()
+    {
+        if (!Auth::isAuthenticated()) {
+            return response()->setJSON(['error' => 'Unauthorized'])->setStatusCode(401);
+        }
+
+        $user = Auth::getCurrentUser();
+        if (!$user) {
+            return response()->setJSON(['error' => 'User not found'])->setStatusCode(401);
+        }
+
+        if (!in_array($user['user_type'], ['admin', 'staff'])) {
+            return response()->setJSON(['error' => 'Forbidden'])->setStatusCode(403);
+        }
+
+        return $user;
+    }
+
+    /**
+     * Check if user has admin or staff privileges (web)
      */
     public static function checkAdminOrStaffAuth()
     {
@@ -128,16 +143,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if (!in_array($user['user_type'], ['admin', 'staff'])) {
             return redirect()->to('/dashboard');
         }
 
         return $user;
     }
-    
+
     /**
-     * Check if user has admin or dentist privileges
+     * Check if user has admin or dentist privileges (web)
      */
     public static function checkAdminOrDentistAuth()
     {
@@ -146,16 +160,15 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        
         if (!in_array($user['user_type'], ['admin', 'doctor'])) {
             return redirect()->to('/dashboard');
         }
 
         return $user;
     }
-    
+
     /**
-     * Get current user or redirect if not authenticated
+     * Get current user or redirect if not authenticated (web)
      */
     public static function getCurrentUserOrRedirect()
     {

@@ -200,6 +200,21 @@
 
     window.addEventListener('load', function() {
         fetchStats();
+        // If server rendered global statistics are present, populate the cards immediately
+        try {
+            if (typeof window.SERVER_STATISTICS !== 'undefined' && window.SERVER_STATISTICS) {
+                const s = window.SERVER_STATISTICS;
+                const pEl = document.getElementById('dentist-total-patients');
+                if (pEl && typeof s.totalPatients !== 'undefined') pEl.textContent = s.totalPatients;
+                const dEl = document.getElementById('dentist-total-dentists');
+                if (dEl && typeof s.totalDentists !== 'undefined') dEl.textContent = s.totalDentists;
+                // If treatments total provided, show as a small badge on patients card
+                if (typeof s.totalTreatments !== 'undefined') {
+                    const patientsCard = document.getElementById('dentist-total-patients');
+                    if (patientsCard) patientsCard.insertAdjacentHTML('afterend', '<div class="text-xs text-gray-500">Treatments: ' + s.totalTreatments + '</div>');
+                }
+            }
+        } catch(e) { console && console.warn && console.warn('populate server statistics failed', e); }
         if (autoRefreshTimer) clearInterval(autoRefreshTimer);
         autoRefreshTimer = setInterval(fetchStats, REFRESH_INTERVAL_MS);
 

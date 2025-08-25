@@ -19,7 +19,8 @@ class DashboardService
             'totalUsers' => $this->userModel->countAll(),
             'totalPatients' => $this->userModel->where('user_type', 'patient')->countAllResults(),
             'totalDentists' => $this->userModel->where('user_type', 'doctor')->countAllResults(),
-            'totalBranches' => $this->branchModel->countAll()
+            'totalBranches' => $this->branchModel->countAll(),
+            'totalTreatments' => (int) \Config\Database::connect()->table('treatment_sessions')->countAllResults()
         ];
     }
     
@@ -81,17 +82,21 @@ class DashboardService
             ->getRowArray();
         $treatmentCount = (int) ($treatmentCountQuery['cnt'] ?? 0);
 
-        // total_patients: count registered patient users (so new patient creations are reflected immediately)
-        try {
-            $patientCount = (int) $this->userModel->where('user_type', 'patient')->countAllResults();
-        } catch (\Exception $e) {
-            // fallback to previous method if userModel unavailable
+        // total_patients: when branch-scoped, count DISTINCT users who have appointments in those branches
+        if (!empty($branchIds)) {
             $patientCountQuery = $db->table('appointments')
                 ->select('COUNT(DISTINCT user_id) as cnt')
                 ->whereIn('branch_id', $branchIds)
                 ->get()
                 ->getRowArray();
             $patientCount = (int) ($patientCountQuery['cnt'] ?? 0);
+        } else {
+            // fallback to registered patient users when no branch scope provided
+            try {
+                $patientCount = (int) $this->userModel->where('user_type', 'patient')->countAllResults();
+            } catch (\Exception $e) {
+                $patientCount = 0;
+            }
         }
 
         $result = [

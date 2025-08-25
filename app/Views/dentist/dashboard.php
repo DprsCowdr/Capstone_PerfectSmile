@@ -54,6 +54,38 @@
             <div class="flex items-center justify-between mb-6">
                 <h1 class="text-2xl font-bold text-gray-800">🩺 Dentist Dashboard</h1>
             </div>
+
+            <!-- Cards Row (clinic-wide stats from admin DashboardService) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white border-l-4 border-indigo-400 shadow rounded-lg p-5 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-indigo-600 uppercase mb-1">Total Patients</div>
+                        <div class="text-2xl font-bold text-gray-800"><span id="dentist-total-patients"><?= isset($statistics['totalPatients']) ? $statistics['totalPatients'] : ($totalPatients ?? 0) ?></span></div>
+                    </div>
+                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                </div>
+                <div class="bg-white border-l-4 border-green-400 shadow rounded-lg p-5 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-green-600 uppercase mb-1">Today's Appointments</div>
+                        <div class="text-2xl font-bold text-gray-800"><span id="dentist-total-today-appointments"><?= count($todayAppointments ?? []) ?></span></div>
+                    </div>
+                    <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                </div>
+                <div class="bg-white border-l-4 border-orange-400 shadow rounded-lg p-5 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-orange-600 uppercase mb-1">Pending Approvals</div>
+                        <div class="text-2xl font-bold text-gray-800"><span id="dentist-total-pending-approvals"><?= count($pendingAppointments ?? []) ?></span></div>
+                    </div>
+                    <i class="fas fa-clock fa-2x text-gray-300"></i>
+                </div>
+                <div class="bg-white border-l-4 border-purple-400 shadow rounded-lg p-5 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-purple-600 uppercase mb-1">Available Dentists</div>
+                        <div class="text-2xl font-bold text-gray-800"><span id="dentist-total-dentists"><?= isset($statistics['totalDentists']) ? $statistics['totalDentists'] : 0 ?></span></div>
+                    </div>
+                    <i class="fas fa-user-md fa-2x text-gray-300"></i>
+                </div>
+            </div>
             
             <!-- (Removed duplicate Live Stats block - single dashboard section retained later) -->
             

@@ -31,6 +31,8 @@ $routes->get('debug/add-test', 'Debug::addTestAppointment');
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard
     $routes->get('dashboard', 'AdminController::dashboard');
+    // Admin-only preview endpoint for branch stats (used by staff/admin UI)
+    $routes->get('preview-branch-stats', 'AdminController::previewBranchStats');
     
     // Branch management
     $routes->post('switch-branch', 'AdminController::switchBranch');

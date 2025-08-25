@@ -27,120 +27,7 @@
         <main class="flex-1 px-6 pb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-6">Staff Dashboard</h1>
  
-            <!-- Cards Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                <!-- Total Patients Card -->
-                <div class="bg-white border-l-4 border-indigo-400 shadow rounded-lg p-5 flex items-center justify-between">
-                    <div>
-                        <div class="text-xs font-bold text-indigo-600 uppercase mb-1">Total Patients</div>
-                        <div class="text-2xl font-bold text-gray-800"><span id="staff-total-patients"><?= $totalPatients ?? 0 ?></span></div>
-                    </div>
-                    <i class="fas fa-users fa-2x text-gray-300"></i>
-                </div>
-                <!-- Today's Appointments Card -->
-                <div class="bg-white border-l-4 border-green-400 shadow rounded-lg p-5 flex items-center justify-between">
-                    <div>
-                        <div class="text-xs font-bold text-green-600 uppercase mb-1">Today's Appointments</div>
-                        <div class="text-2xl font-bold text-gray-800"><span id="staff-total-today-appointments"><?= count($todayAppointments ?? []) ?></span></div>
-                    </div>
-                    <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                </div>
-                <!-- Pending Approvals Card -->
-                <div class="bg-white border-l-4 border-orange-400 shadow rounded-lg p-5 flex items-center justify-between">
-                    <div>
-                        <div class="text-xs font-bold text-orange-600 uppercase mb-1">Pending Approvals</div>
-                        <div class="text-2xl font-bold text-gray-800"><span id="staff-total-pending-approvals"><?= count($pendingAppointments ?? []) ?></span></div>
-                    </div>
-                    <i class="fas fa-clock fa-2x text-gray-300"></i>
-                </div>
-                <!-- Total Dentists Card -->
-                <div class="bg-white border-l-4 border-purple-400 shadow rounded-lg p-5 flex items-center justify-between">
-                    <div>
-                        <div class="text-xs font-bold text-purple-600 uppercase mb-1">Available Dentists</div>
-                        <div class="text-2xl font-bold text-gray-800"><span id="staff-total-dentists"><?= $totalDentists ?? 0 ?></span></div>
-                    </div>
-                    <i class="fas fa-user-md fa-2x text-gray-300"></i>
-                </div>
-            </div>
-            <!-- Live charts (line chart only) - copied from dentist dashboard layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <!-- Chart column (left, spans 2 cols) -->
-                <div class="lg:col-span-2 bg-white shadow rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center space-x-3">
-                            <label for="chartSelectorTop" class="text-sm text-gray-600">Metric</label>
-                            <select id="chartSelectorTop" class="border rounded px-2 py-1 text-sm text-gray-700">
-                                <option value="patients">Patients</option>
-                                <option value="appointments">Appointments</option>
-                                <option value="treatments">Treatments</option>
-                            </select>
-                            <?php if (!empty($assignedBranches) && count($assignedBranches) === 1): ?>
-                                <!-- Single assigned branch: show label and provide hidden input so JS still reads statsScope -->
-                                <span class="inline-block px-3 py-1 border rounded text-sm text-gray-700"><?= htmlentities($assignedBranches[0]['name'] ?? 'Branch', ENT_QUOTES) ?></span>
-                                <input type="hidden" id="statsScope" value="branch:<?= $assignedBranches[0]['id'] ?>">
-                            <?php else: ?>
-                                <select id="statsScope" class="border rounded px-2 py-1 text-sm text-gray-700">
-                                    <option value="all" <?= (empty($assignedBranches)) ? 'selected' : '' ?>>All Branches</option>
-                                    <?php if (!empty($assignedBranches)): ?>
-                                        <?php foreach ($assignedBranches as $b): ?>
-                                            <option value="branch:<?= $b['id'] ?>" <?= (isset($assignedBranches) && isset($assignedBranches[0]) && $assignedBranches[0]['id'] == $b['id']) ? 'selected' : '' ?>><?= htmlentities($b['name'], ENT_QUOTES) ?></option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            <?php endif; ?>
-                            <button id="showTotalsHistoryBtn" class="ml-2 px-3 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200">View totals history</button>
-                        </div>
-                        <div class="text-sm text-gray-500"></div>
-                    </div>
-                    <div class="w-full h-64">
-                        <canvas id="staffTotalsChart" height="160"></canvas>
-                    </div>
-                </div>
-
-                <!-- Totals history modal -->
-                <div id="totalsHistoryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40">
-                    <div class="bg-white rounded-lg shadow-lg w-11/12 max-w-3xl p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-lg font-semibold">Totals History</h3>
-                            <button id="closeTotalsHistoryBtn" class="px-2 py-1 text-gray-600 hover:text-gray-800">&times;</button>
-                        </div>
-                        <div id="totalsHistoryContent" class="max-h-80 overflow-y-auto text-sm text-gray-800">
-                            <!-- populated by JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Summary column (right) -->
-                <div class="bg-white shadow rounded-lg p-4">
-                    <div class="mb-4">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Average / day</div>
-                        <div id="avgPerDayTop" class="text-2xl font-bold text-gray-800">—</div>
-                    </div>
-                    <div class="mb-4">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Peak day</div>
-                        <div id="peakDayTop" class="text-lg font-semibold text-gray-800">—</div>
-                    </div>
-                    <div class="mb-4">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Total (latest)</div>
-                        <div id="patientTotal" class="text-2xl font-bold text-gray-800">—</div>
-                    </div>
-                    <div class="mb-4">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Next appointment</div>
-                        <div class="text-sm text-gray-700" id="nextAppointment">
-                            <span id="nextAppointmentBadge" class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mr-2 hidden">Upcoming appointment</span>
-                            <span id="nextAppointmentText">—</span>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Statuses</div>
-                        <div id="statusLegend" class="mt-2 text-sm text-gray-700"></div>
-                    </div>
-                    <div>
-                        <div class="text-xs font-semibold text-gray-500 uppercase">Recent samples</div>
-                        <div id="recentValues" class="mt-2 text-sm text-gray-700 max-h-40 overflow-y-auto"></div>
-                    </div>
-                </div>
-            </div>
+            <?= view('_partials/branch_dashboard', [ 'selectedBranchId' => isset($selectedBranchId) ? $selectedBranchId : null ]) ?>
             <!-- Quick Actions & Recent Activity -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Quick Actions -->
@@ -251,6 +138,15 @@ function staffDeclineAppointment(appointmentId) {
     // Provide a clean base stats endpoint; client will append branch_id or scope as needed
     window.STAFF_STATS_BASE = '<?= base_url('staff/stats') ?>';
     window.STAFF_STATS_URL = window.STAFF_STATS_BASE; // client will build final URL per selection
+    window.STAFF_NEXT_APPT_GRACE = <?= (int)(config('App\Config\Dashboard')->nextAppointmentGraceMinutes ?? 15) ?>;
+    // Enable client-side debug dump when ?staff_debug=1 is present
+    window.STAFF_DEBUG = <?= isset($_GET['staff_debug']) && $_GET['staff_debug'] ? 'true' : 'false' ?>;
+    // If admin selected a branch and the staff user is assigned to it, expose it for the client to prefer
+    window.STAFF_SELECTED_BRANCH = <?= isset($selectedBranchId) && $selectedBranchId ? (int)$selectedBranchId : 'null' ?>;
+    // Expose current logged-in user type for client-side decisions
+    window.CURRENT_USER_TYPE = '<?= htmlentities($user['user_type'] ?? '', ENT_QUOTES) ?>';
+    // Admin preview endpoint for branch stats (server-side proxy)
+    window.ADMIN_PREVIEW_STATS = '<?= base_url('admin/preview-branch-stats') ?>';
 </script>
 <!-- Use CDN Chart.js (matches dentist view) and a lightweight staff chart script -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

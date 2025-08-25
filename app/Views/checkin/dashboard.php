@@ -145,6 +145,7 @@
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <?php if ($appointment['status'] === 'confirmed'): ?>
                                                         <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline">
+                                                            <?= csrf_field() ?>
                                                             <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                                                 <i class="fas fa-sign-in-alt mr-2"></i>
                                                                 Check In
@@ -154,7 +155,7 @@
                                                         <span class="text-green-600 text-sm">
                                                             <i class="fas fa-check-circle mr-1"></i>
                                                             Checked In
-                                                            <?php if ($appointment['checked_in_at']): ?>
+                                                            <?php if (!empty($appointment['checked_in_at'])): ?>
                                                                 <br><small class="text-gray-500">at <?= date('g:i A', strtotime($appointment['checked_in_at'])) ?></small>
                                                             <?php endif; ?>
                                                         </span>
@@ -226,7 +227,7 @@
                                                 <span class="text-green-600 text-sm">
                                                     <i class="fas fa-check-circle mr-1"></i>
                                                     Checked In
-                                                    <?php if ($appointment['checked_in_at']): ?>
+                                                    <?php if (!empty($appointment['checked_in_at'])): ?>
                                                         <br><small class="text-gray-500">at <?= date('g:i A', strtotime($appointment['checked_in_at'])) ?></small>
                                                     <?php endif; ?>
                                                 </span>

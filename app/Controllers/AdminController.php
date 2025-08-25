@@ -39,7 +39,19 @@ class AdminController extends BaseAdminController
         $appointmentData = $this->appointmentService->getDashboardData();
         $statistics = $this->dashboardService->getStatistics();
         $selectedBranchId = session('selected_branch_id');
-        
+        // If admin has selected a branch, render a dedicated branch dashboard view
+        if (!empty($selectedBranchId)) {
+            // Pass appointmentData + statistics into the branch dashboard view so it mirrors staff dashboard
+            $branchModel = new \App\Models\BranchModel();
+            $branch = $branchModel->find($selectedBranchId);
+            $viewData = array_merge([
+                'user' => $user,
+                'selectedBranchId' => $selectedBranchId,
+                'branch' => $branch
+            ], $appointmentData, $statistics);
+            return view('admin/branch_dashboard', $viewData);
+        }
+
         return view('admin/dashboard', array_merge([
             'user' => $user,
             'selectedBranchId' => $selectedBranchId
@@ -137,6 +149,107 @@ class AdminController extends BaseAdminController
 
         $result = $this->appointmentService->getPatientAppointments($patientId);
         return $this->response->setJSON($result);
+    }
+
+    /**
+     * Admin-only preview endpoint to fetch branch-scoped totals + next appointment.
+     * Query: /admin/preview-branch-stats?branch_id=2
+     */
+    public function previewBranchStats()
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) return $user;
+
+        // only admins allowed
+        if ($user['user_type'] !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden']);
+        }
+
+        $branchId = $this->request->getGet('branch_id');
+        if (!$branchId) return $this->response->setStatusCode(400)->setJSON(['error' => 'branch_id required']);
+
+        $dashboardService = new DashboardService();
+        $totals = $dashboardService->getBranchTotals([(int)$branchId]);
+
+        // next appointment for branch (reuse logic similar to StaffController)
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $dashboardConfig = new \App\Config\Dashboard();
+        $grace = (int) ($dashboardConfig->nextAppointmentGraceMinutes ?? 15);
+        $missedExpr = "DATE_SUB(NOW(), INTERVAL {$grace} MINUTE)";
+        $endOfDay = date('Y-m-d') . ' 16:00:00';
+
+        $nextQ = $appointmentModel->select('appointments.*, user.name as patient_name')
+                    ->join('user', 'user.id = appointments.user_id')
+                    ->where("appointments.appointment_datetime >= {$missedExpr}", null, false)
+                    ->whereIn('appointments.status', ['confirmed','scheduled'])
+                    ->where('appointments.branch_id', (int)$branchId)
+                    ->where('appointments.appointment_datetime <=', $endOfDay)
+                    ->orderBy('appointments.appointment_datetime', 'ASC');
+        $next = $nextQ->first();
+
+        $nextAppointment = null;
+        if ($next) $nextAppointment = ['id' => $next['id'], 'patient_name' => $next['patient_name'] ?? null, 'datetime' => $next['appointment_datetime'] ?? null];
+
+        // Build 7-day timeseries to match StaffController::stats()
+    $db = \Config\Database::connect();
+        $labels = [];
+        $counts = [];
+        $patientCounts = [];
+        $treatmentCounts = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-{$i} days"));
+            $labels[] = date('D M j', strtotime($d));
+
+            // appointments per day
+            $qb = $db->table('appointments');
+            $qb->where('DATE(appointment_datetime)', $d);
+            $qb->where('branch_id', (int)$branchId);
+            $counts[] = (int) $qb->countAllResults();
+
+            // distinct patients
+            $pb = $db->table('appointments');
+            $pb->select('COUNT(DISTINCT user_id) as cnt')->where('DATE(appointment_datetime)', $d)->where('branch_id', (int)$branchId);
+            $row = $pb->get()->getRowArray();
+            $patientCounts[] = (int) ($row['cnt'] ?? 0);
+
+            // treatments per day
+            $tb = $db->table('treatment_sessions ts')
+                     ->select('COUNT(ts.id) as cnt')
+                     ->join('appointments a', 'a.id = ts.appointment_id', 'left')
+                     ->where('DATE(a.appointment_datetime)', $d)
+                     ->where('a.branch_id', (int)$branchId);
+            $trow = $tb->get()->getRowArray();
+            $treatmentCounts[] = (int) ($trow['cnt'] ?? 0);
+        }
+
+        // status counts for last 7 days
+        $statusList = ['confirmed','scheduled','ongoing','completed','no_show','cancelled'];
+        $statusCounts = [];
+        foreach ($statusList as $s) {
+            $sb = $db->table('appointments');
+            $sb->where('status', $s)
+               ->where('DATE(appointment_datetime) >=', date('Y-m-d', strtotime('-6 days')))
+               ->where('DATE(appointment_datetime) <=', date('Y-m-d'))
+               ->where('branch_id', (int)$branchId);
+            $statusCounts[$s] = (int) $sb->countAllResults();
+        }
+
+        // estimate avgPerDay and peakDay
+        $avgPerDay = (count($counts) ? (array_sum($counts) / count($counts)) : 0);
+        $peakDay = count($counts) ? $labels[array_search(max($counts), $counts)] : null;
+
+        return $this->response->setJSON([
+            'success' => true,
+            'totals' => $totals,
+            'nextAppointment' => $nextAppointment,
+            'labels' => $labels,
+            'counts' => $counts,
+            'patientCounts' => $patientCounts,
+            'treatmentCounts' => $treatmentCounts,
+            'statusCounts' => $statusCounts,
+            'avgPerDay' => round($avgPerDay, 1),
+            'peakDay' => $peakDay
+        ]);
     }
 
     // ==================== APPOINTMENT MANAGEMENT ====================

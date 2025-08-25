@@ -3,9 +3,26 @@
 namespace App\Controllers;
 
 use App\Controllers\Auth;
+use App\Services\DashboardService;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Dentist extends BaseController
 {
+    protected $dashboardService;
+
+    /**
+     * Use CodeIgniter initController to initialize services instead of __construct()
+     */
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
+    {
+        // Do Not Edit This Line
+        parent::initController($request, $response, $logger);
+
+        // Initialize DashboardService for dentist controller
+        $this->dashboardService = new DashboardService();
+    }
     public function dashboard()
     {
         // Check if user is logged in and is dentist
@@ -51,13 +68,16 @@ class Dentist extends BaseController
                                          ->where('appointments.dentist_id', $user['id'])
                                          ->groupBy('appointments.user_id')
                                          ->countAllResults();
-        
+        // Get global statistics from DashboardService (clinic-wide numbers)
+        $statistics = $this->dashboardService->getStatistics();
+
         return view('dentist/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
             'todayAppointments' => $todayAppointments,
             'upcomingAppointments' => $upcomingAppointments,
-            'totalPatients' => $totalPatients
+            'totalPatients' => $totalPatients,
+            'statistics' => $statistics
         ]);
     }
 
@@ -160,7 +180,9 @@ class Dentist extends BaseController
             'statusCounts' => $statusCounts,
             'nextAppointment' => $nextAppointment,
             'patientCounts' => $patientCounts,
-            'patientTotal' => $patientTotal
+            'patientTotal' => $patientTotal,
+            // treatments per day (include for dentist view as well)
+            'treatmentCounts' => array_map(function(){ return 0; }, $labels) // default zeros; dentist-specific treatments not implemented here
         ]);
     }
     
