@@ -220,4 +220,5 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
+    $routes->get('waitlist', 'StaffController::waitlist');
 });

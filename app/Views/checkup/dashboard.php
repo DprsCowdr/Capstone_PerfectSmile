@@ -77,10 +77,10 @@
                             <i class="fas fa-stethoscope mr-3"></i>Ongoing Checkup In Progress
                         </div>
                         <div class="text-gray-700 mb-1">
-                            <span class="font-semibold">Patient:</span> <?= esc($ongoingCheckup['patient_name']) ?>
+                            <span class="font-semibold">Patient:</span> <?= esc($ongoingCheckup['patient_name'] ?? 'Unknown') ?>
                         </div>
                         <div class="text-gray-600 text-sm">
-                            <span class="font-semibold">Started at:</span> <?= date('g:i A', strtotime($ongoingCheckup['started_at'])) ?>
+                            <span class="font-semibold">Started at:</span> <?= isset($ongoingCheckup['appointment_datetime']) ? date('g:i A', strtotime($ongoingCheckup['appointment_datetime'])) : 'N/A' ?>
                         </div>
                     </div>
                     <div class="flex gap-3">
