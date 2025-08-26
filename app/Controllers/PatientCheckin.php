@@ -113,18 +113,13 @@ class PatientCheckin extends BaseController
                 throw new \Exception('Failed to update appointment status');
             }
 
-            // Create patient check-in record
+            // Create patient check-in record using model helper (ensures allowedFields/validation)
             $patientCheckinModel = new \App\Models\PatientCheckinModel();
-            $checkinResult = $patientCheckinModel->insert([
-                'appointment_id' => $appointmentId,
-                'patient_id' => $appointment['user_id'],
-                'checked_in_at' => date('Y-m-d H:i:s'),
-                'checked_in_by' => $user['id'],
-                'status' => 'checked_in',
-                'notes' => 'Patient checked in via admin interface'
-            ]);
+            $checkinResult = $patientCheckinModel->checkInPatient($appointmentId, $user['id'], false, 'Patient checked in via admin interface');
 
             if (!$checkinResult) {
+                $errors = method_exists($patientCheckinModel, 'errors') ? $patientCheckinModel->errors() : [];
+                log_message('error', 'PatientCheckin insert failed. Model errors: ' . json_encode($errors));
                 throw new \Exception('Failed to create check-in record');
             }
 
@@ -135,9 +130,15 @@ class PatientCheckin extends BaseController
             }
 
             session()->setFlashdata('success', 'Patient checked in successfully');
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Checked in']);
+            }
         } catch (\Exception $e) {
             $db->transRollback();
             log_message('error', 'Check-in failed: ' . $e->getMessage());
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => 'Failed to check in: ' . $e->getMessage()]);
+            }
             session()->setFlashdata('error', 'Failed to check in patient: ' . $e->getMessage());
         }
 
