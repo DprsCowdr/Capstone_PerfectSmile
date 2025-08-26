@@ -7,7 +7,8 @@
 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
     <h1 class="font-bold text-2xl md:text-3xl text-black tracking-tight">Lists of Patients</h1>
     <?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
-        <button id="showAddPatientFormBtn" class="bg-[#c7aefc] hover:bg-[#a47be5] text-white font-bold text-base rounded-xl shadow px-7 py-2.5 transition">+ Add New Patient</button>
+    <!-- Use explicit Tailwind-like classes as fallback to ensure visibility across themes -->
+    <button id="showAddPatientFormBtn" class="lavender-btn bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base rounded-xl px-7 py-2.5 transition">+ Add New Patient</button>
     <?php endif; ?>
 </div>
 
@@ -179,7 +180,7 @@
 <div id="addPatientPanel" class="slide-in-panel p-4 lg:p-6 flex flex-col gap-4">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold text-gray-700 capitalize dark:text-white">Add New Patient</h2>
-        <button class="close-btn text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" id="closeAddPatientPanel" aria-label="Close">&times;</button>
+    <button class="close-btn text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors" id="closeAddPatientPanel" aria-label="Close">&times;</button>
     </div>
     
     <div>

@@ -31,8 +31,9 @@ class Checkup extends BaseController
      */
     public function index()
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    // allow dentists (previously named 'doctor') and admins to access checkup
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
             return redirect()->to('/login');
         }
 
@@ -40,7 +41,7 @@ class Checkup extends BaseController
         $this->appointmentModel->autoUpdateStatuses();
 
         // Get today's appointments
-        $dentistId = ($user['user_type'] === 'doctor') ? $user['id'] : null;
+    $dentistId = ($user['user_type'] === 'dentist') ? $user['id'] : null;
         $todayAppointments = $this->appointmentModel->getTodayAppointments($dentistId);
 
         // Get ongoing checkup for today for this doctor
@@ -63,7 +64,7 @@ class Checkup extends BaseController
     public function startCheckup($appointmentId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
             return redirect()->to('/login');
         }
 
@@ -90,7 +91,7 @@ class Checkup extends BaseController
     public function patientCheckup($appointmentId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
             return redirect()->to('/login');
         }
 
@@ -173,7 +174,7 @@ class Checkup extends BaseController
     public function saveCheckup($appointmentId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
             return redirect()->to('/login');
         }
 

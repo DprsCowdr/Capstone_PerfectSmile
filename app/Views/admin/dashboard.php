@@ -53,6 +53,8 @@
             </div>
             <?php endif; ?>
             
+            <!-- Branch-specific dashboard moved to a dedicated view: admin/branch_dashboard.php -->
+            
             <!-- Cards Row -->
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
                 <!-- Total Users Card -->

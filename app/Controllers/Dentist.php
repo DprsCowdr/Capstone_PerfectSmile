@@ -3,9 +3,26 @@
 namespace App\Controllers;
 
 use App\Controllers\Auth;
+use App\Services\DashboardService;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Dentist extends BaseController
 {
+    protected $dashboardService;
+
+    /**
+     * Use CodeIgniter initController to initialize services instead of __construct()
+     */
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
+    {
+        // Do Not Edit This Line
+        parent::initController($request, $response, $logger);
+
+        // Initialize DashboardService for dentist controller
+        $this->dashboardService = new DashboardService();
+    }
     public function dashboard()
     {
         // Check if user is logged in and is dentist
@@ -16,7 +33,7 @@ class Dentist extends BaseController
         $user = Auth::getCurrentUser();
         
         // Check if user is dentist
-        if ($user['user_type'] !== 'doctor') {
+        if ($user['user_type'] !== 'dentist') {
             return redirect()->to('/dashboard');
         }
         
@@ -51,13 +68,121 @@ class Dentist extends BaseController
                                          ->where('appointments.dentist_id', $user['id'])
                                          ->groupBy('appointments.user_id')
                                          ->countAllResults();
-        
+        // Get global statistics from DashboardService (clinic-wide numbers)
+        $statistics = $this->dashboardService->getStatistics();
+
         return view('dentist/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
             'todayAppointments' => $todayAppointments,
             'upcomingAppointments' => $upcomingAppointments,
-            'totalPatients' => $totalPatients
+            'totalPatients' => $totalPatients,
+            'statistics' => $statistics
+        ]);
+    }
+
+    /**
+     * JSON stats endpoint for dentist dashboard charts
+     */
+    public function stats()
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setStatusCode(401)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        // allow dentists (and admins) to access stats; dentists can request clinic-wide via ?scope=clinic
+        if (!in_array($user['user_type'], ['dentist', 'admin'])) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden']);
+        }
+
+        $scope = $this->request->getGet('scope') ?? 'mine';
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+
+        // Build last 7 days labels and counts (use fresh builders each iteration to avoid state leakage)
+        $labels = [];
+        $counts = [];
+        $patientCounts = [];
+        $db = \Config\Database::connect();
+        for ($i = 6; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-{$i} days"));
+            $labels[] = date('D M j', strtotime($d));
+
+            // Use fresh table builder for counts to avoid accumulating where() clauses
+            $tb = $db->table('appointments');
+            $tb->where('DATE(appointment_datetime)', $d)
+               ->whereIn('status', ['confirmed','scheduled','ongoing','checked_in']);
+            if ($scope !== 'clinic') {
+                $tb->where('dentist_id', $user['id']);
+            }
+            $counts[] = (int) $tb->countAllResults();
+
+            // Count distinct patients for this day (for patient live chart) using fresh builder
+            $pb = $db->table('appointments');
+            $pb->where('DATE(appointment_datetime)', $d)
+               ->whereIn('status', ['confirmed','scheduled','ongoing','checked_in']);
+            if ($scope !== 'clinic') {
+                $pb->where('dentist_id', $user['id']);
+            }
+            $row = $pb->select('COUNT(DISTINCT user_id) as cnt')->get()->getRowArray();
+            $patientCounts[] = (int) ($row['cnt'] ?? 0);
+        }
+
+        // Status distribution for next 7 days
+        $statusList = ['confirmed','scheduled','ongoing','completed','no_show','cancelled'];
+        $statusCounts = [];
+        foreach ($statusList as $s) {
+            // Use fresh builder per status
+            $sb = $db->table('appointments');
+            $sb->where('status', $s)
+               ->where('DATE(appointment_datetime) >=', date('Y-m-d', strtotime('-6 days')))
+               ->where('DATE(appointment_datetime) <=', date('Y-m-d'));
+            if ($scope !== 'clinic') {
+                $sb->where('dentist_id', $user['id']);
+            }
+            $statusCounts[$s] = (int) $sb->countAllResults();
+        }
+
+        // Next upcoming appointment for the dentist
+        $nextQ = $appointmentModel->select('appointments.*, user.name as patient_name')
+                                 ->join('user', 'user.id = appointments.user_id')
+                                 ->where('DATE(appointment_datetime) >=', date('Y-m-d'))
+                                 ->whereIn('appointments.status', ['confirmed','scheduled'])
+                                 ->orderBy('appointments.appointment_datetime', 'ASC');
+        if ($scope !== 'clinic') {
+            $nextQ->where('appointments.dentist_id', $user['id']);
+        }
+        $next = $nextQ->first();
+
+        $nextAppointment = null;
+        if ($next) {
+            $nextAppointment = [
+                'id' => $next['id'],
+                'patient_name' => $next['patient_name'],
+                'datetime' => $next['appointment_datetime'] ?? null
+            ];
+        }
+
+        // Total distinct patients in the last 7 days (for the patient counter)
+        $tb = $db->table('appointments');
+        $tb->where('DATE(appointment_datetime) >=', date('Y-m-d', strtotime('-6 days')))
+           ->where('DATE(appointment_datetime) <=', date('Y-m-d'));
+        if ($scope !== 'clinic') {
+            $tb->where('appointments.dentist_id', $user['id']);
+        }
+        $totalRow = $tb->select('COUNT(DISTINCT appointments.user_id) as total')->get()->getRowArray();
+        $patientTotal = (int) ($totalRow['total'] ?? 0);
+
+        return $this->response->setJSON([
+            'labels' => $labels,
+            'counts' => $counts,
+            'statusCounts' => $statusCounts,
+            'nextAppointment' => $nextAppointment,
+            'patientCounts' => $patientCounts,
+            'patientTotal' => $patientTotal,
+            // treatments per day (include for dentist view as well)
+            'treatmentCounts' => array_map(function(){ return 0; }, $labels) // default zeros; dentist-specific treatments not implemented here
         ]);
     }
     
@@ -71,18 +196,19 @@ class Dentist extends BaseController
         $user = Auth::getCurrentUser();
         
         // Check if user is dentist
-        if ($user['user_type'] !== 'doctor') {
+        if ($user['user_type'] !== 'dentist') {
             return redirect()->to('/dashboard');
         }
         
         // Get all appointments for this dentist
         $appointmentModel = new \App\Models\AppointmentModel();
-        $appointments = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
-                                        ->join('user', 'user.id = appointments.user_id')
-                                        ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                        ->where('appointments.dentist_id', $user['id'])
-                                        ->orderBy('appointments.appointment_datetime', 'DESC')
-                                        ->findAll();
+    // Fetch all appointments (show full list to dentist - includes assigned and unassigned)
+    $appointments = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name, dentist.name as dentist_name')
+                    ->join('user', 'user.id = appointments.user_id')
+                    ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
+                    ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                    ->orderBy('appointments.appointment_datetime', 'DESC')
+                    ->findAll();
         
         // Get additional data needed by the appointment template
         $userModel = new \App\Models\UserModel();
@@ -90,7 +216,7 @@ class Dentist extends BaseController
         
         $patients = $userModel->where('user_type', 'patient')->findAll();
         $branches = $branchModel->findAll();
-        $dentists = $userModel->where('user_type', 'doctor')->findAll();
+    $dentists = $userModel->where('user_type', 'dentist')->findAll();
         
         return view('dentist/appointments', [
             'user' => $user,
@@ -112,13 +238,29 @@ class Dentist extends BaseController
         $user = Auth::getCurrentUser();
         
         // Check if user is dentist
-        if ($user['user_type'] !== 'doctor') {
+                                                // Prepare grouped appointment lists for the view (avoid undefined variables in view)
+                                                $confirmedAppointments = array_values(array_filter($appointments, function($a) {
+                                                    return isset($a['status']) && $a['status'] === 'confirmed';
+                                                }));
+
+                                                $pendingAppointments = array_values(array_filter($appointments, function($a) {
+                                                    return isset($a['status']) && $a['status'] === 'pending';
+                                                }));
+
+                                                $completedAppointments = array_values(array_filter($appointments, function($a) {
+                                                    return isset($a['status']) && $a['status'] === 'completed';
+                                                }));
+
+        if ($user['user_type'] !== 'dentist') {
             return redirect()->to('/dashboard');
         }
         
         try {
             $data = [
-                'doctor_id' => $user['id'],
+                                                    'confirmedAppointments' => $confirmedAppointments,
+                                                    'pendingAppointments' => $pendingAppointments,
+                                                    'completedAppointments' => $completedAppointments,
+                'dentist_id' => $user['id'],
                 'availability_date' => $this->request->getPost('date'),
                 'status' => $this->request->getPost('status'),
                 'start_time' => $this->request->getPost('start_time'),
@@ -152,7 +294,7 @@ class Dentist extends BaseController
         $user = Auth::getCurrentUser();
         
         // Check if user is dentist
-        if ($user['user_type'] !== 'doctor') {
+    if ($user['user_type'] !== 'dentist') {
             return redirect()->to('/dashboard');
         }
         
@@ -194,7 +336,7 @@ class Dentist extends BaseController
         $user = Auth::getCurrentUser();
         
         // Check if user is dentist
-        if ($user['user_type'] !== 'doctor') {
+    if ($user['user_type'] !== 'dentist') {
             return redirect()->to('/dashboard');
         }
         
@@ -250,7 +392,7 @@ class Dentist extends BaseController
      */
     public function patientRecords($patientId)
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 
@@ -284,7 +426,7 @@ class Dentist extends BaseController
      */
     public function dentalChart($appointmentId)
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 
@@ -319,7 +461,7 @@ class Dentist extends BaseController
      */
     public function createRecord()
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 
@@ -394,7 +536,7 @@ class Dentist extends BaseController
      */
     public function scheduleProcedure()
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 
@@ -426,7 +568,7 @@ class Dentist extends BaseController
      */
     public function procedures()
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 
@@ -456,7 +598,7 @@ class Dentist extends BaseController
      */
     public function procedureDetails($procedureId)
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 
@@ -484,7 +626,7 @@ class Dentist extends BaseController
      */
     public function patients()
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
+    if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'dentist') {
             return redirect()->to('/login');
         }
 

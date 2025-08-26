@@ -1,0 +1,96 @@
+/* Styles scoped to dentist dashboard only */
+
+/* Fixed sidebar when activated by JS (opt-in via dentist-dashboard.js) */
+#sidebar.sidebar-fixed {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 16rem; /* 256px */
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 60;
+}
+
+/* Reserve space for the sidebar on the page wrapper that opts in */
+.with-sidebar-offset-active {
+    /* Use padding to reserve sidebar space inside the page container instead of margin.
+       Margin would expand the element's total width and can create horizontal scroll
+       / stretched content. Padding keeps the container within viewport while reserving
+       internal space for the fixed sidebar. */
+    padding-left: 16rem !important;
+    box-sizing: border-box;
+    margin-left: 0 !important;
+    overflow-x: hidden; /* guard against accidental horizontal overflow in content */
+}
+
+/* Chart sizing helpers scoped to dentist dashboard */
+.dentist-dashboard-root .chart-responsive {
+    width: 100%;
+    height: clamp(360px, 45vh, 720px); /* grows with viewport */
+}
+
+.dentist-dashboard-root .doughnut-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dentist-dashboard-root {
+    width: 100%;
+}
+
+.dentist-dashboard-root.with-sidebar-offset-active {
+    overflow-x: hidden;
+}
+
+/* Keep the sidebar fixed and make the dashboard content area scrollable when content is long */
+.dentist-dashboard-root {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* ensure full viewport height so inner main can scroll */
+}
+
+/* Target the main content area inside the dashboard root to make it scrollable */
+.dentist-dashboard-root > main {
+    flex: 1 1 auto;
+    min-height: 0; /* allow flex child to shrink below content size so overflow works */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Keep footer visible after scrolling (footer sits after main) */
+.dentist-dashboard-root > footer {
+    flex: 0 0 auto;
+}
+
+/* Stronger override for large screens to beat the global .with-sidebar-offset-active margin rule
+   defined in templates/sidebar.php. Use higher specificity and !important so the dentist
+   dashboard reserves space via padding (not margin) and avoids horizontal overflow. */
+@media (min-width: 1024px) {
+    .dentist-dashboard-root.with-sidebar-offset-active {
+        padding-left: 16rem !important;
+        margin-left: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+    /* Ensure the fixed sidebar width matches the reserved padding */
+    #sidebar.sidebar-fixed {
+        width: 16rem !important;
+    }
+}
+
+.dentist-dashboard-root .doughnut-wrapper canvas {
+    max-width: 420px;
+    width: 100%;
+    height: auto;
+}
+
+/* Mobile caps - keep doughnut reasonable on small screens */
+@media (max-width: 640px) {
+    .dentist-dashboard-root .doughnut-wrapper canvas {
+        width: 200px !important;
+        height: 200px !important;
+    }
+    /* Remove forced offset on very small screens */
+    .with-sidebar-offset-active { margin-left: 0 !important; }
+}

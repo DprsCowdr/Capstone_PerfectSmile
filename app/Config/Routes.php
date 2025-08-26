@@ -31,6 +31,8 @@ $routes->get('debug/add-test', 'Debug::addTestAppointment');
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard
     $routes->get('dashboard', 'AdminController::dashboard');
+    // Admin-only preview endpoint for branch stats (used by staff/admin UI)
+    $routes->get('preview-branch-stats', 'AdminController::previewBranchStats');
     
     // Branch management
     $routes->post('switch-branch', 'AdminController::switchBranch');
@@ -131,8 +133,10 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
 });
 
 // Dentist routes (protected)
-$routes->group('doctor', ['filter' => 'auth'], function($routes) {
+// Dentist routes (protected)
+$routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Dentist::dashboard');
+    $routes->get('stats', 'Dentist::stats');
     $routes->get('appointments', 'Dentist::appointments');
     $routes->post('availability/set', 'Dentist::setAvailability');
     $routes->post('appointments/approve/(:num)', 'Dentist::approveAppointment/$1');
@@ -203,6 +207,10 @@ $routes->group('queue', ['filter' => 'auth'], function($routes) {
 // Staff routes (protected)
 $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'StaffController::dashboard');
+    // Branch-scoped totals for staff dashboard (AJAX)
+    $routes->get('totals', 'StaffController::totals');
+    // Optional richer timeseries endpoint for staff dashboards
+    $routes->get('stats', 'StaffController::stats');
     $routes->get('patients', 'StaffController::patients');
     $routes->get('patients/add', 'StaffController::addPatient');
     $routes->post('patients/store', 'StaffController::storePatient');

@@ -38,10 +38,12 @@ abstract class BaseAdminController extends BaseController
         // Filter by selected branch if admin has chosen one
         $selectedBranchId = session('selected_branch_id');
         if ($selectedBranchId && $user['user_type'] === 'admin') {
-            // Note: This assumes patients have a branch_id field
-            // If not, you might need to filter through appointments or other related data
+            // Only filter out patients explicitly assigned to another branch.
+            // Show unassigned patients (no branch_id) so patient lists do not disappear.
             $patients = array_filter($patients, function($patient) use ($selectedBranchId) {
-                return ($patient['branch_id'] ?? null) == $selectedBranchId;
+                $b = $patient['branch_id'] ?? null;
+                if ($b === null || $b === '' ) return true; // show unassigned patients
+                return (string)$b === (string)$selectedBranchId;
             });
         }
         

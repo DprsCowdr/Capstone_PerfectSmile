@@ -99,7 +99,7 @@
                             </button>
                             <a href="<?= base_url('staff/patients') ?>" 
                                 class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
-                                Cancel
+                                Cance
                             </a>
                         </div>
                     </form>

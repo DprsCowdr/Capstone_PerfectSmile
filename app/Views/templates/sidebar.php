@@ -88,6 +88,52 @@ $currentUrl = current_url();
         backdrop-filter: blur(10px);
     }
 }
+
+/* Ensure sidebar remains fixed/sticky on large screens to avoid shifting when page content scrolls */
+@media (min-width: 1024px) {
+    /* Fixed sidebar is opt-in: only apply when #sidebar has class .sidebar-fixed */
+    #sidebar.sidebar-fixed {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 16rem; /* 256px */
+        height: 100vh;
+        overflow-y: auto;
+        z-index: 50;
+    }
+
+    /* Utility: add this class to main content wrappers that should reserve space for the fixed sidebar.
+       Use padding instead of margin to avoid increasing the outer width (which can cause horizontal scroll).
+       Also make the main content scrollable inside the page so the sidebar stays fixed. */
+    .with-sidebar-offset-active {
+        padding-left: 16rem !important; /* reserve sidebar width inside the page container */
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        overflow-x: hidden !important;
+    }
+
+    /* When the page container has the offset class, make its <main> area scroll internally so long
+       content doesn't push the sidebar. This is a safe global behavior for dashboards/layouts.
+       Use min-height:0 so flex children can shrink and overflow properly. */
+    .with-sidebar-offset-active > main {
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Chart responsiveness helpers (global) */
+.chart-responsive {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+.doughnut-wrapper { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+/* Cap doughnut size on small screens */
+@media (max-width: 640px) {
+    .doughnut-wrapper canvas { width: 200px !important; height: 200px !important; }
+}
 </style>
 
 <!-- Mobile menu button -->
@@ -117,7 +163,7 @@ $currentUrl = current_url();
                 <?php if ($userType === 'admin'): ?>
                     <i class="fas fa-laugh-wink"></i>
                 <?php elseif ($userType === 'doctor'): ?>
-                    <i class="fas fa-user-md"></i>
+                        <i class="fas fa-user-md"></i>
                 <?php elseif ($userType === 'staff'): ?>
                     <i class="fas fa-user-tie"></i>
                 <?php elseif ($userType === 'patient'): ?>
@@ -224,7 +270,7 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('admin/settings'), 'fas fa-cog', 'Settings', $currentUrl) ?>
             </div>
 
-            <?php elseif ($userType === 'doctor'): ?>
+            <?php elseif ($userType === 'dentist'): ?>
             <!-- Management Section -->
             <div class="space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Management</label>
@@ -346,6 +392,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (mobileSidebarToggle) {
         mobileSidebarToggle.addEventListener('click', openSidebar);
+    }
+    // Also allow the topbar toggle button to open the mobile sidebar on small screens
+    const topbarSidebarToggle = document.getElementById('sidebarToggleTop');
+    if (topbarSidebarToggle) {
+        topbarSidebarToggle.addEventListener('click', openSidebar);
     }
     
     if (closeSidebar) {
@@ -515,3 +566,44 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Active nav links:', navLinks.length);
 });
 </script> 
+
+<script>
+// Apply content offset to elements that opt-in via data-sidebar-offset attribute
+function applyContentOffset() {
+    try {
+        const shouldOffset = window.innerWidth >= 1024; // only on large screens
+        const targets = document.querySelectorAll('[data-sidebar-offset]');
+        const sidebar = document.getElementById('sidebar');
+        // If there are explicit opt-in targets, use them. Otherwise fall back to the page <main> element
+        // so most dashboards automatically get the fixed-sidebar + scrollable content UX.
+        let applied = false;
+        if (targets.length && shouldOffset) {
+            if (sidebar) sidebar.classList.add('sidebar-fixed');
+            targets.forEach(el => el.classList.add('with-sidebar-offset-active'));
+            applied = true;
+        } else if (shouldOffset) {
+            const main = document.querySelector('main');
+            if (main) {
+                if (sidebar) sidebar.classList.add('sidebar-fixed');
+                main.classList.add('with-sidebar-offset-active');
+                applied = true;
+            }
+        }
+
+        // If not applied (small screens or no main), remove fixed behavior gracefully
+        if (!applied) {
+            if (sidebar) sidebar.classList.remove('sidebar-fixed');
+            targets.forEach(el => el.classList.remove('with-sidebar-offset-active'));
+            const main = document.querySelector('main');
+            if (main) main.classList.remove('with-sidebar-offset-active');
+        }
+        // Dev log
+        console.log('applyContentOffset: targets=', targets.length, 'sidebarFixed=', sidebar ? sidebar.classList.contains('sidebar-fixed') : false);
+    } catch (e) {
+        console.warn('applyContentOffset error', e);
+    }
+}
+
+window.addEventListener('load', applyContentOffset);
+window.addEventListener('resize', applyContentOffset);
+</script>
