@@ -144,7 +144,7 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <?php if ($appointment['status'] === 'confirmed'): ?>
-                                                        <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline">
+                                                        <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline checkin-form" data-patient-name="<?= esc($appointment['patient_name']) ?>">
                                                             <?= csrf_field() ?>
                                                             <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                                                 <i class="fas fa-sign-in-alt mr-2"></i>
@@ -160,9 +160,9 @@
                                                             <?php endif; ?>
                                                         </span>
                                                         <br>
-                                                        <form method="POST" action="<?= base_url('queue/call/' . $appointment['id']) ?>" class="inline mt-2">
+                                                        <form method="POST" action="<?= base_url('queue/call/' . $appointment['id']) ?>" class="inline mt-2 send-to-treatment">
                                                             <?= csrf_field() ?>
-                                                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="return confirm('Send to treatment queue?')">
+                                                            <button type="submit" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                                                 <i class="fas fa-user-md mr-2"></i>
                                                                 Send to Treatment
                                                             </button>
@@ -215,10 +215,10 @@
                                         </div>
                                         <div>
                                             <?php if ($appointment['status'] === 'confirmed'): ?>
-                                                <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline checkin-form">
+                                                <form method="POST" action="<?= base_url('checkin/process/' . $appointment['id']) ?>" class="inline checkin-form" data-patient-name="<?= esc($appointment['patient_name']) ?>">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
-                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" onclick="return confirm('Check in <?= esc($appointment['patient_name']) ?>?')">
+                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                                         <i class="fas fa-sign-in-alt mr-2"></i>
                                                         Check In
                                                     </button>
@@ -231,9 +231,9 @@
                                                         <br><small class="text-gray-500">at <?= date('g:i A', strtotime($appointment['checked_in_at'])) ?></small>
                                                     <?php endif; ?>
                                                 </span>
-                                                <form method="POST" action="<?= base_url('queue/call/' . $appointment['id']) ?>" class="inline mt-2">
+                                                <form method="POST" action="<?= base_url('queue/call/' . $appointment['id']) ?>" class="inline mt-2 send-to-treatment">
                                                     <?= csrf_field() ?>
-                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="return confirm('Send to treatment queue?')">
+                                                    <button type="submit" class="w-full mt-2 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                                         <i class="fas fa-user-md mr-2"></i>
                                                         Send to Treatment
                                                     </button>
@@ -262,6 +262,30 @@
 </div>
 
 <script>
+// Simple toast helper to show AJAX feedback without opening devtools
+function showToast(msg, isError) {
+    var container = document.getElementById('ajax-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'ajax-toast-container';
+        container.style.position = 'fixed';
+        container.style.right = '20px';
+        container.style.bottom = '20px';
+        container.style.zIndex = 9999;
+        document.body.appendChild(container);
+    }
+    var el = document.createElement('div');
+    el.textContent = msg;
+    el.style.background = isError ? 'rgba(220,38,38,0.95)' : 'rgba(37,99,235,0.95)';
+    el.style.color = '#fff';
+    el.style.padding = '10px 14px';
+    el.style.marginTop = '8px';
+    el.style.borderRadius = '6px';
+    el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    container.appendChild(el);
+    setTimeout(function(){ el.style.transition='opacity 300ms'; el.style.opacity=0; setTimeout(()=>el.remove(),300); }, 4000);
+}
+
 let formSubmissionInProgress = false;
 
 // Auto-refresh page every 30 seconds to update real-time status
@@ -281,12 +305,76 @@ function scheduleRefresh() {
 // Start the refresh timer
 scheduleRefresh();
 
-// Confirmation for check-in
-document.querySelectorAll('form').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-        if (!confirm('Check in this patient?')) {
-            e.preventDefault();
-        }
+// Scoped handlers for check-in and send-to-treatment to avoid intercepting unrelated forms
+document.querySelectorAll('.checkin-form').forEach(function(form){
+    form.addEventListener('submit', function(e){
+        e.preventDefault();
+        var name = form.dataset.patientName || 'this patient';
+        if (!confirm('Check in ' + name + '?')) return;
+        var action = form.getAttribute('action');
+        var body = new FormData(form);
+        formSubmissionInProgress = true;
+        console.debug && console.debug('Sending check-in via', action);
+        fetch(action, { method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(res){ return res.json ? res.json().catch(()=>null) : null; })
+        .then(function(data){
+            console.debug('check-in response', data);
+            if (data && data.success) {
+                showToast('Check-in successful', false);
+                setTimeout(function(){ window.location.reload(); }, 900);
+            } else if (data && (data.error || data.message)) {
+                showToast('Error: ' + (data.error || data.message), true);
+                formSubmissionInProgress = false;
+            } else {
+                // fallback to normal submit if server returned HTML/redirect
+                formSubmissionInProgress = false;
+                form.submit();
+            }
+        })
+        .catch(function(err){
+            console.error('Failed to check in', err);
+            formSubmissionInProgress = false;
+            form.submit();
+        });
+    });
+});
+
+// Intercept send-to-treatment forms to perform a fetch and show immediate feedback (prevents full-page hangs)
+document.querySelectorAll('.send-to-treatment').forEach(function(form){
+    form.addEventListener('submit', function(e){
+        e.preventDefault();
+        var name = form.closest('tr')?.querySelector('td:nth-child(2) .text-sm.font-medium')?.innerText || form.dataset.patientName || 'this patient';
+        if (!confirm('Send to treatment queue for ' + name + '?')) return;
+        var action = form.getAttribute('action');
+        var body = new FormData(form);
+        formSubmissionInProgress = true;
+        console.debug && console.debug('Sending to treatment via', action);
+        fetch(action, { method: 'POST', body: body, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(res){
+            // Try to parse JSON, otherwise return null
+            return res.json ? res.json().catch(()=>null) : null;
+        })
+        .then(function(data){
+            console.debug('send-to-treatment response', data);
+            // on structured success, reload to show updated queue; on error, show message and re-enable
+            if (data && data.success) {
+                showToast('Patient sent to treatment', false);
+                setTimeout(function(){ window.location.reload(); }, 900);
+            } else if (data && data.error) {
+                showToast('Error: ' + (data.error || data.message || 'Unknown'), true);
+                formSubmissionInProgress = false;
+            } else {
+                // If server returned HTML/redirect or unexpected payload, fallback to full submit
+                formSubmissionInProgress = false;
+                form.submit();
+            }
+        })
+        .catch(function(err){
+            console.error('Failed to send to treatment', err);
+            formSubmissionInProgress = false;
+            // fallback to normal submit to preserve behavior
+            form.submit();
+        });
     });
 });
 

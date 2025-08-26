@@ -28,30 +28,38 @@ class TreatmentQueue extends BaseController
         }
 
         // Get checked-in patients waiting for treatment
-        $waitingPatients = $this->appointmentModel
+        $waitingQuery = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, user.phone as patient_phone, 
                      patient_checkins.checked_in_at,
                      TIMESTAMPDIFF(MINUTE, patient_checkins.checked_in_at, NOW()) as waiting_time')
             ->join('user', 'user.id = appointments.user_id')
             ->join('patient_checkins', 'patient_checkins.appointment_id = appointments.id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'checked_in')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('patient_checkins.checked_in_at', 'ASC')
-            ->findAll();
+            ->where('appointments.status', 'checked_in');
+
+        // Only filter by dentist if the current user is a dentist/doctor
+        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
+            $waitingQuery = $waitingQuery->where('appointments.dentist_id', $user['id']);
+        }
+
+        $waitingPatients = $waitingQuery->orderBy('patient_checkins.checked_in_at', 'ASC')->findAll();
 
         // Get ongoing treatments
-        $ongoingTreatments = $this->appointmentModel
+        $ongoingQuery = $this->appointmentModel
             ->select('appointments.*, user.name as patient_name, 
                      treatment_sessions.started_at,
                      TIMESTAMPDIFF(MINUTE, treatment_sessions.started_at, NOW()) as treatment_duration')
             ->join('user', 'user.id = appointments.user_id')
             ->join('treatment_sessions', 'treatment_sessions.appointment_id = appointments.id')
             ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('appointments.status', 'ongoing')
-            ->where('appointments.dentist_id', $user['user_type'] === 'doctor' ? $user['id'] : null)
-            ->orderBy('treatment_sessions.started_at', 'ASC')
-            ->findAll();
+            ->where('appointments.status', 'ongoing');
+
+        // Only filter by dentist if the current user is a dentist/doctor
+        if (in_array($user['user_type'], ['dentist', 'doctor'])) {
+            $ongoingQuery = $ongoingQuery->where('appointments.dentist_id', $user['id']);
+        }
+
+        $ongoingTreatments = $ongoingQuery->orderBy('treatment_sessions.started_at', 'ASC')->findAll();
 
         return view('queue/dashboard', [
             'user' => $user,
@@ -67,11 +75,14 @@ class TreatmentQueue extends BaseController
     {
         $user = Auth::getCurrentUser();
         
-        // Log that this method was called
-        log_message('debug', "callNext method called for appointment ID: {$appointmentId}, User type: {$user['user_type']}");
-        
+        // Log that this method was called (protect against null user)
+        log_message('debug', "callNext method called for appointment ID: {$appointmentId}, User type: " . ($user ? $user['user_type'] : 'null'));
+
         if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin', 'staff'])) {
             log_message('error', "Unauthorized user tried to call patient. User type: " . ($user ? $user['user_type'] : 'null'));
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
             return redirect()->to('/login');
         }
 
@@ -79,6 +90,9 @@ class TreatmentQueue extends BaseController
         $appointment = $this->appointmentModel->find($appointmentId);
         if (!$appointment) {
             log_message('error', "Appointment not found: {$appointmentId}");
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Appointment not found']);
+            }
             session()->setFlashdata('error', 'Appointment not found');
             return redirect()->back();
         }
@@ -86,6 +100,9 @@ class TreatmentQueue extends BaseController
         // Check if status is valid for calling next
         if ($appointment['status'] !== 'checked_in') {
             log_message('error', "Invalid appointment status: {$appointment['status']}");
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Invalid appointment or patient not checked in']);
+            }
             session()->setFlashdata('error', 'Invalid appointment or patient not checked in');
             return redirect()->back();
         }
@@ -104,19 +121,19 @@ class TreatmentQueue extends BaseController
                 throw new \Exception('Failed to update appointment status');
             }
 
-            // Create treatment session record
+            // Create treatment session record using model helper
             $treatmentSessionModel = new \App\Models\TreatmentSessionModel();
-            $sessionResult = $treatmentSessionModel->insert([
-                'appointment_id' => $appointmentId,
-                'patient_id' => $appointment['user_id'],
-                'dentist_id' => $appointment['dentist_id'],
-                'started_at' => date('Y-m-d H:i:s'),
-                'called_by' => $user['id'],
-                'status' => 'ongoing',
-                'notes' => 'Patient called for treatment'
-            ]);
+            $sessionResult = $treatmentSessionModel->startSession(
+                $appointmentId,
+                $user['id'],
+                $appointment['dentist_id'] ?? null,
+                'normal',
+                null
+            );
 
             if (!$sessionResult) {
+                $tErrors = method_exists($treatmentSessionModel, 'errors') ? $treatmentSessionModel->errors() : [];
+                log_message('error', 'TreatmentSession insert failed. Model errors: ' . json_encode($tErrors));
                 throw new \Exception('Failed to create treatment session');
             }
 
@@ -127,6 +144,14 @@ class TreatmentQueue extends BaseController
             }
 
             log_message('debug', "Successfully called patient for treatment: {$appointmentId}");
+
+            // Prepare success payload
+            $payload = ['success' => true, 'appointmentId' => $appointmentId, 'message' => 'Patient called for treatment'];
+            // If AJAX, return JSON so client JS can handle it
+            if ($this->request->isAJAX()) {
+                log_message('info', "callNext AJAX success for appointment: {$appointmentId}");
+                return $this->response->setJSON($payload);
+            }
 
             // If the user is a dentist/doctor, redirect to checkup module
             if (in_array($user['user_type'], ['dentist', 'doctor'])) {
@@ -143,6 +168,9 @@ class TreatmentQueue extends BaseController
         } catch (\Exception $e) {
             $db->transRollback();
             log_message('error', "Exception calling patient: {$appointmentId}. " . $e->getMessage());
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => 'Failed to call patient: ' . $e->getMessage()]);
+            }
             session()->setFlashdata('error', 'Failed to call patient: ' . $e->getMessage());
             return redirect()->back();
         }
