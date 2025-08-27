@@ -699,6 +699,21 @@ class AdminController extends BaseAdminController
 
         $result = $this->appointmentService->updateAppointment($id, $data);
 
+        // AppointmentService::updateAppointment may return structured response with conflicts
+        if (is_array($result)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON($result);
+            }
+
+            if (!empty($result['success'])) {
+                session()->setFlashdata('success', $result['message'] ?? 'Appointment updated successfully.');
+            } else {
+                session()->setFlashdata('error', $result['message'] ?? 'Failed to update appointment.');
+            }
+            return redirect()->to('/admin/appointments');
+        }
+
+        // Fallback: boolean
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(['success' => (bool)$result, 'message' => $result ? 'Appointment updated successfully.' : 'Failed to update appointment.']);
         }

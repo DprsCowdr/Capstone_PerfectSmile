@@ -235,10 +235,11 @@ class StaffController extends BaseAdminController
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
-        $date = $this->request->getPost('date');
-        $time = $this->request->getPost('time');
-        $dentist_id = $this->request->getPost('dentist_id');
-        $branch_id = $this->request->getPost('branch_id');
+    $date = $this->request->getPost('date');
+    $time = $this->request->getPost('time');
+    $dentist_id = $this->request->getPost('dentist_id');
+    $branch_id = $this->request->getPost('branch_id');
+    $duration = (int)($this->request->getPost('duration') ?? 30); // minutes
 
         if (!$date || !$time) {
             return $this->response->setJSON(['success' => false, 'message' => 'Date and time are required']);
@@ -246,7 +247,7 @@ class StaffController extends BaseAdminController
 
         try {
             $appointmentModel = new \App\Models\AppointmentModel();
-            $conflicts = $appointmentModel->checkAppointmentConflicts($date, $time, $dentist_id, null, $branch_id);
+            $conflicts = $appointmentModel->checkAppointmentConflicts($date, $time, $dentist_id, null, $branch_id, $duration);
             
             if (empty($conflicts)) {
                 return $this->response->setJSON([
@@ -264,7 +265,9 @@ class StaffController extends BaseAdminController
                     'dentist_name' => $conflict['dentist_name'] ?? 'Unassigned',
                     'appointment_time' => $conflict['appointment_time'],
                     'status' => $conflict['status'],
-                    'time_diff' => $this->calculateTimeDifference($time, $conflict['appointment_time'])
+                    'time_diff' => $this->calculateTimeDifference($time, $conflict['appointment_time']),
+                    'branch_id' => $conflict['branch_id'] ?? null,
+                    'dentist_id' => $conflict['dentist_id'] ?? null
                 ];
             }
 

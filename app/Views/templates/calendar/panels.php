@@ -56,12 +56,33 @@
         <option value="">Select Time</option>
         <!-- Time options will be populated by JavaScript based on availability -->
       </select>
+      <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Procedure duration (minutes)</label>
+          <select name="duration" id="durationSelect" class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-white text-gray-700 text-sm">
+            <option value="15">15</option>
+            <option value="30" selected>30</option>
+            <option value="45">45</option>
+            <option value="60">60</option>
+            <option value="90">90</option>
+            <option value="120">120</option>
+          </select>
+          <input type="hidden" name="duration_minutes" id="durationMinutesInput" value="30">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Time taken</label>
+          <select id="timeTakenSelect" class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-white text-gray-700 text-sm" aria-label="Times already taken">
+            <option value="">— Time taken —</option>
+          </select>
+        </div>
+      </div>
       <div class="text-xs text-green-600 mt-1" id="availabilityMessage" style="display: none;">
         <i class="fas fa-check-circle"></i> <span id="availabilityText"></span>
       </div>
       <div class="text-xs text-red-600 mt-1" id="unavailableMessage" style="display: none;">
         <i class="fas fa-exclamation-triangle"></i> <span id="unavailableText"></span>
       </div>
+  <div id="timeDisabledReasons" class="mt-2 text-xs text-gray-600 hidden"></div>
     </div>
 
     <div class="mb-4 sm:mb-6">
@@ -73,10 +94,12 @@
       <button type="button" id="closeAddAppointmentPanel" class="flex-1 px-4 sm:px-6 py-2 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium">
         Cancel
       </button>
-      <button type="submit" class="flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium">
+      <div class="flex-1 flex gap-2">
+        <button type="submit" class="flex-1 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium">
         <i class="fas fa-calendar-plus mr-2"></i>
         Book Appointment
-      </button>
+        </button>
+      </div>
     </div>
 
     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -245,9 +268,30 @@
     <div class="mb-3 sm:mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
       <input type="time" name="time" id="appointmentTime" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
+      <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Procedure duration (minutes)</label>
+          <select name="duration" id="durationSelectAdmin" class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-white text-gray-700 text-sm">
+            <option value="15">15</option>
+            <option value="30" selected>30</option>
+            <option value="45">45</option>
+            <option value="60">60</option>
+            <option value="90">90</option>
+            <option value="120">120</option>
+          </select>
+          <input type="hidden" name="duration_minutes" id="durationMinutesInputAdmin" value="30">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Time taken</label>
+          <select id="timeTakenSelectAdmin" class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg bg-white text-gray-700 text-sm" aria-label="Times already taken for admin">
+            <option value="">— Time taken —</option>
+          </select>
+        </div>
+      </div>
       <div id="timeConflictWarning" class="text-xs text-red-600 mt-1 hidden">
         <i class="fas fa-exclamation-triangle"></i> <span id="conflictMessage"></span>
       </div>
+  <div id="timeDisabledReasons" class="mt-2 text-xs text-gray-600 hidden"></div>
     </div>
 
     <div class="mb-4 sm:mb-6">
@@ -258,6 +302,7 @@
     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 sm:px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base min-h-12 touch-manipulation">
       Create Appointment
     </button>
+  <!-- Suggest Next button removed per request -->
   </form>
 </div>
 <?php endif; ?>
@@ -336,6 +381,19 @@
     <div class="mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
       <input type="time" name="time" id="editAppointmentTime" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Procedure duration (minutes)</label>
+      <select name="duration" id="editAppointmentDuration" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors">
+        <option value="15">15</option>
+        <option value="30" selected>30</option>
+        <option value="45">45</option>
+        <option value="60">60</option>
+        <option value="90">90</option>
+        <option value="120">120</option>
+      </select>
+      <input type="hidden" name="duration_minutes" id="editAppointmentDurationMinutes" value="30">
     </div>
 
     <?php if ($user['user_type'] === 'admin'): ?>

@@ -276,6 +276,7 @@ abstract class BaseAdminController extends BaseController
             'dentist_id' => $this->request->getPost('dentist') ?: null,
             'appointment_date' => $this->request->getPost('date'),
             'appointment_time' => $this->request->getPost('time'),
+            'duration' => $this->request->getPost('duration') ?: $this->request->getPost('duration_minutes'),
             'appointment_type' => $this->request->getPost('appointment_type') ?? 'scheduled',
             'remarks' => $this->request->getPost('remarks')
         ];

@@ -663,20 +663,24 @@ class Dentist extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
-        $appointmentModel = new \App\Models\AppointmentModel();
-        
         $data = [
-            'appointment_datetime' => $this->request->getPost('appointment_datetime'),
+            'date' => $this->request->getPost('date') ?? substr($this->request->getPost('appointment_datetime') ?? '', 0, 10),
+            'time' => $this->request->getPost('time') ?? substr($this->request->getPost('appointment_datetime') ?? '', 11, 5),
             'service' => $this->request->getPost('service'),
-            'notes' => $this->request->getPost('notes'),
-            'status' => $this->request->getPost('status')
+            'remarks' => $this->request->getPost('notes'),
+            'status' => $this->request->getPost('status'),
+            'branch' => $this->request->getPost('branch_id') ?? null,
+            'dentist' => $this->request->getPost('dentist_id') ?? null,
+            'duration' => $this->request->getPost('duration') ?? $this->request->getPost('duration_minutes') ?? null
         ];
 
-        if ($appointmentModel->update($id, $data)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Appointment updated successfully']);
-        } else {
-            return $this->response->setJSON(['success' => false, 'message' => 'Failed to update appointment']);
+        $result = $this->appointmentService->updateAppointment($id, $data);
+
+        if (is_array($result)) {
+            return $this->response->setJSON($result);
         }
+
+        return $this->response->setJSON(['success' => (bool)$result, 'message' => $result ? 'Appointment updated successfully' : 'Failed to update appointment']);
     }
 
     public function deleteAppointment($id)
@@ -713,15 +717,23 @@ class Dentist extends BaseController
         }
 
         $appointmentModel = new \App\Models\AppointmentModel();
-        $datetime = $this->request->getPost('appointment_datetime');
+        $appointmentDatetime = $this->request->getPost('appointment_datetime');
         $dentistId = $this->request->getPost('dentist_id');
-        
-        $conflicts = $appointmentModel->where('appointment_datetime', $datetime)
-                                    ->where('dentist_id', $dentistId)
-                                    ->where('status !=', 'cancelled')
-                                    ->findAll();
-        
-        return $this->response->setJSON(['success' => true, 'conflicts' => count($conflicts) > 0]);
+        $branchId = $this->request->getPost('branch_id');
+        $duration = (int)($this->request->getPost('duration') ?? 30);
+
+        // Expect either full datetime (Y-m-d H:i) or separate date/time fields
+        if (strpos($appointmentDatetime, ' ') !== false) {
+            [$date, $time] = explode(' ', $appointmentDatetime, 2);
+            $time = substr($time, 0, 5);
+        } else {
+            $date = $this->request->getPost('date');
+            $time = $this->request->getPost('time');
+        }
+
+        $conflicts = $appointmentModel->checkAppointmentConflicts($date, $time, $dentistId, null, $branchId, $duration);
+
+        return $this->response->setJSON(['success' => true, 'conflicts' => count($conflicts) > 0, 'conflict_details' => $conflicts]);
     }
 
     public function getAppointmentDetails($id)

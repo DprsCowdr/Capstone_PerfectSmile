@@ -30,4 +30,4 @@
   </div>
 </div> 
 <!-- Appointment Modal Script -->
-<script src="/js/calendar-day-view-modal.js"></script>
+<!-- Modal script is inlined in templates/calendar/scripts.php; removed external include to avoid 404 -->

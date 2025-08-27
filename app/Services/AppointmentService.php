@@ -17,14 +17,8 @@ class AppointmentService
         $pendingAppointments = $this->appointmentModel->getPendingApprovalAppointments();
         
         // Get today's approved appointments only
-        $todayAppointments = $this->appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
-                                             ->join('user', 'user.id = appointments.user_id')
-                                             ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                             ->where('DATE(appointments.appointment_datetime)', date('Y-m-d'))
-                                             ->where('appointments.approval_status', 'approved') // Only approved appointments
-                                             ->whereIn('appointments.status', ['confirmed', 'scheduled'])
-                                             ->orderBy('appointments.appointment_datetime', 'ASC')
-                                             ->findAll();
+    // Reuse the model method which already applies the proper filters and splitting
+    $todayAppointments = $this->appointmentModel->getTodayAppointments();
         
         // The splitDateTime is already handled by the AppointmentModel's findAll method
         
@@ -47,9 +41,13 @@ class AppointmentService
     
     public function createAppointment($data)
     {
-        // Validate required fields
-        if (empty($data['user_id']) || empty($data['appointment_date']) || empty($data['appointment_time'])) {
-            return ['success' => false, 'message' => 'Required fields missing'];
+        // Validate required fields: need user and either appointment_datetime or both date+time
+        if (empty($data['user_id'])) {
+            return ['success' => false, 'message' => 'Required fields missing: user_id'];
+        }
+        $hasDateTime = !empty($data['appointment_datetime']) || (!empty($data['appointment_date']) && !empty($data['appointment_time']));
+        if (!$hasDateTime) {
+            return ['success' => false, 'message' => 'Required fields missing: appointment_datetime or (appointment_date and appointment_time)'];
         }
 
         try {
@@ -76,15 +74,37 @@ class AppointmentService
     private function createScheduledAppointment($data)
     {
         log_message('info', 'Creating scheduled appointment with data: ' . json_encode($data));
-    // If dentist is assigned, allow booking regardless of dentist availability
+    // Determine duration (minutes) - accept 'duration' or 'duration_minutes' from data
         // Insert appointment and return appropriate message
+        // Determine duration (minutes) - accept 'duration' or 'duration_minutes' from data
+        $duration = (int)($data['duration'] ?? $data['duration_minutes'] ?? 30);
+
+        // Before inserting, check for conflicts (respecting dentist, branch, and duration)
+        $date = $data['appointment_date'] ?? substr($data['appointment_datetime'] ?? '', 0, 10);
+        $time = $data['appointment_time'] ?? substr($data['appointment_datetime'] ?? '', 11, 5);
+        $dentistId = $data['dentist_id'] ?? null;
+        $branchId = $data['branch_id'] ?? null;
+
+    $conflicts = $this->appointmentModel->checkAppointmentConflicts($date, $time, $dentistId, null, $branchId, $duration);
+        if (!empty($conflicts)) {
+            // Conflicts found — return them without attempting to calculate suggestions
+            return [
+                'success' => false,
+                'message' => 'Conflicting appointment(s) found for the selected time.',
+                'conflicts' => $conflicts
+            ];
+        }
+
+        // No conflicts — proceed as before
         if (isset($data['approval_status']) && $data['approval_status'] === 'approved') {
             $data['status'] = 'confirmed';
+            $data['duration_minutes'] = $duration;
             $this->insertAppointment($data);
             log_message('info', 'Admin-created appointment approved with dentist: ' . ($data['dentist_id'] ?? 'none'));
             return ['success' => true, 'message' => 'Appointment created and confirmed successfully.'];
         } else if (isset($data['approval_status']) && $data['approval_status'] === 'pending') {
             $data['status'] = 'pending_approval';
+            $data['duration_minutes'] = $duration;
             $this->insertAppointment($data);
             if (!empty($data['dentist_id'])) {
                 log_message('info', 'Admin-created appointment pending with dentist assigned');
@@ -96,6 +116,7 @@ class AppointmentService
         } else {
             $data['approval_status'] = 'pending';
             $data['status'] = 'pending_approval';
+            $data['duration_minutes'] = $duration;
             log_message('info', 'Scheduled appointment marked as pending approval - will go through waitlist');
             $this->insertAppointment($data);
             if (!empty($data['dentist_id'])) {
@@ -108,7 +129,8 @@ class AppointmentService
     // Helper: Check if a dentist is available for a given date/time/branch
     private function isDentistAvailable($date, $time, $branchId, $dentistId)
     {
-        $availableDentists = $this->appointmentModel->getAvailableDentists($date, $time, $branchId);
+    // Default duration to 30 minutes when not provided
+    $availableDentists = $this->appointmentModel->getAvailableDentists($date, $time, $branchId, 30);
         foreach ($availableDentists as $dentist) {
             if ($dentist['id'] == $dentistId) {
                 return true;
@@ -120,13 +142,42 @@ class AppointmentService
     // Helper: Insert appointment (handles both walk-in and scheduled)
     private function insertAppointment($data)
     {
-        // If walk-in, use special model method, else use insert
-        if (($data['appointment_type'] ?? '') === 'walkin') {
-            $this->appointmentModel->createWalkInAppointment($data);
-        } else {
-            $this->appointmentModel->insert($data);
+        // Use DB transaction to reduce race conditions and optionally persist duration
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        try {
+            // Defensive: only include duration_minutes if the DB column exists (some dev environments
+            // may not have run migrations). If the column is missing, drop it from payload so insert
+            // doesn't fail with SQL errors.
+            if (isset($data['duration_minutes'])) {
+                try {
+                    $res = $db->query("SHOW COLUMNS FROM `appointments` LIKE 'duration_minutes'");
+                    if (!($res && $res->getNumRows() > 0)) {
+                        unset($data['duration_minutes']);
+                    }
+                } catch (\Exception $e) {
+                    // If schema check fails for any reason, remove the field to be safe and log.
+                    log_message('error', 'Schema check for duration_minutes failed: ' . $e->getMessage());
+                    unset($data['duration_minutes']);
+                }
+            }
+            if (($data['appointment_type'] ?? '') === 'walkin') {
+                $this->appointmentModel->createWalkInAppointment($data);
+            } else {
+                $this->appointmentModel->insert($data);
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to insert appointment: ' . $e->getMessage());
+            $db->transRollback();
+            throw $e;
         }
+
+        $db->transComplete();
+        return $db->transStatus();
     }
+
+    // Server-side suggestion algorithm removed. Suggestion responsibilities live on the client now.
     
     public function approveAppointment($id, $dentistId = null)
     {
@@ -145,7 +196,8 @@ class AppointmentService
                 $availableDentists = $this->appointmentModel->getAvailableDentists(
                     $appointment['appointment_date'] ?? substr($appointment['appointment_datetime'], 0, 10),
                     $appointment['appointment_time'] ?? substr($appointment['appointment_datetime'], 11, 5),
-                    $appointment['branch_id']
+                    $appointment['branch_id'],
+                    $appointment['duration_minutes'] ?? 30
                 );
                 
                 if (!empty($availableDentists)) {
@@ -160,10 +212,12 @@ class AppointmentService
             
             // If dentist is being assigned, check availability
             if ($dentistId && !$appointment['dentist_id']) {
+                // Pass duration consistently when checking availability
                 $availableDentists = $this->appointmentModel->getAvailableDentists(
                     $appointment['appointment_date'] ?? substr($appointment['appointment_datetime'], 0, 10),
                     $appointment['appointment_time'] ?? substr($appointment['appointment_datetime'], 11, 5),
-                    $appointment['branch_id']
+                    $appointment['branch_id'],
+                    $appointment['duration_minutes'] ?? 30
                 );
                 
                 $isDentistAvailable = false;
@@ -221,15 +275,32 @@ class AppointmentService
     public function updateAppointment($id, $data)
     {
         $updateData = [
-            'patient_id' => $data['patient'] ?? null,
+            'user_id' => $data['patient'] ?? null,
             'branch_id' => $data['branch'] ?? null,
             'appointment_date' => $data['date'] ?? null,
             'appointment_time' => $data['time'] ?? null,
             'remarks' => $data['remarks'] ?? null,
             'updated_at' => date('Y-m-d H:i:s')
         ];
-        
-        return $this->appointmentModel->update($id, $updateData);
+
+        // If date/time/duration changed, enforce conflict check
+        $date = $updateData['appointment_date'] ?? null;
+        $time = $updateData['appointment_time'] ?? null;
+        $duration = (int)($data['duration'] ?? $data['duration_minutes'] ?? 30);
+        $branchId = $updateData['branch_id'] ?? null;
+
+        if ($date && $time) {
+            $conflicts = $this->appointmentModel->checkAppointmentConflicts($date, $time, $data['dentist'] ?? $data['dentist_id'] ?? null, $id, $branchId, $duration);
+            if (!empty($conflicts)) {
+                // Return conflicts only; server-side suggestion algorithm removed.
+                return ['success' => false, 'message' => 'Conflicting appointment(s) found for the selected time.', 'conflicts' => $conflicts];
+            }
+            // Only set duration when date/time changed and conflict check passed
+            $updateData['duration_minutes'] = $duration;
+        }
+
+        $result = $this->appointmentModel->update($id, $updateData);
+        return ['success' => (bool)$result, 'message' => $result ? 'Appointment updated' : 'Failed to update'];
     }
     
     public function deleteAppointment($id)
@@ -243,7 +314,8 @@ class AppointmentService
             return ['success' => false, 'message' => 'Date, time, and branch are required'];
         }
 
-        $availableDentists = $this->appointmentModel->getAvailableDentists($date, $time, $branchId);
+    // Default duration to 30 minutes for available dentists lookup
+    $availableDentists = $this->appointmentModel->getAvailableDentists($date, $time, $branchId, 30);
 
         return [
             'success' => true,
@@ -266,7 +338,12 @@ class AppointmentService
             $pastAppointments = [];
             
             foreach ($appointments as $appointment) {
-                $appointmentDateTime = $appointment['appointment_datetime'] ?? ($appointment['appointment_date'] . ' ' . $appointment['appointment_time']);
+                // Normalize composed datetime to include seconds when built from date/time
+                if (isset($appointment['appointment_datetime'])) {
+                    $appointmentDateTime = $appointment['appointment_datetime'];
+                } else {
+                    $appointmentDateTime = ($appointment['appointment_date'] ?? '') . ' ' . ($appointment['appointment_time'] ?? '') . ':00';
+                }
                 
                 if ($appointmentDateTime >= $currentDateTime) {
                     $presentAppointments[] = $appointment;

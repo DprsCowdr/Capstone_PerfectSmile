@@ -38,6 +38,7 @@ class AppointmentModel extends Model
         'payment_date',
         'payment_received_by',
         'payment_notes',
+    'duration_minutes',
     ];
 
     // Dates - ENABLE TIMESTAMPS
@@ -76,9 +77,9 @@ class AppointmentModel extends Model
 
     // Callbacks
     protected $allowCallbacks = true;
-    protected $beforeInsert = ['setDefaultValues'];
+    protected $beforeInsert = ['setDefaultValues', 'validateAppointmentDateTime'];
     protected $afterInsert = [];
-    protected $beforeUpdate = [];
+    protected $beforeUpdate = ['setDefaultValues', 'validateAppointmentDateTime'];
     protected $afterUpdate = [];
     protected $beforeFind = [];
     protected $afterFind = [];
@@ -109,43 +110,24 @@ class AppointmentModel extends Model
         return $data;
     }
 
-    /**
-     * Override insert to handle date/time combination and validate business rules
-     */
-    public function insert($data = null, bool $returnID = true)
-    {
-        if (isset($data['appointment_date']) && isset($data['appointment_time'])) {
-            $data['appointment_datetime'] = $data['appointment_date'] . ' ' . $data['appointment_time'] . ':00';
-            unset($data['appointment_date'], $data['appointment_time']);
-        }
-        
-        // Backend validation: no past dates, only 08:00-17:00
-        if (isset($data['appointment_datetime'])) {
-            $dt = strtotime($data['appointment_datetime']);
-            if ($dt < strtotime(date('Y-m-d 00:00:00'))) {
-                throw new \Exception('Cannot book an appointment in the past.');
-            }
-            $hour = (int)date('H', $dt);
-            if ($hour < 8 || $hour > 17) {
-                throw new \Exception('Appointments can only be booked between 08:00 and 17:00.');
-            }
-        }
-        
-        return parent::insert($data, $returnID);
-    }
+    // Using the Model's default insert/update implementation. Date/time
+    // combination and validation are handled by callbacks ($beforeInsert/$beforeUpdate).
 
     /**
-     * Override update to handle date/time combination and validate business rules
+     * Callback: validate appointment datetime business rules
+     * Expects $data in the callbacks shape (['data' => [...]]). Returns same structure.
      */
-    public function update($id = null, $data = null): bool
+    protected function validateAppointmentDateTime(array $data)
     {
-        if (isset($data['appointment_date']) && isset($data['appointment_time'])) {
-            $data['appointment_datetime'] = $data['appointment_date'] . ' ' . $data['appointment_time'] . ':00';
-            unset($data['appointment_date'], $data['appointment_time']);
+        if (!isset($data['data'])) return $data;
+
+        $payload = $data['data'];
+        if (isset($payload['appointment_date']) && isset($payload['appointment_time'])) {
+            // combination will be handled by setDefaultValues; no-op here
         }
-        // Backend validation: no past dates, only 08:00-17:00
-        if (isset($data['appointment_datetime'])) {
-            $dt = strtotime($data['appointment_datetime']);
+
+        if (isset($payload['appointment_datetime'])) {
+            $dt = strtotime($payload['appointment_datetime']);
             if ($dt < strtotime(date('Y-m-d 00:00:00'))) {
                 throw new \Exception('Cannot book an appointment in the past.');
             }
@@ -154,7 +136,8 @@ class AppointmentModel extends Model
                 throw new \Exception('Appointments can only be booked between 08:00 and 17:00.');
             }
         }
-        return parent::update($id, $data);
+
+        return $data;
     }
 
     /**
@@ -467,6 +450,67 @@ class AppointmentModel extends Model
     }
 
     /**
+     * More robust conflict checker that considers appointment duration (in minutes)
+     * Used by staff/dentist conflict endpoints. Returns overlapping appointments
+     * within the interval [targetStart, targetEnd).
+     *
+     * @param string $date Date in Y-m-d
+     * @param string $time Time in H:i
+     * @param int|null $dentistId
+     * @param int|null $excludeId Appointment id to exclude (when updating)
+     * @param int|null $branchId
+     * @param int $durationMinutes Duration in minutes (default 30)
+     * @return array
+     */
+    public function checkAppointmentConflicts($date, $time, $dentistId = null, $excludeId = null, $branchId = null, $durationMinutes = 30)
+    {
+        $targetStart = $date . ' ' . $time . ':00';
+        $targetStartTs = strtotime($targetStart);
+        $targetEndTs = $targetStartTs + ($durationMinutes * 60);
+        $targetEnd = date('Y-m-d H:i:s', $targetEndTs);
+
+        // Overlap condition:
+        // appointment_start < targetEnd AND DATE_ADD(appointment_start, INTERVAL durationMinutes MINUTE) > targetStart
+        $query = $this->select('appointments.id, appointments.appointment_datetime, appointments.status, appointments.approval_status, user.name as patient_name, dentists.name as dentist_name, appointments.dentist_id, appointments.branch_id')
+                     ->join('user', 'user.id = appointments.user_id')
+                     ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
+                     ->where('appointments.appointment_datetime <', $targetEnd)
+                     ->where("DATE_ADD(appointments.appointment_datetime, INTERVAL {$durationMinutes} MINUTE) >", $targetStart)
+                     ->where('appointments.status !=', 'cancelled')
+                     ->whereIn('appointments.approval_status', ['approved', 'auto_approved']);
+
+        if ($dentistId) {
+            $query->where('appointments.dentist_id', $dentistId);
+        }
+
+        if ($branchId) {
+            $query->where('appointments.branch_id', $branchId);
+        }
+
+        if ($excludeId) {
+            $query->where('appointments.id !=', $excludeId);
+        }
+
+        $conflicts = $query->orderBy('appointments.appointment_datetime', 'ASC')->findAll();
+
+        $result = [];
+        foreach ($conflicts as $conflict) {
+            $result[] = [
+                'id' => $conflict['id'],
+                'patient_name' => $conflict['patient_name'] ?? null,
+                'dentist_name' => $conflict['dentist_name'] ?? 'Unassigned',
+                'appointment_time' => date('H:i', strtotime($conflict['appointment_datetime'])),
+                'status' => $conflict['status'] ?? null,
+                'branch_id' => $conflict['branch_id'] ?? null,
+                'dentist_id' => $conflict['dentist_id'] ?? null,
+                'time_difference' => abs($targetStartTs - strtotime($conflict['appointment_datetime'])) / 60
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * Approve appointment
      */
     public function approveAppointment($appointmentId, $dentistId = null)
@@ -564,7 +608,7 @@ class AppointmentModel extends Model
      * @param int $branchId
      * @return array Available dentists
      */
-    public function getAvailableDentists($date, $time, $branchId)
+    public function getAvailableDentists($date, $time, $branchId, $durationMinutes = 30)
     {
         $datetime = $date . ' ' . $time . ':00';
         
@@ -581,12 +625,12 @@ class AppointmentModel extends Model
         
         $availableDentists = [];
         
-        foreach ($allDentists as $dentist) {
+    foreach ($allDentists as $dentist) {
             // Check if dentist has any conflicting appointments
             $conflictBuilder = $db->table('appointments');
             $conflictBuilder->where('dentist_id', $dentist['id'])
-                           ->where('appointment_datetime <=', $datetime)
-                           ->where('DATE_ADD(appointment_datetime, INTERVAL 30 MINUTE) >', $datetime)
+                           ->where('appointment_datetime <', date('Y-m-d H:i:s', strtotime($datetime) + ($durationMinutes * 60)))
+                           ->where("DATE_ADD(appointment_datetime, INTERVAL {$durationMinutes} MINUTE) >", $datetime)
                            ->where('status !=', 'cancelled')
                            ->where('status !=', 'completed');
             

@@ -206,55 +206,156 @@ console.log('Loaded appointments for conflict detection:', window.appointments);
 
 // Function to populate available time slots for patients
 function populateAvailableTimeSlots(selectedDate, timeSelect) {
+  if (!timeSelect) {
+    console.warn('populateAvailableTimeSlots: timeSelect is null for date', selectedDate);
+    return;
+  }
   // Clear existing options
   timeSelect.innerHTML = '<option value="">Select Time</option>';
-  
+
   // Get all appointments for the selected date
-  const dateAppointments = (window.appointments || []).filter(apt => {
+  const dateAppointmentsAll = (window.appointments || []).filter(apt => {
     const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
     return aptDate === selectedDate;
   });
-  
-  // Create time slots from 8:00 AM to 6:00 PM (30-minute intervals)
+  // Respect branch filter from form if present
+  const branchSelectEl = document.querySelector('select[name="branch"]') || document.querySelector('select[name="branch_id"]');
+  const selectedBranch = branchSelectEl ? branchSelectEl.value : (window.currentBranchFilter === 'all' ? null : window.currentBranchFilter);
+  const dateAppointments = selectedBranch ? dateAppointmentsAll.filter(a => String(a.branch_id || a.branch || a.branch_name || '').trim() === String(selectedBranch).trim() || (a.branch_name && a.branch_name.toLowerCase().includes((branchSelectEl ? branchSelectEl.options[branchSelectEl.selectedIndex]?.text?.toLowerCase() : '') || ''))) : dateAppointmentsAll;
+
+  // Prepare Time Taken selects (patient and admin forms)
+  const timeTakenSelect = document.getElementById('timeTakenSelect');
+  const timeTakenSelectAdmin = document.getElementById('timeTakenSelectAdmin');
+  if (timeTakenSelect) timeTakenSelect.innerHTML = '<option value="">— Time taken —</option>';
+  if (timeTakenSelectAdmin) timeTakenSelectAdmin.innerHTML = '<option value="">— Time taken —</option>';
+
+  // Create time slots from 8:00 AM to 6:00 PM (15-minute starts; display every 30 but allow 15-min starts)
   const startHour = 8;
   const endHour = 18;
   let availableSlots = 0;
   let bookedSlots = 0;
-  
+
+  // Build displayed time options (every 30 minutes), but check 15-min aligned starts for overlap
+  const durationEl = document.querySelector('select[name="duration"]') || document.getElementById('durationSelect') || document.getElementById('durationSelectAdmin');
+  const chosenDuration = durationEl ? parseInt(durationEl.value || durationEl.options[durationEl.selectedIndex]?.value || 30, 10) : 30;
+
+  // Keep reasons map for disabled slots
+  const disabledReasons = [];
+
   for (let hour = startHour; hour < endHour; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
       const timeStr = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
       const displayTime = formatTime(timeStr);
-      
-      // Check if this time slot is already booked
-      const isBooked = dateAppointments.some(apt => {
-        const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
-        return aptTime === timeStr;
-      });
-      
+
+      // We will check 15-min aligned starts inside the chosen display slot start
+      // Check starts at timeStr and timeStr+15 if applicable
+      const candidateStarts = [minute, minute + 15].filter(m => m < 60 || (m === 60 && hour + 1 < endHour)).map(m => ({ h: hour + (m === 60 ? 1 : 0), m: m === 60 ? 0 : m }));
+
+      let overlaps = false;
+      let overlapWith = null;
+      for (const s of candidateStarts) {
+        const startMinutes = s.h * 60 + s.m;
+        const endMinutes = startMinutes + chosenDuration;
+        const found = dateAppointments.find(apt => {
+          const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+          if (!aptTime) return false;
+          const [ah, am] = aptTime.split(':').map(Number);
+          const aptStart = ah * 60 + am;
+          const aptDuration = parseInt(apt.duration_minutes || apt.duration || 30, 10);
+          const aptEnd = aptStart + aptDuration;
+          if ((startMinutes < aptEnd) && (endMinutes > aptStart)) {
+            overlapWith = apt;
+            return true;
+          }
+          return false;
+        });
+        if (found) { overlaps = true; break; }
+      }
+
       const option = document.createElement('option');
       option.value = timeStr;
-      
-      if (isBooked) {
-        option.textContent = `${displayTime} (Unavailable)`;
+
+      if (overlaps) {
+        option.textContent = `${displayTime} (Unavailable - overlaps)`;
         option.disabled = true;
         option.style.color = '#ef4444';
         bookedSlots++;
+        if (overlapWith) disabledReasons.push(`${displayTime} overlaps with ${overlapWith.patient_name || 'Unknown'} (${overlapWith.appointment_time || (overlapWith.appointment_datetime||'').substring(11,16)})`);
       } else {
         option.textContent = displayTime;
         availableSlots++;
       }
-      
+
       timeSelect.appendChild(option);
     }
   }
-  
+
+  // Show disabled reasons if any
+  const timeDisabledReasonsEl = document.getElementById('timeDisabledReasons');
+  if (timeDisabledReasonsEl) {
+    if (disabledReasons.length) {
+      timeDisabledReasonsEl.innerHTML = disabledReasons.map(r => `<div>• ${r}</div>`).join('');
+      timeDisabledReasonsEl.classList.remove('hidden');
+    } else {
+      timeDisabledReasonsEl.innerHTML = '';
+      timeDisabledReasonsEl.classList.add('hidden');
+    }
+  }
+
+  // Build list of taken slots with patient names
+  const takenSlots = [];
+  // Filter taken slots by selected branch too (if present)
+  dateAppointmentsAll.forEach(apt => {
+    const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+    if (!aptTime) return;
+  const name = apt.patient_name || (apt.patient && (apt.patient.first_name + ' ' + apt.patient.last_name)) || apt.booked_by || 'Unknown';
+  const duration = apt.duration_minutes || apt.duration || 30;
+  const branch = apt.branch_name || apt.branch || '';
+  const dentist = apt.dentist_name || apt.dentist || '';
+    // include only if branch matches or no branch filter
+    if (!selectedBranch || String(apt.branch_id || apt.branch || apt.branch_name || '').trim() === String(selectedBranch).trim() || (branch && branch.toLowerCase().includes((branchSelectEl ? branchSelectEl.options[branchSelectEl.selectedIndex]?.text?.toLowerCase() : '') || ''))) {
+      takenSlots.push({ id: apt.id || '', time: aptTime, patient: name, duration: duration, branch: branch, dentist: dentist });
+    }
+  });
+
+  // Populate Time Taken selects (avoid duplicates by time)
+  const seen = {};
+  takenSlots.forEach(s => {
+    if (!s.time || seen[s.time]) return;
+    seen[s.time] = true;
+  const extra = [];
+  if (s.duration) extra.push(`${s.duration}m`);
+  if (s.branch) extra.push(s.branch);
+  if (s.dentist) extra.push(s.dentist);
+  const label = `${s.time} — ${s.patient}` + (extra.length ? ` (${extra.join(', ')})` : '');
+    // store appointment id if available as data attribute; fallback to time
+    const aptId = s.id || '';
+    if (timeTakenSelect) {
+      const o = document.createElement('option');
+      o.value = s.time;
+      o.textContent = label;
+      if (aptId) o.setAttribute('data-apt-id', aptId);
+      timeTakenSelect.appendChild(o);
+    }
+    if (timeTakenSelectAdmin) {
+      const o2 = document.createElement('option');
+      o2.value = s.time;
+      o2.textContent = label;
+      if (aptId) o2.setAttribute('data-apt-id', aptId);
+      timeTakenSelectAdmin.appendChild(o2);
+    }
+  });
+
+  // Show or hide the time taken selects depending on whether there are taken slots
+  if (timeTakenSelect) timeTakenSelect.style.display = (takenSlots.length ? 'block' : 'none');
+  if (timeTakenSelectAdmin) timeTakenSelectAdmin.style.display = (takenSlots.length ? 'block' : 'none');
+
   // Show availability message
   const availabilityMessage = document.getElementById('availabilityMessage');
   const unavailableMessage = document.getElementById('unavailableMessage');
   const availabilityText = document.getElementById('availabilityText');
   const unavailableText = document.getElementById('unavailableText');
-  
+
   if (availableSlots > 0) {
     if (availabilityMessage && availabilityText) {
       availabilityText.textContent = `${availableSlots} time slots available`;
@@ -273,6 +374,378 @@ function populateAvailableTimeSlots(selectedDate, timeSelect) {
     }
   }
 }
+
+// Wire duration selects to hidden inputs so server receives duration_minutes
+document.addEventListener('DOMContentLoaded', function() {
+  const durationSelect = document.getElementById('durationSelect');
+  const durationInput = document.getElementById('durationMinutesInput');
+  if (durationSelect && durationInput) {
+    durationSelect.addEventListener('change', function() {
+      durationInput.value = this.value;
+    });
+  }
+
+  const durationSelectAdmin = document.getElementById('durationSelectAdmin');
+  const durationInputAdmin = document.getElementById('durationMinutesInputAdmin');
+  if (durationSelectAdmin && durationInputAdmin) {
+    durationSelectAdmin.addEventListener('change', function() {
+      durationInputAdmin.value = this.value;
+    });
+  }
+
+  const editDuration = document.getElementById('editAppointmentDuration');
+  const editDurationInput = document.getElementById('editAppointmentDurationMinutes');
+  if (editDuration && editDurationInput) {
+    editDuration.addEventListener('change', function() {
+      editDurationInput.value = this.value;
+    });
+  }
+
+  // Make Time Taken selects clickable: when user selects an entry, open appointment info panel
+  function attachTimeTakenHandlers(selectEl) {
+    if (!selectEl) return;
+    selectEl.addEventListener('change', function() {
+      const opt = this.options[this.selectedIndex];
+      const aptId = opt ? opt.getAttribute('data-apt-id') : null;
+      const time = opt ? opt.value : null;
+      if (aptId) {
+        // try to use showWeekAppointmentDetails (global) if available
+        if (typeof window.showWeekAppointmentDetails === 'function') {
+          window.showWeekAppointmentDetails(aptId);
+        } else {
+          // fallback: find appointment and fill panel
+          const apt = (window.appointments || []).find(a => String(a.id) === String(aptId));
+          if (apt) {
+            openAppointmentInfoPanel(apt);
+            prefillBookingFormFromAppointment(apt);
+          }
+        }
+      } else if (time) {
+        // open a small modal listing appointments at that time
+        const aptList = (window.appointments || []).filter(a => (a.appointment_time || (a.appointment_datetime||'').substring(11,16)) === time);
+        if (aptList.length) showAppointmentsListModal(time, aptList);
+      }
+      // reset selection to placeholder after action
+      this.selectedIndex = 0;
+    });
+  }
+
+  attachTimeTakenHandlers(document.getElementById('timeTakenSelect'));
+  attachTimeTakenHandlers(document.getElementById('timeTakenSelectAdmin'));
+
+  // If no date selected, populate time taken selects for today by default
+  try {
+    const today = getPHDate();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
+    const patientDateInput = document.getElementById('appointmentDate');
+    const adminDateInput = document.getElementById('appointmentDate');
+    const patientTimeSelect = document.getElementById('timeSelect');
+    // Only auto-populate if the form date is empty or matches today
+    if ((!patientDateInput || !patientDateInput.value) && (!adminDateInput || !adminDateInput.value)) {
+      if (patientTimeSelect) {
+        populateAvailableTimeSlots(todayStr, patientTimeSelect);
+      }
+      // populate Time Taken selects even if timeSelect not present
+      populateTimeTakenOnly(todayStr);
+    }
+  } catch (e) { console.warn('Failed to pre-populate today time taken', e); }
+
+  // Recompute available time slots when branch or duration changes
+  const branchSelectForm = document.querySelector('select[name="branch"]') || document.querySelector('select[name="branch_id"]');
+  const durationSelectAny = document.querySelectorAll('select[name="duration"]');
+  const patientTimeSelect = document.getElementById('timeSelect');
+  if (branchSelectForm) {
+    branchSelectForm.addEventListener('change', function() {
+      const selectedDate = (document.getElementById('appointmentDate') && document.getElementById('appointmentDate').value) || (document.getElementById('selectedDateDisplay') && document.getElementById('selectedDateDisplay').value) || null;
+      if (selectedDate) {
+        if (patientTimeSelect) populateAvailableTimeSlots(selectedDate, patientTimeSelect);
+        populateTimeTakenOnly(selectedDate);
+      }
+    });
+  }
+
+  // Validate manual time inputs (prevent arbitrary minute starts that overlap)
+  function toMinutes(t) { const [hh, mm] = (t||'00:00').split(':').map(Number); return hh*60 + mm; }
+  // Removed strict 15-minute alignment enforcement - allow free-minute entry.
+  // Conflict detection: returns object { conflict: boolean, type?: 'overlap'|'min_gap', apt?: appointment }
+  function checkTimeConflict(selectedDate, startTimeStr, chosenDuration, branchFilter) {
+    const dateAppointmentsAll = (window.appointments || []).filter(apt => {
+      const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
+      return aptDate === selectedDate;
+    });
+    const dateAppointments = branchFilter ? dateAppointmentsAll.filter(a => String(a.branch_id || a.branch || a.branch_name || '').trim() === String(branchFilter).trim() || (a.branch_name && a.branch_name.toLowerCase().includes(branchFilter.toLowerCase()))) : dateAppointmentsAll;
+    const start = toMinutes(startTimeStr);
+    const end = start + (chosenDuration || 30);
+    const MIN_GAP = 15; // minutes - minimum allowed start-to-start gap
+
+    for (let i = 0; i < dateAppointments.length; i++) {
+      const apt = dateAppointments[i];
+      const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+      if (!aptTime) continue;
+      const aptStart = toMinutes(aptTime);
+      const aptDuration = parseInt(apt.duration_minutes || apt.duration || 30, 10);
+      const aptEnd = aptStart + aptDuration;
+
+      // Duration overlap (primary rule) - if time intervals intersect, it's a conflict
+      if ((start < aptEnd) && (end > aptStart)) {
+        return { conflict: true, type: 'overlap', apt };
+      }
+
+      // Even if intervals don't overlap, require a minimum start-to-start gap
+      if (Math.abs(start - aptStart) < MIN_GAP) {
+        return { conflict: true, type: 'min_gap', apt };
+      }
+    }
+    return { conflict: false };
+  }
+
+  // Hook manual patient time input
+  const patientTimeInput = document.getElementById('timeSelect'); // select
+  const patientManualTime = document.getElementById('appointmentTime'); // admin manual time input
+  function showTimeConflictMessage(msg) {
+    const el = document.getElementById('timeConflictWarning');
+    const m = document.getElementById('conflictMessage');
+    if (el && m) {
+      m.textContent = msg;
+      el.classList.remove('hidden');
+    }
+  }
+  function hideTimeConflictMessage() {
+    const el = document.getElementById('timeConflictWarning');
+    if (el) el.classList.add('hidden');
+  }
+
+  if (patientManualTime) {
+    patientManualTime.addEventListener('change', function() {
+      const val = this.value;
+      const selectedDate = (document.getElementById('appointmentDate') && document.getElementById('appointmentDate').value) || (document.getElementById('selectedDateDisplay') && document.getElementById('selectedDateDisplay').value) || null;
+      const duration = parseInt((document.querySelector('select[name="duration"]') || {}).value || 30, 10);
+      const branchFilter = (document.querySelector('select[name="branch"]') || document.querySelector('select[name="branch_id"]'))?.value || null;
+      if (!selectedDate) return;
+      const res = checkTimeConflict(selectedDate, val, duration, branchFilter);
+      if (res.conflict) {
+        if (res.type === 'min_gap') {
+          showTimeConflictMessage(`Selected time is too close to an existing appointment (${res.apt.patient_name || 'Unknown'} at ${res.apt.appointment_time}). Please allow at least 15 minutes between starts.`);
+        } else {
+          showTimeConflictMessage(`Selected time overlaps an existing appointment (${res.apt.patient_name || 'Unknown'} at ${res.apt.appointment_time}). Please pick another time or change duration.`);
+        }
+      } else {
+        hideTimeConflictMessage();
+      }
+    });
+  }
+
+  // Prevent submission if conflict warning is visible
+  const formsToCheck = document.querySelectorAll('form#appointmentForm, form[action$="/appointments/create"], form#editAppointmentForm');
+  formsToCheck.forEach(f => {
+    f.addEventListener('submit', function(e) {
+      // Re-validate on submit using authoritative local data
+      const selectedDate = (this.querySelector('#appointmentDate') && this.querySelector('#appointmentDate').value) || (this.querySelector('#selectedDateDisplay') && this.querySelector('#selectedDateDisplay').value) || null;
+      const timeField = this.querySelector('input[name="time"], input[name="appointment_time"], select[name="appointment_time"]');
+      const timeVal = timeField ? timeField.value : null;
+      const duration = parseInt((this.querySelector('select[name="duration"]') || {}).value || 30, 10);
+      const branchFilter = (this.querySelector('select[name="branch"]') || this.querySelector('select[name="branch_id"]'))?.value || null;
+      if (selectedDate && timeVal) {
+        const res = checkTimeConflict(selectedDate, timeVal, duration, branchFilter);
+        if (res.conflict) {
+          e.preventDefault();
+          if (res.type === 'min_gap') {
+            alert(`Cannot submit: selected time is less than 15 minutes from an existing appointment (${res.apt.patient_name || 'Unknown'} at ${res.apt.appointment_time}).`);
+          } else {
+            alert(`Cannot submit: selected time overlaps an existing appointment (${res.apt.patient_name || 'Unknown'} at ${res.apt.appointment_time}).`);
+          }
+          return false;
+        }
+      }
+    });
+  });
+  if (durationSelectAny && durationSelectAny.length) {
+    durationSelectAny.forEach(function(dsel) {
+      dsel.addEventListener('change', function() {
+        // sync hidden inputs
+        const hidden = document.querySelector('input[name="duration_minutes"]');
+        if (hidden) hidden.value = this.value;
+        const selectedDate = (document.getElementById('appointmentDate') && document.getElementById('appointmentDate').value) || (document.getElementById('selectedDateDisplay') && document.getElementById('selectedDateDisplay').value) || null;
+        if (selectedDate) {
+          if (patientTimeSelect) populateAvailableTimeSlots(selectedDate, patientTimeSelect);
+          populateTimeTakenOnly(selectedDate);
+        }
+      });
+    });
+  }
+
+  // Helper to populate the Time Taken selects only (useful when admin form has no time select)
+  function populateTimeTakenOnly(selectedDate) {
+    if (!selectedDate) return;
+    const dateAppointmentsAll = (window.appointments || []).filter(apt => {
+      const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
+      return aptDate === selectedDate;
+    });
+    const branchSelectEl = document.querySelector('select[name="branch"]') || document.querySelector('select[name="branch_id"]');
+    const selectedBranch = branchSelectEl ? branchSelectEl.value : (window.currentBranchFilter === 'all' ? null : window.currentBranchFilter);
+
+    const timeTakenSelect = document.getElementById('timeTakenSelect');
+    const timeTakenSelectAdmin = document.getElementById('timeTakenSelectAdmin');
+    if (timeTakenSelect) timeTakenSelect.innerHTML = '<option value="">— Time taken —</option>';
+    if (timeTakenSelectAdmin) timeTakenSelectAdmin.innerHTML = '<option value="">— Time taken —</option>';
+
+    const takenSlots = [];
+    dateAppointmentsAll.forEach(apt => {
+      const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
+      if (!aptTime) return;
+      const name = apt.patient_name || (apt.patient && (apt.patient.first_name + ' ' + apt.patient.last_name)) || apt.booked_by || 'Unknown';
+      const duration = apt.duration_minutes || apt.duration || 30;
+      const branch = apt.branch_name || apt.branch || '';
+      const dentist = apt.dentist_name || apt.dentist || '';
+      if (!selectedBranch || String(apt.branch_id || apt.branch || apt.branch_name || '').trim() === String(selectedBranch).trim() || (branch && branch.toLowerCase().includes((branchSelectEl ? branchSelectEl.options[branchSelectEl.selectedIndex]?.text?.toLowerCase() : '') || ''))) {
+        takenSlots.push({ id: apt.id || '', time: aptTime, patient: name, duration: duration, branch: branch, dentist: dentist });
+      }
+    });
+
+    const seen = {};
+    takenSlots.forEach(s => {
+      if (!s.time || seen[s.time]) return;
+      seen[s.time] = true;
+      const extra = [];
+      if (s.duration) extra.push(`${s.duration}m`);
+      if (s.branch) extra.push(s.branch);
+      if (s.dentist) extra.push(s.dentist);
+      const label = `${s.time} — ${s.patient}` + (extra.length ? ` (${extra.join(', ')})` : '');
+      if (timeTakenSelect) {
+        const o = document.createElement('option');
+        o.value = s.time;
+        o.textContent = label;
+        if (s.id) o.setAttribute('data-apt-id', s.id);
+        timeTakenSelect.appendChild(o);
+      }
+      if (timeTakenSelectAdmin) {
+        const o2 = document.createElement('option');
+        o2.value = s.time;
+        o2.textContent = label;
+        if (s.id) o2.setAttribute('data-apt-id', s.id);
+        timeTakenSelectAdmin.appendChild(o2);
+      }
+    });
+
+    if (timeTakenSelect) timeTakenSelect.style.display = (takenSlots.length ? 'block' : 'none');
+    if (timeTakenSelectAdmin) timeTakenSelectAdmin.style.display = (takenSlots.length ? 'block' : 'none');
+  }
+
+  // Helper: open appointment info panel using existing DOM panel (view-only)
+  function openAppointmentInfoPanel(apt) {
+    const panel = document.getElementById('appointmentInfoPanel');
+    const content = document.getElementById('appointmentInfoContent');
+    if (!panel || !content) return;
+    content.innerHTML = `
+      <div class="p-4">
+        <h3 class="font-semibold mb-2">${apt.patient_name || 'Unknown'}</h3>
+        <div class="text-sm text-gray-600 mb-1"><strong>Date:</strong> ${apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : '')}</div>
+        <div class="text-sm text-gray-600 mb-1"><strong>Time:</strong> ${apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : '')}</div>
+        <div class="text-sm text-gray-600 mb-1"><strong>Procedure duration:</strong> ${apt.duration_minutes || apt.duration || 30} minutes</div>
+        <div class="text-sm text-gray-600 mb-1"><strong>Remarks:</strong> ${apt.remarks || ''}</div>
+        <div class="mt-3">
+          <button class="bg-gray-500 text-white px-3 py-1 rounded" onclick="(function(){ /* view-only; no edit */ })()">Close</button>
+        </div>
+      </div>
+    `;
+    panel.classList.remove('hidden');
+  }
+
+  // Prefill booking form fields from an appointment object (useful for reschedule)
+  function prefillBookingFormFromAppointment(apt) {
+    try {
+      // Determine which form is open: patient or admin
+      const patientForm = document.querySelector('#addAppointmentPanel form#appointmentForm');
+      const adminForm = document.querySelector('#addAppointmentPanel form[action$="/appointments/create"]');
+
+      const targetForm = patientForm || adminForm || document.querySelector('form#appointmentForm');
+      if (!targetForm) return;
+
+      // Set date fields
+      const dateStr = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : null);
+      const timeStr = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : null);
+      const duration = apt.duration_minutes || apt.duration || 30;
+
+      // Set visible selectors/inputs if present
+      const appointmentDateInput = targetForm.querySelector('input#appointmentDate, input[name="appointment_date"]');
+      const selectedDateDisplay = targetForm.querySelector('#selectedDateDisplay');
+      if (appointmentDateInput) appointmentDateInput.value = dateStr || '';
+      if (selectedDateDisplay) selectedDateDisplay.value = dateStr || '';
+
+      const timeSelect = targetForm.querySelector('select[name="appointment_time"]') || targetForm.querySelector('input[name="time"]');
+      if (timeSelect) {
+        if (timeSelect.tagName.toLowerCase() === 'select') {
+          // try to select the option or add it
+          const opt = Array.from(timeSelect.options).find(o => o.value === timeStr);
+          if (opt) { timeSelect.value = timeStr; }
+          else {
+            const newOpt = document.createElement('option'); newOpt.value = timeStr; newOpt.textContent = timeStr; timeSelect.appendChild(newOpt); timeSelect.value = timeStr;
+          }
+        } else {
+          timeSelect.value = timeStr || '';
+        }
+      }
+
+      const durationSelectEl = targetForm.querySelector('select[name="duration"]') || targetForm.querySelector('#durationSelect');
+      const durationHidden = targetForm.querySelector('input[name="duration_minutes"]');
+      if (durationSelectEl) durationSelectEl.value = duration;
+      if (durationHidden) durationHidden.value = duration;
+
+      const branchSelect = targetForm.querySelector('select[name="branch"], select[name="branch_id"]');
+      if (branchSelect && apt.branch) {
+        const opt = Array.from(branchSelect.options).find(o => (o.textContent || o.innerText).trim() === String(apt.branch) || o.value == apt.branch_id || o.value == apt.branch);
+        if (opt) branchSelect.value = opt.value;
+      }
+
+      const dentistSelect = targetForm.querySelector('select[name="dentist"], select[name="dentist_id"]');
+      if (dentistSelect && apt.dentist) {
+        const opt2 = Array.from(dentistSelect.options).find(o => (o.textContent || o.innerText).trim().includes(String(apt.dentist)) || o.value == apt.dentist_id || o.value == apt.dentist);
+        if (opt2) dentistSelect.value = opt2.value;
+      }
+
+      // Focus the form and scroll into view
+      const panel = document.getElementById('addAppointmentPanel');
+      if (panel) {
+        panel.classList.remove('hidden');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } catch (e) {
+      console.error('prefillBookingFormFromAppointment error', e);
+    }
+  }
+
+  // Helper: show a modal listing appointments at a given time
+  function showAppointmentsListModal(time, aptList) {
+    let modal = document.getElementById('timeTakenListModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'timeTakenListModal';
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40';
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML = `
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+        <button id="closeTimeTakenModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+        <h2 class="text-lg font-bold mb-4">Appointments at ${time}</h2>
+        <div class="space-y-3">
+          ${aptList.map(a => `<div class="p-2 border rounded"><div class="font-semibold">${a.patient_name || 'Unknown'}</div><div class="text-xs text-gray-500">${a.remarks || ''}</div><div class="mt-1"><button class=\"text-blue-600\" onclick=\"(function(){ window.showWeekAppointmentDetails && window.showWeekAppointmentDetails(${a.id}); })()\">View</button></div></div>`).join('')}
+        </div>
+      </div>
+    `;
+    modal.classList.remove('hidden');
+    modal.querySelector('#closeTimeTakenModal').onclick = function() { modal.classList.add('hidden'); };
+  }
+
+  // Small JS test helpers: expose to console
+  window.TEST_UI = {
+    listTakenForDate: function(date) { return (window.appointments||[]).filter(a => (a.appointment_date || (a.appointment_datetime||'').substring(0,10)) === date); },
+    openTakenAt: function(date, time) { const list = this.listTakenForDate(date).filter(a => (a.appointment_time || (a.appointment_datetime||'').substring(11,16)) === time); if (list.length) showAppointmentsListModal(time, list); else console.log('No appointments at', time); }
+  };
+  console.log('TEST_UI available: window.TEST_UI.listTakenForDate(date) and .openTakenAt(date,time)');
+});
 
 // Helper function to format time for display
 function formatTime(timeStr) {
