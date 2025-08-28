@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dental Chart Polygon Mapper</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            align-items: center;
+        }
+        .tooth-selector {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin: 10px 0;
+            max-width: 600px;
+        }
+        .tooth-btn {
+            padding: 8px 4px;
+            border: 1px solid #ddd;
+            background: #fff;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .tooth-btn:hover {
+            background: #e9ecef;
+        }
+        .tooth-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        .tooth-btn.completed {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        .image-container {
+            position: relative;
+            display: inline-block;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        #dentalChart {
+            display: block;
+            cursor: crosshair;
+        }
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .canvas-overlay.drawing {
+            pointer-events: all;
+        }
+        .current-polygon {
+            fill: rgba(255, 0, 0, 0.2);
+            stroke: #ff0000;
+            stroke-width: 2;
+        }
+        .completed-polygon {
+            fill: rgba(0, 255, 0, 0.15);
+            stroke: #00aa00;
+            stroke-width: 1.5;
+        }
+        .polygon-point {
+            fill: #ff0000;
+            stroke: #ffffff;
+            stroke-width: 1;
+            cursor: pointer;
+        }
+        .control-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .status-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .current-tooth-info {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        .output-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        #htmlOutput {
+            width: 100%;
+            height: 400px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: white;
+            resize: vertical;
+        }
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #zoomLevel {
+            font-weight: bold;
+            min-width: 50px;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dental Chart Polygon Mapper</h1>
+            <p>Trace the exact outline of each tooth to create precise polygon coordinates</p>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Use:</h3>
+            <ol>
+                <li><strong>Select a tooth</strong> from the grid below</li>
+                <li><strong>Click points</strong> around the tooth's black outline to create a polygon</li>
+                <li><strong>Double-click</strong> or press <kbd>Enter</kbd> to complete the polygon</li>
+                <li><strong>Right-click</strong> to undo the last point</li>
+                <li>Repeat for all 32 teeth</li>
+                <li><strong>Generate HTML</strong> when finished</li>
+            </ol>
+            <p><strong>Tips:</strong> Zoom in for precision, trace clockwise, start from the top of the tooth</p>
+        </div>
+
+        <div class="controls">
+            <div>
+                <label><strong>Select Tooth:</strong></label>
+                <div class="tooth-selector" id="toothSelector">
+                    <!-- Upper Right Quadrant (18-11) -->
+                    <button class="tooth-btn" data-tooth="18">18</button>
+                    <button class="tooth-btn" data-tooth="17">17</button>
+                    <button class="tooth-btn" data-tooth="16">16</button>
+                    <button class="tooth-btn" data-tooth="15">15</button>
+                    <button class="tooth-btn" data-tooth="14">14</button>
+                    <button class="tooth-btn" data-tooth="13">13</button>
+                    <button class="tooth-btn" data-tooth="12">12</button>
+                    <button class="tooth-btn" data-tooth="11">11</button>
+                    
+                    <!-- Upper Left Quadrant (21-28) -->
+                    <button class="tooth-btn" data-tooth="21">21</button>
+                    <button class="tooth-btn" data-tooth="22">22</button>
+                    <button class="tooth-btn" data-tooth="23">23</button>
+                    <button class="tooth-btn" data-tooth="24">24</button>
+                    <button class="tooth-btn" data-tooth="25">25</button>
+                    <button class="tooth-btn" data-tooth="26">26</button>
+                    <button class="tooth-btn" data-tooth="27">27</button>
+                    <button class="tooth-btn" data-tooth="28">28</button>
+                    
+                    <!-- Lower Left Quadrant (38-31) -->
+                    <button class="tooth-btn" data-tooth="38">38</button>
+                    <button class="tooth-btn" data-tooth="37">37</button>
+                    <button class="tooth-btn" data-tooth="36">36</button>
+                    <button class="tooth-btn" data-tooth="35">35</button>
+                    <button class="tooth-btn" data-tooth="34">34</button>
+                    <button class="tooth-btn" data-tooth="33">33</button>
+                    <button class="tooth-btn" data-tooth="32">32</button>
+                    <button class="tooth-btn" data-tooth="31">31</button>
+                    
+                    <!-- Lower Right Quadrant (41-48) -->
+                    <button class="tooth-btn" data-tooth="41">41</button>
+                    <button class="tooth-btn" data-tooth="42">42</button>
+                    <button class="tooth-btn" data-tooth="43">43</button>
+                    <button class="tooth-btn" data-tooth="44">44</button>
+                    <button class="tooth-btn" data-tooth="45">45</button>
+                    <button class="tooth-btn" data-tooth="46">46</button>
+                    <button class="tooth-btn" data-tooth="47">47</button>
+                    <button class="tooth-btn" data-tooth="48">48</button>
+                </div>
+            </div>
+            
+            <div class="zoom-controls">
+                <label><strong>Zoom:</strong></label>
+                <button class="control-btn btn-primary" onclick="zoomImage(0.8)">-</button>
+                <span id="zoomLevel">100%</span>
+                <button class="control-btn btn-primary" onclick="zoomImage(1.2)">+</button>
+                <button class="control-btn btn-warning" onclick="resetZoom()">Reset</button>
+            </div>
+            
+            <div>
+                <button class="control-btn btn-success" onclick="completePolygon()" id="completeBtn" disabled>Complete Polygon</button>
+                <button class="control-btn btn-warning" onclick="undoLastPoint()" id="undoBtn" disabled>Undo Point</button>
+                <button class="control-btn btn-danger" onclick="clearCurrentPolygon()" id="clearBtn" disabled>Clear Current</button>
+                <button class="control-btn btn-danger" onclick="clearAll()">Clear All</button>
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <div class="current-tooth-info" id="currentToothInfo">Select a tooth to start mapping</div>
+            <div class="progress-info">
+                <span>Progress: <span id="completedCount">0</span>/32 teeth completed</span>
+                <span>Current points: <span id="currentPoints">0</span></span>
+            </div>
+            <div class="help-text" id="helpText">Click on a tooth number to begin tracing its outline</div>
+        </div>
+
+        <div class="image-container" id="imageContainer">
+            <img id="dentalChart" src="img/d.jpg" alt="Dental Chart">
+            <svg class="canvas-overlay" id="svgOverlay">
+                <!-- Polygons will be drawn here -->
+            </svg>
+        </div>
+
+        <div class="output-section">
+            <h3>Generated HTML Image Map:</h3>
+            <textarea id="htmlOutput" placeholder="Complete tooth mappings will appear here..."></textarea>
+            <br>
+            <button class="control-btn btn-success" onclick="generateHTML()">Generate HTML</button>
+            <button class="control-btn btn-primary" onclick="copyToClipboard()">Copy HTML</button>
+            <button class="control-btn btn-warning" onclick="downloadHTML()">Download HTML</button>
+        </div>
+    </div>
+
+    <script>
+        let currentTooth = null;
+        let currentPoints = [];
+        let completedPolygons = {};
+        let isDrawing = false;
+        let zoomFactor = 1;
+        let svgOverlay, image, imageContainer;
+
+        // Tooth names mapping
+        const toothNames = {
+            '18': 'Upper Right Third Molar', '17': 'Upper Right Second Molar', '16': 'Upper Right First Molar',
+            '15': 'Upper Right Second Premolar', '14': 'Upper Right First Premolar', '13': 'Upper Right Canine',
+            '12': 'Upper Right Lateral Incisor', '11': 'Upper Right Central Incisor',
+            '21': 'Upper Left Central Incisor', '22': 'Upper Left Lateral Incisor', '23': 'Upper Left Canine',
+            '24': 'Upper Left First Premolar', '25': 'Upper Left Second Premolar', '26': 'Upper Left First Molar',
+            '27': 'Upper Left Second Molar', '28': 'Upper Left Third Molar',
+            '38': 'Lower Left Third Molar', '37': 'Lower Left Second Molar', '36': 'Lower Left First Molar',
+            '35': 'Lower Left Second Premolar', '34': 'Lower Left First Premolar', '33': 'Lower Left Canine',
+            '32': 'Lower Left Lateral Incisor', '31': 'Lower Left Central Incisor',
+            '41': 'Lower Right Central Incisor', '42': 'Lower Right Lateral Incisor', '43': 'Lower Right Canine',
+            '44': 'Lower Right First Premolar', '45': 'Lower Right Second Premolar', '46': 'Lower Right First Molar',
+            '47': 'Lower Right Second Molar', '48': 'Lower Right Third Molar'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            image = document.getElementById('dentalChart');
+            svgOverlay = document.getElementById('svgOverlay');
+            imageContainer = document.getElementById('imageContainer');
+
+            // Setup tooth selector buttons
+            document.querySelectorAll('.tooth-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectTooth(this.dataset.tooth);
+                });
+            });
+
+            // Setup image click handler
+            image.addEventListener('click', handleImageClick);
+            image.addEventListener('contextmenu', handleRightClick);
+
+            // Setup keyboard handlers
+            document.addEventListener('keydown', handleKeyPress);
+
+            // Setup image load handler
+            image.addEventListener('load', updateSVGSize);
+            if (image.complete) {
+                updateSVGSize();
+            }
+
+            // Setup window resize handler
+            window.addEventListener('resize', updateSVGSize);
+        }
+
+        function updateSVGSize() {
+            const rect = image.getBoundingClientRect();
+            svgOverlay.setAttribute('width', image.offsetWidth);
+            svgOverlay.setAttribute('height', image.offsetHeight);
+            svgOverlay.style.width = image.offsetWidth + 'px';
+            svgOverlay.style.height = image.offsetHeight + 'px';
+        }
+
+        function selectTooth(toothNumber) {
+            // Save current work if switching teeth
+            if (currentTooth && currentPoints.length > 0) {
+                if (confirm('You have unsaved points. Do you want to save the current polygon first?')) {
+                    completePolygon();
+                } else {
+                    clearCurrentPolygon();
+                }
+            }
+
+            currentTooth = toothNumber;
+            currentPoints = [];
+            isDrawing = true;
+
+            // Update UI
+            document.querySelectorAll('.tooth-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tooth="${toothNumber}"]`).classList.add('active');
+
+            // Update status
+            document.getElementById('currentToothInfo').textContent = `Mapping Tooth ${toothNumber} - ${toothNames[toothNumber]}`;
+            document.getElementById('helpText').textContent = 'Click around the tooth outline to create polygon points. Double-click or press Enter to complete.';
+            
+            // Enable drawing overlay
+            svgOverlay.classList.add('drawing');
+            
+            updateUI();
+        }
+
+        function handleImageClick(e) {
+            if (!currentTooth || !isDrawing) return;
+
+            const rect = image.getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) * (image.naturalWidth / image.offsetWidth));
+            const y = Math.round((e.clientY - rect.top) * (image.naturalHeight / image.offsetHeight));
+
+            // Check for double-click
+            if (e.detail === 2) {
+                completePolygon();
+                return;
+            }
+
+            addPoint(x, y);
+        }
+
+        function handleRightClick(e) {
+            e.preventDefault();
+            if (currentPoints.length > 0) {
+                undoLastPoint();
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter' && currentPoints.length >= 3) {
+                completePolygon();
+            } else if (e.key === 'Escape') {
+                clearCurrentPolygon();
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                undoLastPoint();
+            }
+        }
+
+        function addPoint(x, y) {
+            currentPoints.push({x, y});
+            drawCurrentPolygon();
+            updateUI();
+        }
+
+        function undoLastPoint() {
+            if (currentPoints.length > 0) {
+                currentPoints.pop();
+                drawCurrentPolygon();
+                updateUI();
+            }
+        }
+
+        function drawCurrentPolygon() {
+            // Remove existing current polygon
+            const existingCurrent = svgOverlay.querySelector('.current-polygon-group');
+            if (existingCurrent) {
+                existingCurrent.remove();
+            }
+
+            if (currentPoints.length === 0) return;
+
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.classList.add('current-polygon-group');
+
+            // Draw polygon if we have enough points
+            if (currentPoints.length >= 3) {
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const points = currentPoints.map(p => `${p.x * (image.offsetWidth / image.naturalWidth)},${p.y * (image.offsetHeight / image.naturalHeight)}`).join(' ');
+                polygon.setAttribute('points', points);
+                polygon.classList.add('current-polygon');
+                group.appendChild(polygon);
+            }
+
+            // Draw points
+            currentPoints.forEach((point, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point.x * (image.offsetWidth / image.naturalWidth));
+                circle.setAttribute('cy', point.y * (image.offsetHeight / image.naturalHeight));
+                circle.setAttribute('r', '4');
+                circle.classList.add('polygon-point');
+                circle.setAttribute('data-index', index);
+                group.appendChild(circle);
+
+                // Add point number
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', point.x * (image.offsetWidth / image.naturalWidth) + 6);
+                text.setAttribute('y', point.y * (image.offsetHeight / image.naturalHeight) - 6);
+                text.setAttribute('fill', '#000');
+                text.setAttribute('font-size', '10');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = index + 1;
+                group.appendChild(text);
+            });
+
+            svgOverlay.appendChild(group);
+        }
+
+        function completePolygon() {
+            if (currentPoints.length < 3) {
+                alert('A polygon needs at least 3 points.');
+                return;
+            }
+
+            // Store the completed polygon
+            completedPolygons[currentTooth] = [...currentPoints];
+
+            // Update UI
+            const btn = document.querySelector(`[data-tooth="${currentTooth}"]`);
+            btn.classList.remove('active');
+            btn.classList.add('completed');
+
+            // Draw completed polygon
+            drawCompletedPolygon(currentTooth, currentPoints);
+
+            // Reset for next tooth
+            currentPoints = [];
+            isDrawing = false;
+            currentTooth = null;
+            svgOverlay.classList.remove('drawing');
+
+            // Remove current polygon drawing
+            const existingCurrent = svgOverlay.querySelector('.current-polygon-group');
+            if (existingCurrent) {
+                existingCurrent.remove();
+            }
+
+            updateUI();
+            document.getElementById('currentToothInfo').textContent = 'Select next tooth to continue mapping';
+            document.getElementById('helpText').textContent = 'Click on another tooth number to continue, or generate HTML when all teeth are mapped.';
+        }
+
+        function drawCompletedPolygon(toothNumber, points) {
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.classList.add('completed-polygon-group');
+            group.setAttribute('data-tooth', toothNumber);
+
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            const pointsStr = points.map(p => `${p.x * (image.offsetWidth / image.naturalWidth)},${p.y * (image.offsetHeight / image.naturalHeight)}`).join(' ');
+            polygon.setAttribute('points', pointsStr);
+            polygon.classList.add('completed-polygon');
+            group.appendChild(polygon);
+
+            // Add tooth number label
+            const centroid = calculateCentroid(points);
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', centroid.x * (image.offsetWidth / image.naturalWidth));
+            text.setAttribute('y', centroid.y * (image.offsetHeight / image.naturalHeight));
+            text.setAttribute('fill', '#000');
+            text.setAttribute('font-size', '12');
+            text.setAttribute('font-weight', 'bold');
+            text.setAttribute('text-anchor', 'middle');
+            text.textContent = toothNumber;
+            group.appendChild(text);
+
+            svgOverlay.appendChild(group);
+        }
+
+        function calculateCentroid(points) {
+            const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+            const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+            return {x, y};
+        }
+
+        function clearCurrentPolygon() {
+            currentPoints = [];
+            const existingCurrent = svgOverlay.querySelector('.current-polygon-group');
+            if (existingCurrent) {
+                existingCurrent.remove();
+            }
+            updateUI();
+        }
+
+        function clearAll() {
+            if (Object.keys(completedPolygons).length > 0 || currentPoints.length > 0) {
+                if (!confirm('This will clear all polygons. Are you sure?')) {
+                    return;
+                }
+            }
+
+            completedPolygons = {};
+            currentPoints = [];
+            currentTooth = null;
+            isDrawing = false;
+
+            // Clear SVG
+            svgOverlay.innerHTML = '';
+            svgOverlay.classList.remove('drawing');
+
+            // Reset buttons
+            document.querySelectorAll('.tooth-btn').forEach(btn => {
+                btn.classList.remove('active', 'completed');
+            });
+
+            // Clear output
+            document.getElementById('htmlOutput').value = '';
+
+            updateUI();
+            document.getElementById('currentToothInfo').textContent = 'Select a tooth to start mapping';
+            document.getElementById('helpText').textContent = 'Click on a tooth number to begin tracing its outline';
+        }
+
+        function updateUI() {
+            const completedCount = Object.keys(completedPolygons).length;
+            const currentPointsCount = currentPoints.length;
+
+            document.getElementById('completedCount').textContent = completedCount;
+            document.getElementById('currentPoints').textContent = currentPointsCount;
+
+            // Update button states
+            document.getElementById('completeBtn').disabled = currentPointsCount < 3;
+            document.getElementById('undoBtn').disabled = currentPointsCount === 0;
+            document.getElementById('clearBtn').disabled = currentPointsCount === 0;
+        }
+
+        function zoomImage(factor) {
+            zoomFactor *= factor;
+            image.style.transform = `scale(${zoomFactor})`;
+            image.style.transformOrigin = 'top left';
+            
+            // Update container size
+            imageContainer.style.width = (image.naturalWidth * zoomFactor) + 'px';
+            imageContainer.style.height = (image.naturalHeight * zoomFactor) + 'px';
+            imageContainer.style.overflow = 'auto';
+            
+            document.getElementById('zoomLevel').textContent = Math.round(zoomFactor * 100) + '%';
+            
+            setTimeout(updateSVGSize, 100);
+        }
+
+        function resetZoom() {
+            zoomFactor = 1;
+            image.style.transform = 'none';
+            imageContainer.style.width = 'auto';
+            imageContainer.style.height = 'auto';
+            imageContainer.style.overflow = 'hidden';
+            document.getElementById('zoomLevel').textContent = '100%';
+            setTimeout(updateSVGSize, 100);
+        }
+
+        function generateHTML() {
+            if (Object.keys(completedPolygons).length === 0) {
+                alert('No polygons to generate. Please map some teeth first.');
+                return;
+            }
+
+            let html = '<!-- Generated Dental Chart Polygon Image Map -->\n';
+            html += '<map name="dental-map">\n';
+
+            // Sort teeth by number for organized output
+            const sortedTeeth = Object.keys(completedPolygons).sort((a, b) => parseInt(a) - parseInt(b));
+
+            sortedTeeth.forEach(toothNumber => {
+                const points = completedPolygons[toothNumber];
+                const coords = points.map(p => `${p.x},${p.y}`).join(',');
+                const toothName = toothNames[toothNumber] || `Tooth ${toothNumber}`;
+                
+                html += `    <area shape="poly" coords="${coords}" alt="Tooth ${toothNumber}" title="${toothName}" href="#" onclick="toothClicked('${toothNumber}'); return false;">\n`;
+            });
+
+            html += '</map>\n\n';
+            html += '<!-- JavaScript function to handle tooth clicks -->\n';
+            html += '<script>\n';
+            html += 'function toothClicked(toothNumber) {\n';
+            html += '    console.log("Clicked tooth:", toothNumber);\n';
+            html += '    // Add your tooth click handling logic here\n';
+            html += '    alert("Clicked on tooth " + toothNumber);\n';
+            html += '}\n';
+            html += '</script>\n\n';
+            html += '<!-- Usage: <img src="img/d.jpg" alt="Dental Chart" usemap="#dental-map"> -->';
+
+            document.getElementById('htmlOutput').value = html;
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('htmlOutput');
+            if (output.value.trim() === '') {
+                alert('Generate HTML first!');
+                return;
+            }
+            
+            output.select();
+            document.execCommand('copy');
+            alert('HTML copied to clipboard!');
+        }
+
+        function downloadHTML() {
+            const output = document.getElementById('htmlOutput');
+            if (output.value.trim() === '') {
+                alert('Generate HTML first!');
+                return;
+            }
+
+            const blob = new Blob([output.value], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dental-chart-map.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
