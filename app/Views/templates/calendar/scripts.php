@@ -1060,10 +1060,12 @@ function openAddAppointmentPanelWithTime(date, time) {
       if (timeInput && time) {
         timeInput.value = time;
       }
-      
       panel.classList.add('active');
-      
-  // (Conflict detection removed)
+
+      // Trigger conflict check for this branch/time/dentist
+      setTimeout(() => {
+        runConflictCheckForPanel();
+      }, 80);
     }
   } else if (userType === 'doctor') {
     const availabilityPanel = document.getElementById('doctorAvailabilityPanel');
@@ -1086,6 +1088,159 @@ function openAddAppointmentPanelWithTime(date, time) {
     }
   }
 }
+
+// Run conflict check using staff AJAX endpoint and populate UI
+function runConflictCheckForPanel() {
+  // Use appointmentDate if set, otherwise default to today (YYYY-MM-DD) so branch selection shows today's appointments
+  const dateEl = document.getElementById('appointmentDate');
+  let date = dateEl ? dateEl.value : null;
+  if (!date) {
+    const d = new Date();
+    date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  const time = document.getElementById('appointmentTime') ? document.getElementById('appointmentTime').value : null;
+  const branchEl = document.querySelector('select[name="branch"]') || document.querySelector('select[name="branch_id"]');
+  const dentistEl = document.querySelector('select[name="dentist"]') || document.querySelector('select[name="dentist_id"]');
+  const branch_id = branchEl ? branchEl.value : '';
+  const dentist_id = dentistEl ? dentistEl.value : '';
+
+  const conflictMessageEl = document.getElementById('timeConflictWarning');
+  const conflictText = document.getElementById('conflictMessage');
+  const conflictList = document.getElementById('conflictList');
+  const timeTakenSelect = document.getElementById('timeTakenSelect');
+
+  // Always fetch day appointments to populate Time Taken dropdown (branch selection should show today's appointments)
+  if (timeTakenSelect) { timeTakenSelect.classList.add('hidden'); }
+
+  // Read procedure duration input (minutes) if present and include in request
+  const procedureDurationEl = document.getElementById('procedureDuration');
+  const procedureDurationVal = procedureDurationEl ? procedureDurationEl.value : '';
+
+  // Fetch fresh branch/day appointments from server to populate Time Taken dropdown
+  fetch(`${window.baseUrl}appointments/day-appointments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: `date=${encodeURIComponent(date)}&branch_id=${encodeURIComponent(branch_id)}&<?= csrf_token() ?>=${encodeURIComponent('<?= csrf_hash() ?>')}`
+  })
+  .then(r => r.json())
+  .then(dayData => {
+    if (dayData && dayData.success && Array.isArray(dayData.appointments)) {
+        if (timeTakenSelect) {
+        timeTakenSelect.innerHTML = '<option value="">-- Branch appointments for selected date --</option>' + dayData.appointments.map(apt => {
+          const dur = apt.procedure_duration ? (' / ' + apt.procedure_duration + 'm') : '';
+          const end = apt.appointment_end_time ? (' → ' + apt.appointment_end_time) : '';
+          return `<option value="${apt.id}">${apt.appointment_time || ''}${end} - ${apt.patient_name || 'Unknown'}${dur}</option>`;
+        }).join('');
+        timeTakenSelect.classList.remove('hidden');
+      }
+    } else {
+      if (timeTakenSelect) { timeTakenSelect.innerHTML = '<option value="">-- Branch appointments for selected date --</option>'; timeTakenSelect.classList.add('hidden'); }
+    }
+
+    // After populating, run the conflict check only when time is set
+    if (time) {
+  return fetch(`${window.baseUrl}appointments/check-conflicts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: `date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}&branch_id=${encodeURIComponent(branch_id)}&dentist_id=${encodeURIComponent(dentist_id)}&procedure_duration=${encodeURIComponent(procedureDurationVal)}&<?= csrf_token() ?>=${encodeURIComponent('<?= csrf_hash() ?>')}`
+      });
+    }
+    // If no time, resolve with null so next .then handles lack of data
+    return Promise.resolve(null);
+  })
+  .then(r => {
+    if (!r) {
+      // No conflict check was performed because time not set
+      if (conflictMessageEl) conflictMessageEl.classList.add('hidden');
+      if (conflictList) conflictList.classList.add('hidden');
+      return;
+    }
+    return r.json().then(data => {
+      if (!data || !data.success) {
+        if (conflictMessageEl) conflictMessageEl.classList.add('hidden');
+        return;
+      }
+
+  if (data.hasConflicts) {
+        const conflicts = data.conflicts || [];
+        const msgs = conflicts.map(c => `${c.patient_name} at ${c.appointment_time}${c.status ? ' ('+c.status+')' : ''}`);
+        if (conflictMessageEl && conflictText) {
+          conflictText.textContent = `Time conflict: ${msgs.join(', ')}`;
+          conflictMessageEl.classList.remove('hidden');
+        }
+        if (conflictList) {
+          conflictList.innerHTML = '<strong>Conflicts:</strong><br>' + msgs.map(m => `<div>${m}</div>`).join('');
+          // Basic suggestion: suggest nearest available slot +/- 15/30 minutes
+          const suggestion = suggestNearestAvailable(time, conflicts, procedureDurationVal);
+          if (suggestion) {
+            conflictList.innerHTML += `<div class="mt-2 text-sm text-gray-700">Suggestion: try ${suggestion}</div>`;
+          }
+          conflictList.classList.remove('hidden');
+        }
+      } else {
+        if (conflictMessageEl) conflictMessageEl.classList.add('hidden');
+        if (conflictList) { conflictList.innerHTML = ''; conflictList.classList.add('hidden'); }
+      }
+    });
+  })
+  .catch(err => {
+    console.error('Conflict check failed', err);
+  });
+}
+
+// Suggest a nearest available time by checking +/- 15 and 30 minutes that do not overlap any conflicts
+function suggestNearestAvailable(requestedTime, conflicts, duration) {
+  if (!requestedTime) return null;
+  const mins = duration ? parseInt(duration, 10) : 30;
+  const candidates = [15, 30, -15, -30];
+  for (let delta of candidates) {
+    const dt = new Date();
+    const parts = requestedTime.split(':');
+    dt.setHours(parseInt(parts[0],10), parseInt(parts[1],10), 0, 0);
+    dt.setMinutes(dt.getMinutes() + delta);
+    const candStart = dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
+    const candStartTs = dt.getTime();
+    const candEndTs = candStartTs + (mins * 60 * 1000);
+    let ok = true;
+    for (let c of conflicts) {
+      const cStartParts = (c.appointment_time || '').split(':');
+      if (cStartParts.length < 2) continue;
+      const cDt = new Date();
+      cDt.setHours(parseInt(cStartParts[0],10), parseInt(cStartParts[1],10), 0, 0);
+      const cStartTs = cDt.getTime();
+      const cDuration = c.procedure_duration ? parseInt(c.procedure_duration,10) : 30;
+      const cEndTs = cStartTs + (cDuration * 60 * 1000);
+      if (!(candStartTs >= cEndTs || candEndTs <= cStartTs)) { ok = false; break; }
+    }
+    if (ok) return candStart;
+  }
+  return null;
+}
+
+// Hook conflict checks to time, branch, and dentist changes
+document.addEventListener('DOMContentLoaded', function() {
+  const timeInput = document.getElementById('appointmentTime');
+  const branchInput = document.querySelector('select[name="branch"]') || document.querySelector('select[name="branch_id"]');
+  const dentistInput = document.querySelector('select[name="dentist"]') || document.querySelector('select[name="dentist_id"]');
+  const procedureDurationInput = document.getElementById('procedureDuration');
+
+  [timeInput, branchInput, dentistInput].forEach(el => {
+    if (!el) return;
+    el.addEventListener('change', function() {
+      // Debounce a bit
+      clearTimeout(window._conflictCheckTimer);
+      window._conflictCheckTimer = setTimeout(runConflictCheckForPanel, 150);
+    });
+  });
+
+  // If procedure duration changes, optionally re-run conflict check to show expected overlap
+  if (procedureDurationInput) {
+    procedureDurationInput.addEventListener('change', function() {
+      clearTimeout(window._conflictCheckTimer);
+      window._conflictCheckTimer = setTimeout(runConflictCheckForPanel, 150);
+    });
+  }
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     // Function to load appointments for a specific date

@@ -572,6 +572,7 @@ class StaffController extends BaseAdminController
         $time = $this->request->getPost('time');
         $dentist_id = $this->request->getPost('dentist_id');
         $branch_id = $this->request->getPost('branch_id');
+        $procedureDuration = $this->request->getPost('procedure_duration');
 
         if (!$date || !$time) {
             return $this->response->setJSON(['success' => false, 'message' => 'Date and time are required']);
@@ -579,7 +580,7 @@ class StaffController extends BaseAdminController
 
         try {
             $appointmentModel = new \App\Models\AppointmentModel();
-            $conflicts = $appointmentModel->checkAppointmentConflicts($date, $time, $dentist_id, null, $branch_id);
+            $conflicts = $appointmentModel->checkAppointmentConflicts($date, $time, $dentist_id, null, $branch_id, $procedureDuration);
             
             if (empty($conflicts)) {
                 return $this->response->setJSON([
@@ -614,6 +615,57 @@ class StaffController extends BaseAdminController
                 'success' => false, 
                 'message' => 'Error checking conflicts'
             ]);
+        }
+    }
+
+    /**
+     * AJAX: return appointments for a given branch and date (used to populate Time Taken dropdown)
+     */
+    public function getDayAppointments()
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $date = $this->request->getPost('date') ?: $this->request->getGet('date');
+        $branchId = $this->request->getPost('branch_id') ?: $this->request->getGet('branch_id');
+
+        if (!$date) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Date is required']);
+        }
+
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $appointments = $appointmentModel->select('appointments.id, appointments.appointment_datetime, appointments.appointment_time, appointments.procedure_duration, user.name as patient_name, appointments.branch_id')
+                                          ->join('user', 'user.id = appointments.user_id')
+                                          ->where('DATE(appointments.appointment_datetime)', $date);
+            if ($branchId) $appointments->where('appointments.branch_id', $branchId);
+            $rows = $appointments->orderBy('appointments.appointment_datetime', 'ASC')->findAll();
+
+            // Format minimal info for the client
+            $list = array_map(function($r) {
+                $start = $r['appointment_time'] ?: (isset($r['appointment_datetime']) ? substr($r['appointment_datetime'], 11,5) : null);
+                $duration = isset($r['procedure_duration']) && $r['procedure_duration'] ? (int)$r['procedure_duration'] : 30;
+                $endTime = null;
+                if ($start) {
+                    $dt = strtotime(($r['appointment_datetime'] ?? date('Y-m-d')) . ' ' . $start . ':00');
+                    $endTime = date('H:i', $dt + ($duration * 60));
+                }
+                return [
+                    'id' => $r['id'],
+                    'appointment_time' => $start,
+                    'appointment_end_time' => $endTime,
+                    'patient_name' => $r['patient_name'] ?? null,
+                    'procedure_duration' => $duration,
+                    'branch_id' => $r['branch_id'] ?? null
+                ];
+            }, $rows ?: []);
+
+            return $this->response->setJSON(['success' => true, 'appointments' => $list]);
+        } catch (\Exception $e) {
+            log_message('error', 'Staff::getDayAppointments error: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to load appointments']);
         }
     }
 

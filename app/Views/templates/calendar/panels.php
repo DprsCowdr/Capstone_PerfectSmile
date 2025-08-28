@@ -242,13 +242,30 @@
       </div>
     </div>
 
-    <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
-      <input type="time" name="time" id="appointmentTime" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
-      <div id="timeConflictWarning" class="text-xs text-red-600 mt-1 hidden">
-        <i class="fas fa-exclamation-triangle"></i> <span id="conflictMessage"></span>
+    <div class="mb-3 sm:mb-4 flex flex-col sm:flex-row gap-3">
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
+        <input type="time" name="time" id="appointmentTime" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
+        <div id="timeConflictWarning" class="text-xs text-red-600 mt-1 hidden">
+          <i class="fas fa-exclamation-triangle"></i> <span id="conflictMessage"></span>
+        </div>
+      </div>
+
+      <div style="width:260px; min-width:180px;">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Time Taken (branch summary)</label>
+        <select id="timeTakenSelect" name="time_taken" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
+          <option value="">-- Branch appointments for selected date --</option>
+        </select>
+        <div id="conflictList" class="text-xs text-gray-700 mt-1 hidden"></div>
       </div>
     </div>
+
+    <div class="mb-3 sm:mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Procedure Duration (minutes)</label>
+      <input type="number" min="1" name="procedure_duration" id="procedureDuration" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" placeholder="e.g., 30">
+    </div>
+
+  <!-- previous timeTaken control removed; replaced by inline select next to time -->
 
     <div class="mb-4 sm:mb-6">
       <label class="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
