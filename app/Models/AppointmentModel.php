@@ -37,7 +37,10 @@ class AppointmentModel extends Model
         'payment_amount',
         'payment_date',
         'payment_received_by',
-        'payment_notes',
+    'payment_notes',
+    // Procedure meta
+    'procedure_duration', // minutes
+    'time_taken', // optional: recorded time taken or summary
     ];
 
     // Dates - ENABLE TIMESTAMPS
@@ -55,6 +58,7 @@ class AppointmentModel extends Model
         'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,checked_in,ongoing,completed,cancelled,no_show]',
         'appointment_type' => 'permit_empty|in_list[scheduled,walkin]',
         'approval_status' => 'permit_empty|in_list[pending,approved,declined,auto_approved]',
+    'procedure_duration' => 'permit_empty|integer',
     ];
 
     protected $validationMessages = [
@@ -431,7 +435,7 @@ class AppointmentModel extends Model
         $endTime = date('Y-m-d H:i:s', $targetTimestamp + ($windowMinutes * 60));
         
         // Build query for conflicts
-        $query = $this->select('appointments.id, appointments.appointment_datetime, user.name as patient_name, dentist.name as dentist_name')
+    $query = $this->select('appointments.id, appointments.appointment_datetime, appointments.status, appointments.branch_id, user.name as patient_name, dentist.name as dentist_name')
                      ->join('user', 'user.id = appointments.user_id')
                      ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
                      ->where('appointment_datetime >=', $startTime)
@@ -459,7 +463,9 @@ class AppointmentModel extends Model
                 'patient_name' => $conflict['patient_name'],
                 'dentist_name' => $conflict['dentist_name'] ?? 'Unassigned',
                 'appointment_time' => date('H:i', strtotime($conflict['appointment_datetime'])),
-                'time_difference' => abs($targetTimestamp - strtotime($conflict['appointment_datetime'])) / 60
+                'time_difference' => abs($targetTimestamp - strtotime($conflict['appointment_datetime'])) / 60,
+                'status' => $conflict['status'] ?? null,
+                'branch_id' => $conflict['branch_id'] ?? null,
             ];
         }
         
@@ -598,5 +604,72 @@ class AppointmentModel extends Model
         }
         
         return $availableDentists;
+    }
+
+    /**
+     * Backwards-compatible wrapper used by controllers that expect
+     * checkAppointmentConflicts(date, time, dentistId, excludeId, branchId)
+     */
+    public function checkAppointmentConflicts($date, $time, $dentistId = null, $excludeId = null, $branchId = null, $requestedDuration = null)
+    {
+        // Compute requested start/end timestamps
+        $requestedStart = $date . ' ' . $time . ':00';
+        $requestedStartTs = strtotime($requestedStart);
+        // If requestedDuration provided (minutes), use it; otherwise default to 30
+        $requestedMinutes = $requestedDuration ? (int)$requestedDuration : 30;
+        $requestedEndTs = $requestedStartTs + ($requestedMinutes * 60);
+        $requestedEnd = date('Y-m-d H:i:s', $requestedEndTs);
+
+        // Query appointments where their time range overlaps the requested range.
+        // appointment overlaps if appointment_start < requested_end AND appointment_end > requested_start
+        // appointment_end computed as DATE_ADD(appointment_datetime, INTERVAL COALESCE(appointments.procedure_duration, 30) MINUTE)
+
+        $query = $this->select('appointments.id, appointments.appointment_datetime, appointments.status, appointments.branch_id, appointments.procedure_duration, user.name as patient_name, dentist.name as dentist_name')
+                     ->join('user', 'user.id = appointments.user_id')
+                     ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
+                     ->where('appointments.appointment_datetime <', $requestedEnd)
+                     ->where("DATE_ADD(appointments.appointment_datetime, INTERVAL COALESCE(appointments.procedure_duration, 30) MINUTE) >", $requestedStart)
+                     ->whereIn('appointments.status', ['confirmed', 'checked_in', 'ongoing'])
+                     ->whereIn('appointments.approval_status', ['approved', 'auto_approved']);
+
+        if ($dentistId) {
+            // If a specific dentist is selected, prefer conflicts for that dentist — but still include other branch appointments
+            $query->where('appointments.dentist_id', $dentistId);
+        }
+
+        if ($excludeId) {
+            $query->where('appointments.id !=', $excludeId);
+        }
+
+        if ($branchId) {
+            $query->where('appointments.branch_id', $branchId);
+        }
+
+        $conflicts = $query->findAll();
+
+        $result = [];
+        foreach ($conflicts as $conflict) {
+            $conflictStartTs = strtotime($conflict['appointment_datetime']);
+            $conflictDuration = isset($conflict['procedure_duration']) && $conflict['procedure_duration'] ? (int)$conflict['procedure_duration'] : 30;
+            $conflictEndTs = $conflictStartTs + ($conflictDuration * 60);
+
+            // Calculate overlap in minutes
+            $overlapStart = max($requestedStartTs, $conflictStartTs);
+            $overlapEnd = min($requestedEndTs, $conflictEndTs);
+            $overlapMinutes = $overlapEnd > $overlapStart ? ($overlapEnd - $overlapStart) / 60 : 0;
+
+            $result[] = [
+                'id' => $conflict['id'],
+                'patient_name' => $conflict['patient_name'],
+                'dentist_name' => $conflict['dentist_name'] ?? 'Unassigned',
+                'appointment_time' => date('H:i', $conflictStartTs),
+                'procedure_duration' => $conflictDuration,
+                'time_overlap_minutes' => $overlapMinutes,
+                'status' => $conflict['status'] ?? null,
+                'branch_id' => $conflict['branch_id'] ?? null,
+            ];
+        }
+
+        return $result;
     }
 }

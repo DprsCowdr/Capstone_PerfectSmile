@@ -63,6 +63,10 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/decline/(:num)', 'AdminController::declineAppointment/$1');
     $routes->post('appointments/available-dentists', 'AdminController::getAvailableDentists');
     $routes->post('appointments/check-conflicts', 'AdminController::checkAppointmentConflicts');
+    // Mirror staff AJAX endpoints so admin UI which builds URLs using window.userType ('admin')
+    // can call the same handlers without a 404. These delegate to StaffController methods.
+    $routes->post('appointments/day-appointments', 'StaffController::getDayAppointments');
+    $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
     $routes->get('appointments/details/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->get('waitlist', 'AdminController::waitlist'); // → appointments/waitlist.php
     
@@ -220,5 +224,14 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
+    $routes->post('appointments/day-appointments', 'StaffController::getDayAppointments');
     $routes->get('waitlist', 'StaffController::waitlist');
+});
+
+// Centralized appointments AJAX endpoints (auth protected) to avoid userType prefix duplication
+$routes->group('appointments', ['filter' => 'auth'], function($routes) {
+    // Return branch/day appointments for populating UI (used by staff/admin frontend)
+    $routes->post('day-appointments', 'StaffController::getDayAppointments');
+    // Check for conflicts using duration ranges
+    $routes->post('check-conflicts', 'StaffController::checkConflicts');
 });

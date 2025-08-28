@@ -298,11 +298,16 @@ abstract class BaseAdminController extends BaseController
             }
         }
 
-        $result = $this->appointmentService->createAppointment($data);
-        
-        session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
-        
-        return redirect()->to($redirectPath);
+        try {
+            $result = $this->appointmentService->createAppointment($data);
+            session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
+            return redirect()->to($redirectPath);
+        } catch (\Exception $e) {
+            // Likely a conflict detected in service layer
+            $msg = $e->getMessage() ?: 'Failed to create appointment';
+            session()->setFlashdata('error', $msg);
+            return redirect()->to($redirectPath);
+        }
     }
     
     /**

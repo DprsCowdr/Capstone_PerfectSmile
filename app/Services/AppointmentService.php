@@ -124,7 +124,42 @@ class AppointmentService
         if (($data['appointment_type'] ?? '') === 'walkin') {
             $this->appointmentModel->createWalkInAppointment($data);
         } else {
-            $this->appointmentModel->insert($data);
+            // Before inserting scheduled appointment, check for conflicts using duration ranges
+            $date = $data['appointment_date'] ?? null;
+            $time = $data['appointment_time'] ?? null;
+            $dentistId = $data['dentist_id'] ?? null;
+            $branchId = $data['branch_id'] ?? ($data['branch'] ?? null);
+            $requestedDuration = isset($data['procedure_duration']) ? (int)$data['procedure_duration'] : null;
+
+            if ($date && $time) {
+                // Begin DB transaction to avoid race conditions during insert
+                $db = \Config\Database::connect();
+                $db->transStart();
+
+                // Re-check for conflicts inside the transaction
+                $conflicts = $this->appointmentModel->checkAppointmentConflicts($date, $time, $dentistId, null, $branchId, $requestedDuration);
+                if (!empty($conflicts)) {
+                    $db->transComplete();
+                    // Conflict detected - rollback and notify caller
+                    throw new \Exception('Time conflict detected with existing appointment(s)');
+                }
+
+                // Ensure allowed fields like procedure_duration/time_taken get passed
+                $insertData = $data;
+                if (isset($data['procedure_duration'])) $insertData['procedure_duration'] = (int)$data['procedure_duration'];
+                if (isset($data['time_taken'])) $insertData['time_taken'] = $data['time_taken'];
+
+                // Perform insert
+                $this->appointmentModel->insert($insertData);
+
+                // Complete transaction
+                $db->transComplete();
+
+                // If transaction failed, throw
+                if ($db->transStatus() === false) {
+                    throw new \Exception('Failed to create appointment due to DB error');
+                }
+            }
         }
     }
     
