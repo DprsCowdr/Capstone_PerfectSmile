@@ -19,6 +19,11 @@ class App extends BaseConfig
     public string $baseURL = 'http://localhost:8080/';
 
     /**
+     * Feature flag: enable the new patient calendar refactor
+     */
+    public bool $enableCalendarRefactor = true;
+
+    /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
      * If you want to accept multiple Hostnames, set this.
      *

@@ -44,11 +44,19 @@ class AdminController extends BaseAdminController
             // Pass appointmentData + statistics into the branch dashboard view so it mirrors staff dashboard
             $branchModel = new \App\Models\BranchModel();
             $branch = $branchModel->find($selectedBranchId);
+            // Fetch unread branch notifications for this branch
+            $bnModel = new \App\Models\BranchNotificationModel();
+            $branchNotifications = $bnModel->where('branch_id', $selectedBranchId)
+                                           ->where('sent', 0)
+                                           ->orderBy('created_at', 'DESC')
+                                           ->findAll();
+
+            // attach to view data
             $viewData = array_merge([
                 'user' => $user,
                 'selectedBranchId' => $selectedBranchId,
                 'branch' => $branch
-            ], $appointmentData, $statistics);
+            ], ['branchNotifications' => $branchNotifications], $appointmentData, $statistics);
             return view('admin/branch_dashboard', $viewData);
         }
 

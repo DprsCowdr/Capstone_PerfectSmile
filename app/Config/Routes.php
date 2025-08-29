@@ -118,6 +118,9 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Billing routes
 });
 
+// Staff notification handling (mark branch notification handled)
+$routes->post('staff/notifications/handle/(:num)', 'Staff::markNotificationHandled/$1');
+
 // Checkup routes (accessible by admin and doctor)
 $routes->group('checkup', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'Checkup::index');
@@ -177,6 +180,34 @@ $routes->group('dentist', ['filter' => 'auth'], function($routes) {
 // Patient routes (protected)
 $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Patient::dashboard');
+    $routes->get('calendar', 'Patient::calendar');
+    $routes->get('book-appointment', 'Patient::bookAppointment');
+    $routes->post('book-appointment', 'Patient::submitAppointment');
+    $routes->get('appointments', 'Patient::appointments');
+    $routes->get('records', 'Patient::records');
+    $routes->get('profile', 'Patient::profile');
+    // Patient appointment management (cancel only - edit/delete removed to avoid accidental changes)
+    // $routes->get('appointments/edit/(:num)', 'Patient::editAppointment/$1');
+    $routes->post('appointments/cancel/(:num)', 'Patient::cancelAppointment/$1');
+    // $routes->post('appointments/delete/(:num)', 'Patient::deleteAppointment/$1');
+    // $routes->post('appointments/update/(:num)', 'Patient::updateAppointment/$1');
+    // Read-only view for appointment details
+    $routes->get('appointments/view/(:num)', 'Patient::viewAppointment/$1');
+    $routes->post('save-profile', 'Patient::saveProfile');
+    // New patient modules
+    $routes->get('billing', 'Patient::billing');
+    $routes->get('messages', 'Patient::messages');
+    $routes->get('forms', 'Patient::forms');
+    $routes->get('prescriptions', 'Patient::prescriptions');
+    $routes->get('treatment-plan', 'Patient::treatmentPlan');
+    // Page routes for patient UI (prevent 404s from dashboard links)
+    $routes->get('calendar', 'Patient::calendar');
+    $routes->get('book-appointment', 'Patient::bookAppointment');
+    $routes->post('book-appointment', 'Patient::submitAppointment');
+    $routes->get('appointments', 'Patient::appointments');
+    $routes->get('records', 'Patient::records');
+    $routes->get('profile', 'Patient::profile');
+
     $routes->get('progress', 'TreatmentProgress::index/$1'); // View own treatment progress
     $routes->post('save-medical-history', 'Patient::saveMedicalHistory'); // Save medical history via AJAX
     $routes->get('get-medical-history/(:num)', 'Patient::getMedicalHistory/$1'); // Get medical history via AJAX
@@ -185,6 +216,14 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->get('get-bills/(:num)', 'Patient::getPatientBills/$1'); // Get patient bills via AJAX
     $routes->get('test-treatments', 'Patient::testTreatmentsEndpoint'); // Test treatments endpoint
     $routes->get('test-database', 'Patient::testDatabase'); // Test database connection
+});
+
+// API endpoints for patient-scoped appointment data
+$routes->group('api', [], function($routes) {
+    $routes->group('patient', ['filter' => 'auth'], function($routes) {
+        $routes->get('appointments', 'Api\\PatientAppointments::index');
+        $routes->post('check-conflicts', 'Api\\PatientAppointments::checkConflicts');
+    });
 });
 
 // Patient Check-in routes (for staff/reception)
@@ -221,4 +260,12 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
     $routes->get('waitlist', 'StaffController::waitlist');
+    // Approve/reject patient-submitted change requests
+    $routes->post('appointments/approve-change/(:num)', 'Staff::approveChangeRequest/$1');
+    $routes->post('appointments/reject-change/(:num)', 'Staff::rejectChangeRequest/$1');
 });
+
+// Public appointments AJAX endpoints (used by patient calendar JS)
+$routes->post('appointments/day-appointments', 'Appointments::dayAppointments');
+$routes->post('appointments/available-slots', 'Appointments::availableSlots');
+$routes->post('appointments/check-conflicts', 'Appointments::checkConflicts');

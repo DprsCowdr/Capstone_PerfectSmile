@@ -13,6 +13,7 @@ use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 use App\Filters\AuthFilter;
+use App\Filters\PatientDataFilter;
 
 class Filters extends BaseFilters
 {
@@ -36,6 +37,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'auth'          => AuthFilter::class,
+    'patientData'   => PatientDataFilter::class,
     ];
 
     /**
@@ -106,4 +108,16 @@ class Filters extends BaseFilters
      * @var array<string, array<string, list<string>>>
      */
     public array $filters = [];
+
+    public function __construct()
+    {
+        // Add patient data filter to API and guest booking routes
+        $this->filters = [
+            'patientData' => ['after' => [
+                'api/*',
+                'guest/book-appointment',
+                'appointments/*',
+            ]]
+        ];
+    }
 }

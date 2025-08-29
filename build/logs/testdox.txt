@@ -1,0 +1,4 @@
+Patient Dashboard (Tests\Feature\PatientDashboard)
+ [ ] Appointments page loads as patient
+ [ ] View route does not 500
+

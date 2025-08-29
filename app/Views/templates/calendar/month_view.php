@@ -81,7 +81,8 @@
               echo ' title="Cannot book in the past"';
             }
             if (!$cell['inactive'] && !$isPast) {
-              echo ' onclick="openAddAppointmentPanelWithTime(\'' . $date . '\', \'\')"';
+              // Use a safe inline wrapper to avoid ReferenceError if the handler isn't initialized yet
+              echo ' onclick="(typeof window.openAddAppointmentPanelWithTime === \'function\') ? window.openAddAppointmentPanelWithTime(\'' . $date . '\', \'\') : console.warn(\'openAddAppointmentPanelWithTime not ready\', \'' . $date . '\')"';
             }
             echo '>';
             

@@ -1,3 +1,13 @@
+<?php
+// Ensure view variables exist so the template doesn't error when called without full data
+$branches = $branches ?? [];
+$dentists = $dentists ?? [];
+$services = $services ?? [];
+$user = $user ?? [];
+// Determine preferred dentist: prefer old input, then explicit user fields (preferred_dentist_id or preferred_dentist)
+$preferredDentist = old('dentist_id') ?: ($user['preferred_dentist_id'] ?? $user['preferred_dentist'] ?? '');
+?>
+
 <?= view('templates/header') ?>
 
 <div class="min-h-screen bg-gray-50 flex">
@@ -36,10 +46,18 @@
                     </div>
                 <?php endif; ?>
 
-                <?php if (session()->getFlashdata('error')): ?>
+                <?php if ($err = session()->getFlashdata('error')): ?>
                     <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                         <i class="fas fa-exclamation-circle mr-2"></i>
-                        <?= session()->getFlashdata('error') ?>
+                        <?php if (is_array($err)): ?>
+                            <ul class="list-disc list-inside">
+                                <?php foreach ($err as $e): ?>
+                                    <li><?= esc($e) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <?= esc($err) ?>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
@@ -66,9 +84,9 @@
                             <div>
                                 <label for="dentist_id" class="block text-sm font-medium text-gray-700 mb-2">Preferred Dentist (Optional)</label>
                                 <select id="dentist_id" name="dentist_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Any Available</option>
+                                    <option value="" <?= $preferredDentist === '' ? 'selected' : '' ?>>Any Available</option>
                                     <?php foreach ($dentists as $dentist): ?>
-                                        <option value="<?= $dentist['id'] ?>" <?= old('dentist_id') == $dentist['id'] ? 'selected' : '' ?>>
+                                        <option value="<?= $dentist['id'] ?>" <?= ((string)$preferredDentist === (string)$dentist['id']) ? 'selected' : '' ?>>
                                             Dr. <?= esc($dentist['name']) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -101,6 +119,50 @@
                                     ?>
                                 </select>
                             </div>
+                            
+                            <!-- Procedure Duration -->
+                            <div>
+                                <label for="procedure_duration" class="block text-sm font-medium text-gray-700 mb-2">Procedure Duration (minutes)</label>
+                                <select id="procedure_duration" name="procedure_duration" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="15" <?= old('procedure_duration') == '15' ? 'selected' : '' ?>>15</option>
+                                    <option value="30" <?= old('procedure_duration') == '30' ? 'selected' : '' ?>>30</option>
+                                    <option value="45" <?= old('procedure_duration') == '45' ? 'selected' : '' ?>>45</option>
+                                    <option value="60" <?= old('procedure_duration') == '60' ? 'selected' : '' ?>>60</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Patient contact fields (prefilled for logged-in patient) -->
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label for="patient_name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                                <input id="patient_name" name="patient_name" required type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="<?= old('patient_name') ?: esc($user['name'] ?? '') ?>">
+                            </div>
+                            <div>
+                                <label for="patient_email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <input id="patient_email" name="patient_email" required type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="<?= old('patient_email') ?: esc($user['email'] ?? '') ?>">
+                            </div>
+                            <div>
+                                <label for="patient_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                                <input id="patient_phone" name="patient_phone" required type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="<?= old('patient_phone') ?: esc($user['phone'] ?? '') ?>">
+                            </div>
+                        </div>
+
+                        <!-- Service selector (hidden for patient but included for validation) -->
+                        <div style="display:none;">
+                            <label for="service_id">Service</label>
+                            <select id="service_id" name="service_id">
+                                <option value="">Select service</option>
+                                <?php if (!empty($services)): ?>
+                                    <?php foreach ($services as $s): ?>
+                                        <option value="<?= $s['id'] ?>" <?= old('service_id') == $s['id'] ? 'selected' : '' ?>><?= esc($s['name']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <?php // Hidden textual service field required by Guest::submitAppointment validation ?>
+                            <?php $defaultService = old('service') ?: (isset($services[0]) ? $services[0]['id'] : ''); ?>
+                            <input type="hidden" name="service" id="service_text" value="<?= esc($defaultService) ?>">
+                            <input type="hidden" name="origin" value="patient">
                         </div>
 
                         <!-- Remarks -->
