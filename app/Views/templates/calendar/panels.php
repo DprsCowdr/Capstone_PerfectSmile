@@ -40,12 +40,15 @@
 
     <div class="mb-3 sm:mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Dentist (Optional)</label>
+      <?php // Determine preferred dentist: prefer old input, then user's saved preference ?>
+      <?php $preferredDentist = old('dentist_id') ?: ($user['preferred_dentist_id'] ?? $user['preferred_dentist'] ?? ''); ?>
       <select name="dentist_id" id="dentistSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
-        <option value="">Any Available Dentist</option>
+        <option value="" <?= $preferredDentist === '' ? 'selected' : '' ?>>Any Available Dentist</option>
         <?php if (isset($dentists) && is_array($dentists)): ?>
-          <?php foreach ($dentists as $dentist): ?>
-            <option value="<?= $dentist['id'] ?>">Dr. <?= esc($dentist['name']) ?></option>
-          <?php endforeach; ?>
+            <?php foreach ($dentists as $dentist): ?>
+              <?php $dentistDisplay = $dentist['name'] ?? trim(($dentist['first_name'] ?? '') . ' ' . ($dentist['last_name'] ?? '')); ?>
+              <option value="<?= $dentist['id'] ?>" <?= ((string)$preferredDentist === (string)$dentist['id']) ? 'selected' : '' ?>>Dr. <?= esc($dentistDisplay) ?></option>
+            <?php endforeach; ?>
         <?php endif; ?>
       </select>
     </div>
@@ -83,6 +86,12 @@
       <div class="text-xs text-blue-700">
         <i class="fas fa-info-circle mr-1"></i>
         Your appointment request will be reviewed and confirmed by our staff.
+      </div>
+    </div>
+    <div id="appointmentSuccessMessage" class="mt-3" style="display:none;">
+      <div class="bg-green-100 border border-green-300 text-green-800 px-3 py-2 rounded text-sm">
+        <div id="appointmentSuccessMain"></div>
+        <div class="text-xs text-gray-600 mt-1">Please wait until staff review your request.</div>
       </div>
     </div>
   </form>
@@ -231,11 +240,12 @@
       <label class="block text-sm font-medium text-gray-700 mb-2">Dentist</label>
       <select name="dentist" id="dentistSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
         <option value="">Select Dentist (Optional for scheduled appointments)</option>
-        <?php if (isset($dentists) && is_array($dentists)): ?>
-          <?php foreach ($dentists as $d): ?>
-            <option value="<?= $d['id'] ?>"><?= $d['name'] ?></option>
-          <?php endforeach; ?>
-        <?php endif; ?>
+      <?php if (isset($dentists) && is_array($dentists)): ?>
+        <?php foreach ($dentists as $d): ?>
+          <?php $dDisplay = $d['name'] ?? trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? '')); ?>
+          <option value="<?= $d['id'] ?>"><?= esc($dDisplay) ?></option>
+        <?php endforeach; ?>
+      <?php endif; ?>
       </select>
       <div id="dentistNote" class="text-xs text-gray-500 mt-1">
         For scheduled appointments, all requests go through waitlist approval process

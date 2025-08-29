@@ -16,15 +16,17 @@ class AppointmentService
         // Get pending appointments for approval
         $pendingAppointments = $this->appointmentModel->getPendingApprovalAppointments();
         
-        // Get today's approved appointments only
-        $todayAppointments = $this->appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
-                                             ->join('user', 'user.id = appointments.user_id')
-                                             ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                             ->where('DATE(appointments.appointment_datetime)', date('Y-m-d'))
-                                             ->where('appointments.approval_status', 'approved') // Only approved appointments
-                                             ->whereIn('appointments.status', ['confirmed', 'scheduled'])
-                                             ->orderBy('appointments.appointment_datetime', 'ASC')
-                                             ->findAll();
+    // Get upcoming approved appointments starting from today (exclude past appointments)
+    // Use datetime comparison to include today and future dates
+    $todayStart = date('Y-m-d') . ' 00:00:00';
+    $todayAppointments = $this->appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+                         ->join('user', 'user.id = appointments.user_id')
+                         ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                         ->where('appointments.appointment_datetime >=', $todayStart)
+                         ->where('appointments.approval_status', 'approved') // Only approved appointments
+                         ->whereIn('appointments.status', ['confirmed', 'scheduled', 'ongoing'])
+                         ->orderBy('appointments.appointment_datetime', 'ASC')
+                         ->findAll();
         
         // The splitDateTime is already handled by the AppointmentModel's findAll method
         

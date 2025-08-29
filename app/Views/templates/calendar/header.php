@@ -69,7 +69,33 @@ $calendarTitle = date('F Y');
           </div>
         </div>
       </div>
+
+                <!-- Quick buttons: Available slots & Time Taken (patient-only) -->
+      <?php $sess = session(); if ($sess->get('user_type') === 'patient'): ?>
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <button id="availableSlotsBtn" type="button" class="flex items-center gap-2 px-3 py-2 rounded bg-purple-600 text-white border border-purple-600 hover:bg-purple-700 text-sm sm:text-base">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Available slots</span>
+          </button>
+          <div id="availableSlotsMenu" class="hidden absolute right-0 mt-2 w-64 bg-white border rounded shadow z-50">
+            <div class="p-3 text-sm text-gray-600" id="availableSlotsMenuContent">Loading...</div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <button id="timeTakenBtn" type="button" class="flex items-center gap-2 px-3 py-2 rounded bg-white border text-gray-700 hover:bg-gray-50 text-sm sm:text-base">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/></svg>
+            <span>Time Taken</span>
+          </button>
+          <div id="timeTakenMenu" class="hidden absolute right-0 mt-2 w-72 bg-white border rounded shadow z-50">
+            <div class="p-3 text-sm text-gray-600" id="timeTakenMenuContent">Loading...</div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
+
     
     <!-- Date Controls and Actions -->
     <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">

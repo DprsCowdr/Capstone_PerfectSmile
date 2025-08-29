@@ -17,6 +17,7 @@ class AppointmentModel extends Model
         'branch_id', 
         'dentist_id',
         'appointment_datetime', // Use this as the main field
+    'procedure_duration',
         'status', 
         'appointment_type',
         'approval_status',
@@ -126,8 +127,9 @@ class AppointmentModel extends Model
                 throw new \Exception('Cannot book an appointment in the past.');
             }
             $hour = (int)date('H', $dt);
-            if ($hour < 8 || $hour > 17) {
-                throw new \Exception('Appointments can only be booked between 08:00 and 17:00.');
+            // Allow bookings from 08:00 to 20:00 to match UI range
+            if ($hour < 8 || $hour > 20) {
+                throw new \Exception('Appointments can only be booked between 08:00 and 20:00.');
             }
         }
         

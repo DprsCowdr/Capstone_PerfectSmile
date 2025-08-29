@@ -67,17 +67,65 @@ class Staff extends BaseController
         // Get this month's appointments
         $currentMonth = date('Y-m');
         $monthlyAppointments = $appointmentModel->where('DATE_FORMAT(appointment_datetime, "%Y-%m")', $currentMonth)->countAllResults();
-        
+        // Fetch unread branch notifications for this staff's branches (fallback messages when email failed)
+        $branchNotifications = [];
+        if (!empty($branchIds)) {
+            $bnModel = new \App\Models\BranchNotificationModel();
+            $branchNotifications = $bnModel->whereIn('branch_id', $branchIds)
+                                         ->where('sent', 0)
+                                         ->orderBy('created_at', 'DESC')
+                                         ->findAll();
+            // attach appointment details when possible
+            $appointmentModel = new \App\Models\AppointmentModel();
+            foreach ($branchNotifications as &$bn) {
+                $bn['appointment'] = null;
+                if (!empty($bn['appointment_id'])) {
+                    $apt = $appointmentModel->find($bn['appointment_id']);
+                    if ($apt) $bn['appointment'] = $apt;
+                }
+            }
+            unset($bn);
+        }
+
+        // Fetch pending change requests for this staff's branches
+        $pendingChangeRequests = [];
+        if (!empty($branchIds)) {
+            $pendingChangeRequests = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+                                                     ->join('user', 'user.id = appointments.user_id')
+                                                     ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                                     ->where('appointments.pending_change', 1)
+                                                     ->whereIn('appointments.branch_id', $branchIds)
+                                                     ->orderBy('appointments.updated_at', 'DESC')
+                                                     ->findAll();
+        }
+
+        // Fetch recently cancelled appointments (last 24 hours) for quick visibility
+        $recentCancelledAppointments = [];
+        if (!empty($branchIds)) {
+            $since = date('Y-m-d H:i:s', strtotime('-24 hours'));
+            $recentCancelledAppointments = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+                                                            ->join('user', 'user.id = appointments.user_id')
+                                                            ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                                            ->where('appointments.status', 'cancelled')
+                                                            ->whereIn('appointments.branch_id', $branchIds)
+                                                            ->where('appointments.updated_at >=', $since)
+                                                            ->orderBy('appointments.updated_at', 'DESC')
+                                                            ->findAll();
+        }
+
         return view('staff/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
+            'pendingChangeRequests' => $pendingChangeRequests,
+            'recentCancelledAppointments' => $recentCancelledAppointments,
             'todayAppointments' => $todayAppointments,
             'totalPatients' => $totalPatients,
             'totalDentists' => $totalDentists,
             'totalBranches' => $totalBranches,
             'totalAppointments' => $totalAppointments,
             'monthlyAppointments' => $monthlyAppointments,
-            'recentPatients' => $recentPatients
+            'recentPatients' => $recentPatients,
+            'branchNotifications' => $branchNotifications
         ]);
     }
 
@@ -419,6 +467,162 @@ class Staff extends BaseController
         } catch (\Exception $e) {
             session()->setFlashdata('error', 'Failed to create appointment: ' . $e->getMessage());
             return redirect()->back();
+        }
+    }
+
+    /**
+     * Mark a branch notification as handled by staff
+     */
+    public function markNotificationHandled($id)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        $bnModel = new \App\Models\BranchNotificationModel();
+        $note = $bnModel->find($id);
+        if (!$note) return $this->response->setJSON(['success' => false, 'message' => 'Notification not found']);
+
+        // Verify staff is assigned to the branch
+        $branchUserModel = new \App\Models\BranchUserModel();
+        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $note['branch_id'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+        }
+
+        $bnModel->update($id, ['sent' => 1, 'sent_at' => date('Y-m-d H:i:s')]);
+        return $this->response->setJSON(['success' => true, 'message' => 'Marked handled']);
+    }
+
+    /**
+     * Staff approves a patient's change request for an appointment
+     */
+    public function approveChangeRequest($appointmentId)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($appointmentId);
+        if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
+
+        // Check branch assignment
+        $branchUserModel = new \App\Models\BranchUserModel();
+        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+        }
+
+        // Look up a branch notification for this appointment with change request
+        $bnModel = new \App\Models\BranchNotificationModel();
+        $bn = $bnModel->where('appointment_id', $appointmentId)->where('payload LIKE', '%appointment_change_request%')->orderBy('created_at', 'DESC')->first();
+
+        $requestedChanges = null;
+        if ($bn && !empty($bn['payload'])) {
+            $payload = json_decode($bn['payload'], true);
+            $requestedChanges = $payload['requested_changes'] ?? null;
+        }
+
+        if (!$requestedChanges) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No requested changes found']);
+        }
+
+        // Apply requested changes
+        $updateData = [];
+        if (isset($requestedChanges['branch_id'])) $updateData['branch_id'] = $requestedChanges['branch_id'];
+        if (isset($requestedChanges['dentist_id'])) $updateData['dentist_id'] = $requestedChanges['dentist_id'];
+        if (isset($requestedChanges['appointment_date']) || isset($requestedChanges['appointment_time'])) {
+            if (isset($requestedChanges['appointment_date'])) $updateData['appointment_date'] = $requestedChanges['appointment_date'];
+            if (isset($requestedChanges['appointment_time'])) $updateData['appointment_time'] = $requestedChanges['appointment_time'];
+        }
+        if (isset($requestedChanges['remarks'])) $updateData['remarks'] = $requestedChanges['remarks'];
+        if (isset($requestedChanges['service_id'])) $updateData['service_id'] = $requestedChanges['service_id'];
+
+        // Final workflow fields
+        $updateData['pending_change'] = 0;
+        $updateData['approval_status'] = 'approved';
+        $updateData['status'] = 'confirmed';
+        $updateData['updated_at'] = date('Y-m-d H:i:s');
+
+        try {
+            $appointmentModel->update($appointmentId, $updateData);
+
+            // Mark notification handled if exists
+            if ($bn) {
+                $bnModel->update($bn['id'], ['sent' => 1, 'sent_at' => date('Y-m-d H:i:s')]);
+            }
+
+            return $this->response->setJSON(['success' => true, 'message' => 'Change request approved and applied']);
+        } catch (\Exception $e) {
+            log_message('error', 'Error applying change request: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to apply change request']);
+        }
+    }
+
+    /**
+     * Staff rejects a patient's change request
+     */
+    public function rejectChangeRequest($appointmentId)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        $reason = $this->request->getPost('reason') ?: 'No reason provided';
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($appointmentId);
+        if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
+
+        // Check branch assignment
+        $branchUserModel = new \App\Models\BranchUserModel();
+        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+        }
+
+        try {
+            // Clear pending change and mark approval_status as declined
+            $appointmentModel->update($appointmentId, [
+                'pending_change' => 0,
+                'approval_status' => 'declined',
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+
+            // Add a branch notification marking the rejection for record
+            if (class_exists('\App\\Models\\BranchNotificationModel')) {
+                $bnModel = new \App\Models\BranchNotificationModel();
+                $payload = json_encode([
+                    'type' => 'appointment_change_rejected',
+                    'appointment_id' => (int)$appointmentId,
+                    'staff_id' => (int)$user['id'],
+                    'reason' => $reason,
+                ]);
+                $bnModel->insert([
+                    'branch_id' => $appointment['branch_id'] ?? null,
+                    'appointment_id' => (int)$appointmentId,
+                    'payload' => $payload,
+                    'sent' => 0,
+                ]);
+            }
+
+            return $this->response->setJSON(['success' => true, 'message' => 'Change request rejected']);
+        } catch (\Exception $e) {
+            log_message('error', 'Error rejecting change request: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to reject change request']);
         }
     }
 

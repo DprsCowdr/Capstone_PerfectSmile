@@ -13,7 +13,7 @@ class BranchModel extends Model
     protected $useSoftDeletes = false;
     protected $protectFields = true;
     protected $allowedFields = [
-        'name', 'address', 'contact_number', 'created_at', 'updated_at'
+        'name', 'address', 'contact_number', 'contact_email', 'created_at', 'updated_at'
     ];
 
     // Dates
@@ -40,6 +40,9 @@ class BranchModel extends Model
         ],
         'contact_number' => [
             'required' => 'Contact number is required'
+        ],
+        'contact_email' => [
+            'valid_email' => 'Contact email must be a valid email address'
         ]
     ];
 

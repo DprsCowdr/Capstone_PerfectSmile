@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\phpunit.xml.dist" tests="2" assertions="0" errors="2" failures="0" skipped="0" time="0.042976">
+    <testsuite name="App" tests="2" assertions="0" errors="2" failures="0" skipped="0" time="0.042976">
+      <testsuite name="Tests\Feature\PatientDashboardTest" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\Feature\PatientDashboardTest.php" tests="2" assertions="0" errors="2" failures="0" skipped="0" time="0.042976">
+        <testcase name="testAppointmentsPageLoadsAsPatient" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\Feature\PatientDashboardTest.php" line="14" class="Tests\Feature\PatientDashboardTest" classname="Tests.Feature.PatientDashboardTest" assertions="0" time="0.038448">
+          <error type="CodeIgniter\Exceptions\CriticalError">Tests\Feature\PatientDashboardTest::testAppointmentsPageLoadsAsPatient&#13;
+CodeIgniter\Exceptions\CriticalError: The required PHP extension "sqlite3" is not loaded. Install and enable it to use "SQLite3" driver.
+&#13;
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Database.php:182
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Database.php:59
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Config.php:82
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Model.php:155
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\app\Controllers\Auth.php:159
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\app\Controllers\Patient.php:277
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\CodeIgniter.php:933
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\CodeIgniter.php:507
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\CodeIgniter.php:354
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Test\FeatureTestTrait.php:213
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\Feature\PatientDashboardTest.php:31</error>
+        </testcase>
+        <testcase name="testViewRouteDoesNot500" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\Feature\PatientDashboardTest.php" line="43" class="Tests\Feature\PatientDashboardTest" classname="Tests.Feature.PatientDashboardTest" assertions="0" time="0.004528">
+          <error type="CodeIgniter\Exceptions\CriticalError">Tests\Feature\PatientDashboardTest::testViewRouteDoesNot500&#13;
+CodeIgniter\Exceptions\CriticalError: The required PHP extension "sqlite3" is not loaded. Install and enable it to use "SQLite3" driver.
+&#13;
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Database.php:182
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Database.php:59
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Config.php:82
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Model.php:155
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\app\Controllers\Patient.php:306
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\CodeIgniter.php:933
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\CodeIgniter.php:507
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\CodeIgniter.php:354
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Test\FeatureTestTrait.php:213
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\Feature\PatientDashboardTest.php:52</error>
+        </testcase>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

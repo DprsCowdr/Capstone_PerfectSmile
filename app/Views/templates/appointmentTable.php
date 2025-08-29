@@ -43,9 +43,17 @@
       </div>
     <?php endif; ?>
 
-    <?php if (session()->getFlashdata('error')): ?>
+    <?php if ($flashErr = session()->getFlashdata('error')): ?>
       <div class="bg-red-100 border border-red-400 text-red-800 px-3 sm:px-4 py-3 rounded mb-4 sm:mb-5 text-sm sm:text-base">
-        <?= session()->getFlashdata('error') ?>
+        <?php if (is_array($flashErr)): ?>
+          <ul class="list-disc pl-5">
+            <?php foreach ($flashErr as $err): ?>
+              <li><?= esc($err) ?></li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else: ?>
+          <?= esc($flashErr) ?>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
 
@@ -87,11 +95,31 @@
 ]) ?>
 
 <!-- JavaScript -->
-<?= view('templates/calendar/scripts', [
-  'user' => $user,
-  'appointments' => $appointments ?? [],
-  'branches' => $branches ?? []
-]) ?>
+<?php
+// Ensure patient pages always load the patient-scoped calendar assets.
+$isPatientContext = (isset($isPatientView) && $isPatientView) || (isset($user['user_type']) && $user['user_type'] === 'patient');
+if ($isPatientContext):
+  // Patient context: include patient_partial to inject patient-scoped data and markers,
+  // then include the main calendar scripts so the full calendar UI (views, branch filters,
+  // and panel handlers) are available for patients as well.
+  echo view('templates/calendar/patient_partial', [
+    'user' => $user,
+    'appointments' => $appointments ?? [],
+    'branches' => $branches ?? []
+  ]);
+  echo view('templates/calendar/scripts', [
+    'user' => $user,
+    'appointments' => $appointments ?? [],
+    'branches' => $branches ?? []
+  ]);
+else:
+  echo view('templates/calendar/scripts', [
+    'user' => $user,
+    'appointments' => $appointments ?? [],
+    'branches' => $branches ?? []
+  ]);
+endif;
+?>
 
 <!-- CSS -->
 <?= view('templates/calendar/styles') ?>

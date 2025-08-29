@@ -319,6 +319,15 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('patient/records'), 'fas fa-file-medical-alt', 'My Records', $currentUrl) ?>
                 <?= nav_link(base_url('patient/profile'), 'fas fa-user-cog', 'My Profile', $currentUrl) ?>
             </div>
+            <!-- Patient Tools Section -->
+            <div class="space-y-2 sm:space-y-3">
+                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Tools</label>
+                <?= nav_link(base_url('patient/billing'), 'fas fa-file-invoice-dollar', 'Billing & Payments', $currentUrl) ?>
+                <?= nav_link(base_url('patient/messages'), 'fas fa-envelope', 'Messages', $currentUrl) ?>
+                <?= nav_link(base_url('patient/forms'), 'fas fa-clipboard-list', 'Forms', $currentUrl) ?>
+                <?= nav_link(base_url('patient/prescriptions'), 'fas fa-prescription-bottle', 'Prescriptions', $currentUrl) ?>
+                <?= nav_link(base_url('patient/treatment-plan'), 'fas fa-notes-medical', 'Treatment Plan', $currentUrl) ?>
+            </div>
             <?php endif; ?>
 
             <!-- Account Section -->
