@@ -302,37 +302,31 @@ $currentUrl = current_url();
             <div class="space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Flow</label>
                 <?= nav_link(base_url('checkin'), 'fas fa-sign-in-alt', 'Patient Check-In', $currentUrl) ?>
+                <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
+                <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Checkup Module', $currentUrl) ?>
             </div>
 
             <?php elseif ($userType === 'patient'): ?>
-            <!-- My Appointments Section -->
+            <!-- Patient Sidebar (reordered & concise) -->
             <div class="space-y-2 sm:space-y-3">
-                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Appointments</label>
-                <?= nav_link(base_url('patient/calendar'), 'fas fa-calendar-alt', 'Calendar View', $currentUrl) ?>
-                <?= nav_link(base_url('patient/book-appointment'), 'fas fa-calendar-plus', 'Book Appointment', $currentUrl) ?>
-                <?= nav_link(base_url('patient/appointments'), 'fas fa-calendar-check', 'My Appointments', $currentUrl) ?>
-            </div>
+                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Menu</label>
+                <!-- Appointments parent linking to My Appointments -->
+                <?= nav_link(base_url('patient/appointments'), 'fas fa-calendar-check', 'Appointments', $currentUrl) ?>
+                <?= nav_link(base_url('patient/calendar'), 'fas fa-calendar-alt', 'Calendar', $currentUrl) ?>
+                <?= nav_link(base_url('patient/records'), 'fas fa-file-medical-alt', 'Dental Records', $currentUrl) ?>
+                <?php if (function_exists('module_enabled') ? module_enabled('billing') : (class_exists('\App\Controllers\Billing') || env('ENABLE_BILLING'))): ?>
+                    <?= nav_link(base_url('patient/invoice'), 'fas fa-file-invoice-dollar', 'Invoice', $currentUrl) ?>
+                <?php endif; ?>
+                <?= nav_link(base_url('patient/notifications'), 'fas fa-bell', 'Notifications', $currentUrl) ?>
+                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Account</label>
+                <?= nav_link(base_url('auth/profile'), 'fas fa-user', 'My Profile', $currentUrl) ?>
+                <?= nav_link(base_url('auth/settings'), 'fas fa-cog', 'Account Settings', $currentUrl) ?>
 
-            <!-- My Records Section -->
-            <div class="space-y-2 sm:space-y-3">
-                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Medical Records</label>
-                <?= nav_link(base_url('patient/records'), 'fas fa-file-medical-alt', 'My Records', $currentUrl) ?>
-                <?= nav_link(base_url('patient/profile'), 'fas fa-user-cog', 'My Profile', $currentUrl) ?>
-            </div>
-            <!-- Patient Tools Section -->
-            <div class="space-y-2 sm:space-y-3">
-                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Tools</label>
-                <?= nav_link(base_url('patient/billing'), 'fas fa-file-invoice-dollar', 'Billing & Payments', $currentUrl) ?>
-                <?= nav_link(base_url('patient/messages'), 'fas fa-envelope', 'Messages', $currentUrl) ?>
-                <?= nav_link(base_url('patient/forms'), 'fas fa-clipboard-list', 'Forms', $currentUrl) ?>
-                <?= nav_link(base_url('patient/prescriptions'), 'fas fa-prescription-bottle', 'Prescriptions', $currentUrl) ?>
-                <?= nav_link(base_url('patient/treatment-plan'), 'fas fa-notes-medical', 'Treatment Plan', $currentUrl) ?>
             </div>
             <?php endif; ?>
 
             <!-- Account Section -->
             <div class="space-y-2 sm:space-y-3 border-t border-gray-200 pt-4">
-                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Account</label>
                 <?= nav_link(base_url('auth/logout'), 'fas fa-sign-out-alt', 'Sign Out', $currentUrl) ?>
             </div>
         </nav>

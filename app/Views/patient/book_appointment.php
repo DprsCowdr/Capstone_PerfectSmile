@@ -1,205 +1,110 @@
-<?php
-// Ensure view variables exist so the template doesn't error when called without full data
-$branches = $branches ?? [];
-$dentists = $dentists ?? [];
-$services = $services ?? [];
-$user = $user ?? [];
-// Determine preferred dentist: prefer old input, then explicit user fields (preferred_dentist_id or preferred_dentist)
-$preferredDentist = old('dentist_id') ?: ($user['preferred_dentist_id'] ?? $user['preferred_dentist'] ?? '');
-?>
-
 <?= view('templates/header') ?>
 
+<?= view('templates/sidebar', ['user' => $user ?? null]) ?>
+
 <div class="min-h-screen bg-gray-50 flex">
-    <div class="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden">
-        <!-- Topbar -->
-        <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6 flex-shrink-0">
-            <div class="flex items-center">
-                <a href="<?= base_url('patient/dashboard') ?>" class="text-gray-600 hover:text-gray-800 mr-4">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </a>
-                <h1 class="text-xl font-semibold text-gray-800">Book Appointments</h1>
-            </div>
-            <div class="flex items-center ml-auto">
-                <span class="mr-4 hidden lg:inline text-gray-600 font-semibold"><?= $user['name'] ?? 'Patient' ?></span>
-                <div class="relative">
-                    <button class="focus:outline-none">
-                        <img class="w-10 h-10 rounded-full border-2 border-gray-200" src="<?= base_url('img/undraw_profile.svg') ?>" alt="Profile">
-                    </button>
-                    <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50" id="userDropdownMenu">
-                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-user mr-2 text-gray-400"></i>Profile</a>
-                        <div class="border-t my-1"></div>
-                        <a href="<?= base_url('auth/logout') ?>" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-sign-out-alt mr-2 text-gray-400"></i>Logout</a>
+    <div class="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden" data-sidebar-offset>
+        <main class="flex-1 px-6 py-8 bg-white">
+            <div class="max-w-3xl mx-auto">
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">Book Appointment</h1>
+                        <p class="text-gray-600">Choose a date, time and preferred dentist.</p>
+                    </div>
+                    <div>
+                        <a href="<?= base_url('patient/appointments') ?>" class="text-sm text-gray-600 hover:underline">Back to My Appointments</a>
                     </div>
                 </div>
-            </div>
-        </nav>
 
-        <!-- Main Content -->
-        <main class="flex-1 px-6 pb-6 overflow-auto min-w-0">
-            <div class="max-w-2xl mx-auto">
-                <!-- Flash Messages -->
-                <?php if (session()->getFlashdata('success')): ?>
-                    <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                        <i class="fas fa-check-circle mr-2"></i>
-                        <?= session()->getFlashdata('success') ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($err = session()->getFlashdata('error')): ?>
-                    <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
-                        <?php if (is_array($err)): ?>
-                            <ul class="list-disc list-inside">
-                                <?php foreach ($err as $e): ?>
-                                    <li><?= esc($e) ?></li>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <?php $errors = session()->getFlashdata('errors') ?? []; ?>
+                    <?php if (!empty($errors)): ?>
+                        <div class="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded">
+                            <ul class="list-disc pl-5">
+                                <?php foreach ($errors as $field => $msg): ?>
+                                    <li><?= is_array($msg) ? esc(implode(' ', $msg)) : esc($msg) ?></li>
                                 <?php endforeach; ?>
                             </ul>
-                        <?php else: ?>
-                            <?= esc($err) ?>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Booking Form -->
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <form method="POST" action="<?= base_url('patient/book-appointment') ?>">
-                        <?= csrf_field() ?>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Branch Selection -->
-                            <div>
-                                <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-2">Branch *</label>
-                                <select id="branch_id" name="branch_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select Branch</option>
-                                    <?php foreach ($branches as $branch): ?>
-                                        <option value="<?= $branch['id'] ?>" <?= old('branch_id') == $branch['id'] ? 'selected' : '' ?>>
-                                            <?= esc($branch['name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <!-- Dentist Selection -->
-                            <div>
-                                <label for="dentist_id" class="block text-sm font-medium text-gray-700 mb-2">Preferred Dentist (Optional)</label>
-                                <select id="dentist_id" name="dentist_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="" <?= $preferredDentist === '' ? 'selected' : '' ?>>Any Available</option>
-                                    <?php foreach ($dentists as $dentist): ?>
-                                        <option value="<?= $dentist['id'] ?>" <?= ((string)$preferredDentist === (string)$dentist['id']) ? 'selected' : '' ?>>
-                                            Dr. <?= esc($dentist['name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <!-- Appointment Date -->
-                            <div>
-                                <label for="appointment_date" class="block text-sm font-medium text-gray-700 mb-2">Appointment Date *</label>
-                                <input type="date" id="appointment_date" name="appointment_date" required 
-                                       min="<?= date('Y-m-d') ?>"
-                                       value="<?= old('appointment_date') ?>"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-
-                            <!-- Appointment Time -->
-                            <div>
-                                <label for="appointment_time" class="block text-sm font-medium text-gray-700 mb-2">Appointment Time *</label>
-                                <select id="appointment_time" name="appointment_time" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Select Time</option>
-                                    <?php 
-                                    for ($hour = 8; $hour <= 17; $hour++) {
-                                        for ($minute = 0; $minute < 60; $minute += 30) {
-                                            $time = sprintf('%02d:%02d', $hour, $minute);
-                                            $display = date('g:i A', strtotime($time));
-                                            $selected = old('appointment_time') == $time ? 'selected' : '';
-                                            echo "<option value=\"$time\" $selected>$display</option>";
-                                        }
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                            
-                            <!-- Procedure Duration -->
-                            <div>
-                                <label for="procedure_duration" class="block text-sm font-medium text-gray-700 mb-2">Procedure Duration (minutes)</label>
-                                <select id="procedure_duration" name="procedure_duration" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="15" <?= old('procedure_duration') == '15' ? 'selected' : '' ?>>15</option>
-                                    <option value="30" <?= old('procedure_duration') == '30' ? 'selected' : '' ?>>30</option>
-                                    <option value="45" <?= old('procedure_duration') == '45' ? 'selected' : '' ?>>45</option>
-                                    <option value="60" <?= old('procedure_duration') == '60' ? 'selected' : '' ?>>60</option>
-                                </select>
-                            </div>
                         </div>
+                    <?php endif; ?>
 
-                        <!-- Patient contact fields (prefilled for logged-in patient) -->
-                        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div>
-                                <label for="patient_name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                                <input id="patient_name" name="patient_name" required type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="<?= old('patient_name') ?: esc($user['name'] ?? '') ?>">
-                            </div>
-                            <div>
-                                <label for="patient_email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                                <input id="patient_email" name="patient_email" required type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="<?= old('patient_email') ?: esc($user['email'] ?? '') ?>">
-                            </div>
-                            <div>
-                                <label for="patient_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
-                                <input id="patient_phone" name="patient_phone" required type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="<?= old('patient_phone') ?: esc($user['phone'] ?? '') ?>">
-                            </div>
-                        </div>
+                    <form id="appointmentForm" method="POST" action="<?= base_url('patient/book-appointment') ?>" novalidate>
+                        <input type="hidden" name="csrf_test_name" value="<?= csrf_hash() ?>">
 
-                        <!-- Service selector (hidden for patient but included for validation) -->
-                        <div style="display:none;">
-                            <label for="service_id">Service</label>
-                            <select id="service_id" name="service_id">
-                                <option value="">Select service</option>
-                                <?php if (!empty($services)): ?>
-                                    <?php foreach ($services as $s): ?>
-                                        <option value="<?= $s['id'] ?>" <?= old('service_id') == $s['id'] ? 'selected' : '' ?>><?= esc($s['name']) ?></option>
-                                    <?php endforeach; ?>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Branch <span class="text-red-500">*</span></label>
+                                <select id="branchSelect" name="branch_id" class="w-full px-3 py-2 border rounded" required>
+                                    <option value="">Select branch</option>
+                                    <?php if (!empty($branches)): foreach ($branches as $b): ?>
+                                        <option value="<?= esc($b['id']) ?>" <?= (old('branch_id') == $b['id']) ? 'selected' : '' ?>><?= esc($b['name']) ?></option>
+                                    <?php endforeach; endif; ?>
+                                </select>
+                            </div>
+
+                            <div>
+                                <?php if (!empty($dentists) && count($dentists) > 1): ?>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Dentist (optional)</label>
+                                    <select id="dentistSelect" name="dentist_id" class="w-full px-3 py-2 border rounded">
+                                        <option value="">Any available</option>
+                                        <?php foreach ($dentists as $d): ?>
+                                            <option value="<?= esc($d['id']) ?>" <?= (old('dentist_id') == $d['id']) ? 'selected' : '' ?>><?= esc($d['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                <?php elseif (!empty($dentists) && count($dentists) === 1):
+                                    // single dentist: include hidden input so backend receives it
+                                    $onlyDentist = reset($dentists);
+                                ?>
+                                    <input type="hidden" name="dentist_id" value="<?= esc($onlyDentist['id']) ?>">
+                                <?php else: ?>
+                                    <select id="dentistSelect" name="dentist_id" class="w-full px-3 py-2 border rounded hidden"></select>
                                 <?php endif; ?>
-                            </select>
-                            <?php // Hidden textual service field required by Guest::submitAppointment validation ?>
-                            <?php $defaultService = old('service') ?: (isset($services[0]) ? $services[0]['id'] : ''); ?>
-                            <input type="hidden" name="service" id="service_text" value="<?= esc($defaultService) ?>">
-                            <input type="hidden" name="origin" value="patient">
+                            </div>
                         </div>
 
-                        <!-- Remarks -->
-                        <div class="mt-6">
-                            <label for="remarks" class="block text-sm font-medium text-gray-700 mb-2">Additional Notes (Optional)</label>
-                            <textarea id="remarks" name="remarks" rows="3" 
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Any specific concerns or requests..."><?= old('remarks') ?></textarea>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date <span class="text-red-500">*</span></label>
+                                <input id="dateInput" type="date" name="appointment_date" min="<?= date('Y-m-d') ?>" value="<?= old('appointment_date') ?>" class="w-full px-3 py-2 border rounded" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Time <span class="text-red-500">*</span></label>
+                                <select id="timeSelect" name="appointment_time" class="w-full px-3 py-2 border rounded" required>
+                                    <option value="">Select time</option>
+                                    <!-- Options populated by patient-calendar.js via /appointments/available-slots -->
+                                </select>
+                            </div>
                         </div>
 
-                        <!-- Submit Button -->
-                        <div class="mt-8 flex justify-end space-x-4">
-                            <a href="<?= base_url('patient/dashboard') ?>" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
-                                Cancel
-                            </a>
-                            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                                <i class="fas fa-calendar-plus mr-2"></i>
-                                Submit Request
-                            </button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Service / Procedure <span class="text-red-500">*</span></label>
+                                <select id="serviceSelect" name="service_id" class="w-full px-3 py-2 border rounded" required>
+                                    <option value="">Select service</option>
+                                    <?php if (!empty($services)): foreach ($services as $s): 
+                                        $dur = $s['duration'] ?? $s['procedure_duration'] ?? 30;
+                                    ?>
+                                        <option value="<?= esc($s['id']) ?>" data-duration="<?= esc($dur) ?>" <?= (old('service_id') == $s['id']) ? 'selected' : '' ?>><?= esc($s['name']) ?> (<?= esc($dur) ?>m)</option>
+                                    <?php endforeach; endif; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
+                                <input id="durationDisplay" type="text" class="w-full px-3 py-2 border rounded bg-gray-100" value="<?= old('procedure_duration') ?: '30' ?>" readonly>
+                                <input id="procedureDuration" type="hidden" name="procedure_duration" value="<?= old('procedure_duration') ?: '30' ?>">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Special Notes (optional)</label>
+                            <textarea name="remarks" rows="3" class="w-full px-3 py-2 border rounded"><?= old('remarks') ?></textarea>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Request Booking</button>
+                            <a href="<?= base_url('patient/appointments') ?>" class="text-sm text-gray-600 hover:underline">Cancel</a>
                         </div>
                     </form>
-                </div>
-
-                <!-- Information Card -->
-                <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex items-start">
-                        <i class="fas fa-info-circle text-blue-500 mr-3 mt-0.5"></i>
-                        <div class="text-sm text-blue-700">
-                            <p class="font-medium mb-2">Please Note:</p>
-                            <ul class="list-disc list-inside space-y-1">
-                                <li>Your appointment request will be reviewed and confirmed by our staff</li>
-                                <li>You will receive a confirmation once your appointment is approved</li>
-                                <li>Clinic hours are 8:00 AM to 6:00 PM, Monday to Saturday</li>
-                                <li>Please arrive 15 minutes before your scheduled appointment</li>
-                            </ul>
-                        </div>
-                    </div>
                 </div>
             </div>
         </main>
@@ -207,3 +112,173 @@ $preferredDentist = old('dentist_id') ?: ($user['preferred_dentist_id'] ?? $user
 </div>
 
 <?= view('templates/footer') ?>
+
+<script>
+// Auto-fill duration from selected service and fetch available slots
+(function(){
+    const serviceSelect = document.getElementById('serviceSelect');
+    const durationDisplay = document.getElementById('durationDisplay');
+    const procedureDuration = document.getElementById('procedureDuration');
+    const branchSelect = document.getElementById('branchSelect');
+    const dateInput = document.getElementById('dateInput');
+    const dentistSelect = document.getElementById('dentistSelect');
+    const timeSelect = document.getElementById('timeSelect');
+
+    function postForm(url, data){
+        const headers = {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest'};
+        const body = new URLSearchParams();
+        Object.keys(data || {}).forEach(k => { if (data[k] !== undefined && data[k] !== null) body.append(k, data[k]); });
+        return fetch(url, {method: 'POST', headers, body: body.toString(), credentials: 'same-origin'}).then(r => r.json());
+    }
+
+    function setDurationFromService(){
+        if(!serviceSelect) return;
+        const opt = serviceSelect.options[serviceSelect.selectedIndex];
+        const dur = opt ? opt.dataset.duration || opt.getAttribute('data-duration') : null;
+        const val = dur ? String(dur) : '30';
+        if(durationDisplay) durationDisplay.value = val;
+        if(procedureDuration) procedureDuration.value = val;
+    }
+
+    async function loadSlots(){
+        if(!timeSelect) return;
+        timeSelect.innerHTML = '<option>Loading...</option>';
+        const branch = branchSelect ? branchSelect.value : '';
+        const date = dateInput ? dateInput.value : '';
+        const dentist = dentistSelect ? dentistSelect.value : '';
+        const duration = procedureDuration ? Number(procedureDuration.value || 30) : 30;
+        if(!date) { timeSelect.innerHTML = '<option value="">Select date first</option>'; return; }
+        try{
+            const res = await postForm('/appointments/available-slots', {branch_id: branch, date, duration, dentist_id: dentist});
+            if(res && res.success){
+                const slots = res.slots || [];
+                timeSelect.innerHTML = '<option value="">Select time</option>';
+                slots.forEach(s => {
+                    const time = (typeof s === 'string') ? s : (s.time || '');
+                    const opt = document.createElement('option');
+                    opt.value = time;
+                    opt.textContent = time + (s.dentist_id ? (' • Dr. ' + s.dentist_id) : '');
+                    timeSelect.appendChild(opt);
+                });
+                if(slots.length === 0) timeSelect.innerHTML = '<option value="">No available slots</option>';
+            } else {
+                timeSelect.innerHTML = '<option value="">No available slots</option>';
+            }
+        }catch(e){ console.error('loadSlots error', e); timeSelect.innerHTML = '<option value="">Error loading slots</option>'; }
+    }
+
+    // Events
+    if(serviceSelect) serviceSelect.addEventListener('change', function(){ setDurationFromService(); loadSlots(); });
+    if(branchSelect) branchSelect.addEventListener('change', loadSlots);
+    if(dateInput) dateInput.addEventListener('change', loadSlots);
+    if(dentistSelect) dentistSelect.addEventListener('change', loadSlots);
+
+    // Initialize
+    setDurationFromService();
+    // Preload slots if date present
+    if(dateInput && dateInput.value) loadSlots();
+})();
+</script>
+
+<script>
+// AJAX submit for appointmentForm with in-page popup feedback (no redirect)
+(function(){
+    const form = document.getElementById('appointmentForm');
+    if(!form) return;
+
+    // Create or reuse an errors container above the form
+    function ensureErrorContainer(){
+        let el = document.getElementById('ajaxErrors');
+        if(el) return el;
+        el = document.createElement('div');
+        el.id = 'ajaxErrors';
+        el.className = 'mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded hidden';
+        form.parentNode.insertBefore(el, form);
+        return el;
+    }
+
+    function showErrors(errors){
+        const el = ensureErrorContainer();
+        el.innerHTML = '';
+        if(!errors) { el.classList.add('hidden'); return; }
+        const ul = document.createElement('ul'); ul.className = 'list-disc pl-5';
+        Object.keys(errors).forEach(k => {
+            const msg = Array.isArray(errors[k]) ? errors[k].join(' ') : errors[k];
+            const li = document.createElement('li'); li.textContent = msg; ul.appendChild(li);
+        });
+        el.appendChild(ul);
+        el.classList.remove('hidden');
+    }
+
+    // Inline success panel (above form)
+    function ensureSuccessContainer(){
+        let el = document.getElementById('ajaxSuccess');
+        if(el) return el;
+        el = document.createElement('div');
+        el.id = 'ajaxSuccess';
+        el.className = 'mb-4 p-3 bg-green-50 border border-green-100 text-green-800 rounded hidden';
+        form.parentNode.insertBefore(el, form);
+        return el;
+    }
+
+    function showSuccess(message, autoClose = 6000){
+        const el = ensureSuccessContainer();
+        el.textContent = message || 'Appointment requested successfully';
+        el.classList.remove('hidden');
+        if(autoClose) setTimeout(() => { el.classList.add('hidden'); }, autoClose);
+    }
+
+    async function submitAjax(e){
+        e.preventDefault();
+        showErrors(null);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if(submitBtn) submitBtn.disabled = true;
+
+        // Collect form data
+        const fd = new FormData(form);
+        // inform server this came from patient page (keeps legacy behavior) but we still expect JSON
+        fd.set('origin', 'patient');
+
+        // Convert to URLSearchParams for urlencoded body
+        const params = new URLSearchParams();
+        for(const pair of fd.entries()){ params.append(pair[0], pair[1]); }
+
+        try{
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: params.toString(),
+                credentials: 'same-origin'
+            });
+
+            const data = await res.json().catch(() => null);
+            if(res.ok && data && data.success){
+                // Redirect patient to their appointments list after successful request
+                window.location.href = '<?= base_url('patient/appointments') ?>';
+                return;
+            } else if(res.status === 422 && data && data.errors){
+                // Validation errors
+                showErrors(data.errors);
+                if(submitBtn) submitBtn.disabled = false;
+            } else {
+                // Generic failure: show message from server or generic
+                const msg = data && data.message ? data.message : 'Failed to request booking. Please try again.';
+                // show as inline error
+                showErrors({general: msg});
+                if(submitBtn) submitBtn.disabled = false;
+            }
+        } catch(err){
+            console.error('Booking AJAX error', err);
+            showErrors({general: 'Network error while requesting booking. Please try again.'});
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if(submitBtn) submitBtn.disabled = false;
+        }
+    }
+
+    form.addEventListener('submit', submitAjax);
+})();
+</script>

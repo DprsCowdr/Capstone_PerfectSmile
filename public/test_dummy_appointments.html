@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Dummy Appointments</title>
+  <style>
+    body { font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; padding:20px; }
+    .apt { border:1px solid #e5e7eb; padding:10px; margin:8px 0; border-radius:6px; }
+    .meta { color:#6b7280; font-size:13px }
+    button { margin-right:8px }
+    pre { background:#f3f4f6; padding:10px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <h2>Dummy Appointments Test</h2>
+  <p>This page helps test time computation and staff availability endpoint calls.</p>
+
+  <h3>Sample appointments</h3>
+  <div id="apts"></div>
+
+  <h3>Availability test (POST /staff/calendar/available-slots)</h3>
+  <div>
+    <label>Branch ID: <input id="testBranch" value="1" style="width:80px"></label>
+    <label style="margin-left:8px">Date: <input id="testDate" type="date" value="2025-09-01"></label>
+    <label style="margin-left:8px">Duration (min): <input id="testDur" value="30" style="width:70px"></label>
+  <label style="margin-left:8px"><input type="checkbox" id="useMock"> Use mock response</label>
+  <label style="margin-left:8px"><input type="checkbox" id="useDebug"> Use debug endpoint (no auth)</label>
+  <button id="runAvail">Run availability POST</button>
+  </div>
+  <pre id="availResult">(response will appear here)</pre>
+
+  <h4>Prefill / selection</h4>
+  <div>
+    <label>Suggested times: <select id="prefillSelect"><option value="">-- none --</option></select></label>
+    <button id="applyPrefill">Apply selected time</button>
+    <div style="margin-top:6px">
+      Selected start: <input id="appointmentTime" readonly style="width:90px"> &nbsp; End: <input id="appointmentEnd" readonly style="width:90px">
+    </div>
+  </div>
+
+  <h3>Helpers</h3>
+  <div>
+    <button id="refreshDisplay">Refresh display (recompute end times)</button>
+    <button id="openCalendar">Open real calendar page (staff) in a new tab</button>
+  </div>
+
+  <h3>Create appointment (debug)</h3>
+  <div style="border:1px solid #e6e6e6; padding:10px; margin-top:10px; border-radius:6px">
+    <div><label>Branch: <input id="createBranch" value="1" style="width:80px"></label></div>
+    <div style="margin-top:6px"><label>Date: <input id="createDate" type="date" value="2025-09-01"></label></div>
+    <div style="margin-top:6px"><label>Start time: <input id="createTime" value="09:00" style="width:90px"></label> <label style="margin-left:8px">Duration: <input id="createDur" value="30" style="width:70px"></label></div>
+    <div style="margin-top:6px"><label>Patient name: <input id="createPatient" value="Local Test" style="width:200px"></label></div>
+    <div style="margin-top:6px"><label>Procedure: <input id="createProcedure" style="width:200px"></label></div>
+    <div style="margin-top:6px"><label>Notes: <input id="createNotes" style="width:400px"></label></div>
+    <div style="margin-top:8px"><label><input type="checkbox" id="useCreateDebug" checked> Use debug create endpoint (no auth)</label> <button id="createApt">Create appointment</button></div>
+    <pre id="createResult">(create response)</pre>
+  </div>
+
+  <h3>Cancel appointment (debug)</h3>
+  <div style="border:1px solid #e6e6e6; padding:10px; margin-top:10px; border-radius:6px">
+    <div><label>Appointment ID: <input id="cancelId" style="width:120px"></label> <label style="margin-left:8px">Reason: <input id="cancelReason" style="width:300px"></label></div>
+    <div style="margin-top:8px"><label><input type="checkbox" id="useCancelDebug" checked> Use debug cancel endpoint (no auth)</label> <button id="cancelApt">Request cancel</button></div>
+    <pre id="cancelResult">(cancel response)</pre>
+  </div>
+
+<script>
+// Sample data from your message
+const sampleAppointments = [
+  { name: 'Eden Caritos', start: '08:30', duration: 30, status: 'Confirmed', remarks: 'first try' },
+  { name: 'John Bert Manaog', start: '08:00', duration: 30, status: 'Ongoing', remarks: 'please prio me. i will arrive early' },
+  { name: 'Brandon Brandon Brandon', start: '09:30', duration: 30, status: 'Confirmed', remarks: 'testing no2' },
+  { name: 'testuser-1', start: '09:00', duration: 30, status: 'Confirmed', remarks: 'testing selected time' },
+  { name: 'Alice Nguyen', start: '10:00', duration: 60, status: 'Confirmed', remarks: 'root canal' },
+  { name: 'Bob Smith', start: '11:30', duration: 45, status: 'Pending', remarks: 'new patient intake' },
+  { name: 'Carol K', start: '12:15', duration: 30, status: 'Cancelled', remarks: 'cancel request pending' },
+  { name: 'David Lee', start: '13:00', duration: 120, status: 'Confirmed', remarks: 'minor surgery' },
+  { name: 'Eve Adams', start: '15:00', duration: 15, status: 'Confirmed', remarks: 'quick check' },
+  { name: 'Frank R', start: '15:15', duration: 45, status: 'Confirmed', remarks: 'fillings and polish' },
+  { name: 'Grace Hopper', start: '16:00', duration: 30, status: 'Confirmed', remarks: '' },
+  { name: 'Heidi', start: '17:30', duration: 30, status: 'Ongoing', remarks: 'running late' },
+  { name: 'NoDuration', start: '18:00', duration: 0, status: 'Confirmed', remarks: 'missing duration should default to 30' }
+];
+
+function calcEndTime(startTime, duration) {
+  if (!startTime) return '';
+  const parts = startTime.split(':');
+  if (parts.length < 2) return '';
+  const hh = parseInt(parts[0], 10);
+  const mm = parseInt(parts[1], 10);
+  const dur = (Number(duration) && Number(duration) > 0) ? Number(duration) : 30;
+  const start = new Date(0,0,0,hh,mm);
+  start.setMinutes(start.getMinutes() + dur);
+  const h = String(start.getHours()).padStart(2, '0');
+  const m = String(start.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function renderAppointments(){
+  const container = document.getElementById('apts');
+  container.innerHTML = '';
+  sampleAppointments.forEach(a => {
+    const end = calcEndTime(a.start, a.duration);
+    const el = document.createElement('div'); el.className = 'apt';
+    el.innerHTML = `
+      <div><strong>${a.name}</strong></div>
+      <div class="meta">(${a.start}–${end}) — ${a.status}</div>
+      <div style="margin-top:6px">${a.remarks || ''}</div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+document.getElementById('refreshDisplay').addEventListener('click', renderAppointments);
+
+// Availability POST helper
+document.getElementById('runAvail').addEventListener('click', async () => {
+  const branch = document.getElementById('testBranch').value;
+  const date = document.getElementById('testDate').value;
+  const duration = document.getElementById('testDur').value;
+  const useMock = document.getElementById('useMock').checked;
+  // simple mock response so you can test without authentication
+  if (useMock) {
+    const mock = {
+      branch_id: branch,
+      date: date,
+      duration: Number(duration),
+      suggested: [
+        { start: '08:00', end: '08:30' },
+        { start: '08:30', end: '09:00' },
+        { start: '09:30', end: '10:00' }
+      ]
+    };
+  document.getElementById('availResult').textContent = JSON.stringify(mock, null, 2);
+  populateSuggested(mock.suggested || [], Number(duration));
+    return;
+  }
+  const body = new URLSearchParams();
+  body.append('branch_id', branch);
+  body.append('date', date);
+  body.append('duration', duration);
+
+  try {
+  const useDebug = document.getElementById('useDebug').checked;
+  const url = useDebug ? '/debug_available_slots.php' : '/staff/calendar/available-slots';
+  const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+      body: body.toString(),
+      credentials: 'same-origin'
+    });
+    const text = await res.text();
+    // try parse json
+    try {
+      const j = JSON.parse(text);
+      document.getElementById('availResult').textContent = JSON.stringify(j, null, 2);
+      // try to find suggested slots in the response
+      const suggested = j.suggested || j.data && j.data.suggested || j.slots || [];
+      populateSuggested(suggested, Number(duration));
+    } catch(e) { document.getElementById('availResult').textContent = text; }
+  } catch(err) {
+    document.getElementById('availResult').textContent = 'Error: ' + err.message;
+  }
+});
+
+function populateSuggested(suggested, duration) {
+  const sel = document.getElementById('prefillSelect');
+  sel.innerHTML = '<option value="">-- none --</option>';
+  if (!Array.isArray(suggested) || suggested.length === 0) return;
+  suggested.forEach((s, idx) => {
+    // s may be string or object; accept {start,end} or {time}
+    const start = s.start || s.time || s[0] || '';
+    const end = s.end || s[1] || '';
+    const text = end ? `${start} — ${end}` : `${start}`;
+    const opt = document.createElement('option');
+    opt.value = start;
+    opt.textContent = text;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('applyPrefill').addEventListener('click', () => {
+  const sel = document.getElementById('prefillSelect');
+  const start = sel.value;
+  const dur = Number(document.getElementById('testDur').value) || 30;
+  if (!start) return alert('No suggested time selected');
+  document.getElementById('appointmentTime').value = start;
+  document.getElementById('appointmentEnd').value = calcEndTime(start, dur);
+});
+
+// Open staff calendar page
+document.getElementById('openCalendar').addEventListener('click', () => {
+  window.open('/staff/appointments', '_blank');
+});
+
+renderAppointments();
+
+// Create appointment (debug)
+document.getElementById('createApt').addEventListener('click', async () => {
+  const branch = document.getElementById('createBranch').value;
+  const date = document.getElementById('createDate').value;
+  const time = document.getElementById('createTime').value;
+  const duration = document.getElementById('createDur').value;
+  const patient = document.getElementById('createPatient').value;
+  const procedure = document.getElementById('createProcedure').value;
+  const notes = document.getElementById('createNotes').value;
+  const useDebug = document.getElementById('useCreateDebug').checked;
+  const url = useDebug ? '/debug_create_appointment.php' : '/staff/appointments/create';
+  const body = new URLSearchParams();
+  body.append('branch_id', branch);
+  body.append('date', date);
+  body.append('time', time);
+  body.append('duration', duration);
+  body.append('patient_name', patient);
+  body.append('procedure', procedure);
+  body.append('notes', notes);
+
+  try {
+    const res = await fetch(url, { method: 'POST', body: body.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin' });
+    let j;
+    try {
+      j = await res.json();
+    } catch (parseErr) {
+      const text = await res.text();
+      const hint = text.trim().startsWith('<') ? '\n\nNon-JSON response (HTML). This often means you are not authenticated or CSRF blocked. Open the staff dashboard in the same browser to authenticate, or enable the debug endpoint.' : '';
+      document.getElementById('createResult').textContent = 'Could not parse JSON response.' + hint + '\n\n' + text;
+      return;
+    }
+
+    document.getElementById('createResult').textContent = JSON.stringify(j, null, 2);
+    if (j && j.success) {
+      // append to in-memory sample appointments for local testing
+      sampleAppointments.push({ name: j.patient_name || patient || 'New Patient', start: j.start || time, duration: j.duration || Number(duration), status: j.status || 'Pending', remarks: j.notes || '' });
+      renderAppointments();
+      // fill cancel id with new id so you can test cancelling
+      document.getElementById('cancelId').value = j.id || '';
+    }
+  } catch (err) {
+    document.getElementById('createResult').textContent = 'Error: ' + err.message;
+  }
+});
+
+// Cancel appointment (debug)
+document.getElementById('cancelApt').addEventListener('click', async () => {
+  const id = document.getElementById('cancelId').value;
+  const reason = document.getElementById('cancelReason').value;
+  const useDebug = document.getElementById('useCancelDebug').checked;
+  const url = useDebug ? '/debug_cancel_request.php' : '/staff/appointments/cancel';
+  const body = new URLSearchParams();
+  body.append('id', id);
+  body.append('reason', reason);
+  try {
+    const res = await fetch(url, { method: 'POST', body: body.toString(), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, credentials: 'same-origin' });
+    try {
+      const j = await res.json();
+      document.getElementById('cancelResult').textContent = JSON.stringify(j, null, 2);
+    } catch (parseErr) {
+      const text = await res.text();
+      const hint = text.trim().startsWith('<') ? '\n\nNon-JSON response (HTML). Likely authentication/CSRF or an error page. Authenticate in the same browser and retry, or use the debug endpoint.' : '';
+      document.getElementById('cancelResult').textContent = 'Could not parse JSON response.' + hint + '\n\n' + text;
+    }
+  } catch (err) {
+    document.getElementById('cancelResult').textContent = 'Error: ' + err.message;
+  }
+});
+</script>
+</body>
+</html>

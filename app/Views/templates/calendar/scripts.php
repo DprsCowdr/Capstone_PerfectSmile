@@ -148,6 +148,15 @@ if (!Array.isArray(_apts)) {
 }
 window.baseUrl = '<?= base_url() ?>';
 window.branches = <?= json_encode($branches ?? []) ?>;
+// Normalize branch records client-side and ensure start_time/end_time defaults are present
+window.branches = (window.branches || []).map(b => {
+  const normalized = Object.assign({}, b);
+  // Some branch records might use different field names; ensure id and times exist
+  normalized.id = normalized.id ?? normalized.branch_id ?? null;
+  normalized.start_time = normalized.start_time ?? normalized.start ?? '08:00:00';
+  normalized.end_time = normalized.end_time ?? normalized.end ?? '20:00:00';
+  return normalized;
+});
 window.currentUserId = <?= isset($user['id']) ? $user['id'] : 'null' ?>;
 
 // Initialize branch filter dropdown
@@ -240,19 +249,28 @@ function populateAvailableTimeSlots(selectedDate, timeSelect) {
     return aptDate === selectedDate;
   });
   
-  // Create time slots from 8:00 AM to 8:00 PM (30-minute intervals)
-  const startHour = 8;
-  const endHour = 20;
+  // Use configured granularity (default 30) and per-branch hours when available
+  const gran = Number(window.SLOT_GRANULARITY || 30);
   let availableSlots = 0;
   let bookedSlots = 0;
-  
+  // Determine hours from selected branch (if any)
+  let startHour = 8, endHour = 20;
+  if (window.currentBranchFilter && window.currentBranchFilter !== 'all') {
+    const branch = (window.branches || []).find(b => String(b.id) === String(window.currentBranchFilter));
+    if (branch) {
+      const st = (branch.start_time || '08:00:00').split(':')[0];
+      const et = (branch.end_time || '20:00:00').split(':')[0];
+      startHour = Number(st);
+      endHour = Number(et);
+    }
+  }
   for (let hour = startHour; hour < endHour; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
+    for (let minute = 0; minute < 60; minute += gran) {
       const timeStr = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
       const displayTime = formatTime(timeStr);
       
       // Check if this time slot is already booked
-      const isBooked = dateAppointments.some(apt => {
+  const isBooked = dateAppointments.some(apt => {
         const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
         return aptTime === timeStr;
       });
@@ -260,7 +278,7 @@ function populateAvailableTimeSlots(selectedDate, timeSelect) {
       const option = document.createElement('option');
       option.value = timeStr;
       
-      if (isBooked) {
+  if (isBooked) {
         option.textContent = `${displayTime} (Unavailable)`;
         option.disabled = true;
         option.style.color = '#ef4444';
@@ -665,10 +683,10 @@ function updateDayViewForDate(selectedDate) {
     });
   }
 
-  // --- Update hourly slots (6 AM to 4 PM) ---
+  // --- Update hourly slots (08:00 to 19:00) ---
   const hourlyRows = tbody.querySelectorAll('tr:not(:first-child)');
   hourlyRows.forEach((row, index) => {
-    const hour = index + 6;
+    const hour = index + 8; // start at 08:00
     const appointmentCell = row.querySelector('td:last-child');
     if (!appointmentCell) { console.error(`[DayView] Hourly cell not found for hour ${hour}`); return; }
     appointmentCell.innerHTML = '';
@@ -682,6 +700,14 @@ function updateDayViewForDate(selectedDate) {
       return apt_hour === hour;
     });
     if (hourAppointments.length === 0) console.info(`[DayView] No appointments for hour ${hour} on ${selectedDate}`);
+    // If no appointments in this hour and user is staff/admin, show availability highlight
+    if (hourAppointments.length === 0 && window.userType !== 'patient') {
+      const availDiv = document.createElement('div');
+      availDiv.className = 'bg-green-50 rounded p-1 sm:p-2 text-xs text-green-700 mb-1 hover:bg-opacity-90 transition-colors cursor-pointer';
+      availDiv.innerHTML = `<div class="flex items-center justify-between"><span class="font-semibold text-green-800 text-xs">Available</span></div>`;
+      availDiv.onclick = function(e) { e.stopPropagation(); openAddAppointmentPanelWithTime(selectedDate, time); };
+      appointmentCell.appendChild(availDiv);
+    }
     hourAppointments.forEach(apt => {
       let bgColor, textColor, statusText;
       switch ((apt.status || '').toLowerCase()) {
@@ -693,14 +719,34 @@ function updateDayViewForDate(selectedDate) {
       }
       const div = document.createElement('div');
       div.className = `${bgColor} rounded p-1 sm:p-2 text-xs ${textColor} mb-1 hover:bg-opacity-80 transition-colors cursor-pointer`;
+      // Compute procedure/description label (fall back to generic 'Booked')
+      const procedureLabel = apt.service || apt.procedure || apt.procedure_name || apt.service_name || apt.treatment || 'Booked';
+      // Helper: calculate end time if duration provided
+      function calcEndTime(startTime, duration) {
+        if (!startTime) return '';
+        const parts = startTime.split(':');
+        if (parts.length < 2) return '';
+        const hh = parseInt(parts[0], 10);
+        const mm = parseInt(parts[1], 10);
+        // Default duration to 30 minutes when missing or zero
+        const dur = (Number(duration) && Number(duration) > 0) ? Number(duration) : 30;
+        const start = new Date(0,0,0,hh,mm);
+        start.setMinutes(start.getMinutes() + dur);
+        const h = String(start.getHours()).padStart(2, '0');
+        const m = String(start.getMinutes()).padStart(2, '0');
+        return `${h}:${m}`;
+      }
+      const endTime = calcEndTime(apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : ''), apt.procedure_duration || apt.duration_minutes);
+      const timeLabel = apt.appointment_time ? `${apt.appointment_time}${endTime ? '–' + endTime : ''}` : '';
       div.innerHTML = `
-        <div class=\"flex flex-col sm:flex-row sm:items-center sm:justify-between\">
-          <div class=\"flex flex-col sm:flex-row sm:items-center\">
-            <span class=\"font-bold text-gray-700 text-xs sm:text-sm\">${apt.patient_name || 'Appointment'}</span>
-            <span class=\"text-gray-500 text-xs sm:ml-2\">(${apt.appointment_time})</span>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center">
+            <span class="font-bold text-gray-700 text-xs sm:text-sm">${window.userType === 'patient' ? (apt.patient_name ? 'Appointment' : 'Appointment') : (apt.patient_name || 'Appointment')}</span>
+            <span class="text-gray-500 text-xs sm:ml-2">${timeLabel ? '(' + timeLabel + ')' : ''}</span>
           </div>
-          <span class=\"text-xs ${textColor} font-semibold mt-1 sm:mt-0\">${statusText}</span>
+          <span class="text-xs ${textColor} font-semibold mt-1 sm:mt-0">${statusText}</span>
         </div>
+        <div class='text-gray-600 italic text-xs mt-1'>${procedureLabel}</div>
         ${apt.remarks ? `<div class='text-gray-600 italic text-xs mt-1'>${apt.remarks}</div>` : ''}
       `;
       div.onclick = function(e) { e.stopPropagation(); window.showDayAppointmentDetails(apt.id); };
@@ -841,7 +887,19 @@ function rebuildCalendarGrid() {
           appointmentDiv.className = 'relative z-10 mt-1 text-xs text-blue-700 font-medium flex items-center justify-center cursor-pointer';
           const span = document.createElement('span');
           span.className = 'bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200';
-          span.innerHTML = `<i class=\"fas fa-calendar-check mr-1 text-blue-600\"></i>${dayAppointments.length} apt${dayAppointments.length > 1 ? 's' : ''}`;
+          // Show filled / total slots summary - compute dynamically from branch hours and granularity
+          const GRAN = Number(window.SLOT_GRANULARITY || 30);
+          // default working hours
+          let bStart = 8, bEnd = 20;
+          if (window.currentBranchFilter && window.currentBranchFilter !== 'all') {
+            const branch = (window.branches || []).find(b => String(b.id) === String(window.currentBranchFilter));
+            if (branch) {
+              bStart = Number((branch.start_time || '08:00:00').split(':')[0]);
+              bEnd = Number((branch.end_time || '20:00:00').split(':')[0]);
+            }
+          }
+          const TOTAL_SLOTS_PER_DAY = Math.max(0, Math.floor(((bEnd - bStart) * 60) / GRAN));
+          span.innerHTML = `<i class="fas fa-calendar-check mr-1 text-blue-600"></i>${dayAppointments.length}/${TOTAL_SLOTS_PER_DAY} slots`;
           appointmentDiv.appendChild(span);
           // On click, show a list of appointments for that day
           appointmentDiv.onclick = function(e) {
@@ -952,8 +1010,8 @@ function updateWeekView() {
       // Future days always disabled
       return `<td class="bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
     }).join('') + '</tr>';
-  // Hourly rows
-  for (let h = 6; h <= 16; h++) {
+  // Hourly rows (08:00 to 20:00)
+  for (let h = 8; h <= 20; h++) {
     const time = String(h).padStart(2, '0') + ':00';
     html += `<tr><td class="text-xs text-gray-400 py-2 px-2 align-top border-t">${h <= 12 ? h : h-12}${h < 12 ? 'am' : 'pm'}</td>`;
     weekDays.forEach(wd => {
@@ -1560,7 +1618,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 } catch (e) { console.error('Calendar runtime error', e); }
-</script> 
-<?php if (!isset($user) || ($user['user_type'] ?? '') !== 'patient'): ?>
+</script>
+<?php
+  // Include role-specific calendar logic so each dashboard uses its own JS file.
+  $userType = $user['user_type'] ?? '';
+  if ($userType === 'admin') {
+?>
   <script src="<?= base_url('js/calendar-admin.js') ?>"></script>
-<?php endif; ?>
+<?php
+  } elseif ($userType === 'staff') {
+?>
+  <script src="<?= base_url('js/calendar-staff.js') ?>"></script>
+<?php
+  } elseif ($userType === 'doctor' || $userType === 'dentist') {
+?>
+  <script src="<?= base_url('js/calendar-dentist.js') ?>"></script>
+<?php
+  }
+?>

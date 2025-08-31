@@ -98,6 +98,8 @@ class StaffController extends BaseAdminController
         return view('staff/dashboard', [
             'user' => $user,
             'pendingAppointments' => $pendingAppointments,
+            // pendingCancellationRequests will be populated below if available
+            'pendingCancellationRequests' => $this->gatherPendingCancellationRequests($branchIds ?? []),
             'todayAppointments' => $appointmentData['todayAppointments'],
             'totalPatients' => $userStats['total_patients'],
             'totalDentists' => $userStats['total_dentists'],
@@ -107,6 +109,42 @@ class StaffController extends BaseAdminController
                 ,'assignedBranches' => $branches
                 ,'selectedBranchId' => $selectedBranchId
         ]);
+    }
+
+    /**
+     * Gather pending cancellation notifications for given branch IDs.
+     * Returns an array of ['notification'=>..., 'appointment'=>..., 'reason'=>..., 'requested_by'=>...]
+     */
+    protected function gatherPendingCancellationRequests(array $branchIds = [])
+    {
+        if (empty($branchIds)) return [];
+        if (!class_exists('\App\\Models\\BranchNotificationModel')) return [];
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $bnModel = new \App\Models\BranchNotificationModel();
+        try {
+            $cancels = $bnModel->whereIn('branch_id', $branchIds)
+                               ->where('sent', 0)
+                               ->like('payload', 'appointment_cancellation_request')
+                               ->orderBy('created_at', 'DESC')
+                               ->findAll();
+            $out = [];
+            foreach ($cancels as $bn) {
+                $apt = $appointmentModel->find($bn['appointment_id']);
+                if (!$apt) continue;
+                $payload = json_decode($bn['payload'], true) ?: [];
+                $out[] = [
+                    'notification' => $bn,
+                    'appointment' => $apt,
+                    'reason' => $payload['reason'] ?? null,
+                    'requested_by' => $payload['user_id'] ?? null,
+                ];
+            }
+            return $out;
+        } catch (\Exception $e) {
+            log_message('error', 'Error gathering pending cancellation requests: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**

@@ -65,6 +65,11 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/check-conflicts', 'AdminController::checkAppointmentConflicts');
     $routes->get('appointments/details/(:num)', 'AdminController::getAppointmentDetails/$1');
     $routes->get('waitlist', 'AdminController::waitlist'); // → appointments/waitlist.php
+
+    // Role-scoped calendar AJAX endpoints (delegates to Appointments controller via thin wrapper)
+    $routes->post('calendar/day-appointments', 'AdminCalendarController::dayAppointments');
+    $routes->post('calendar/available-slots', 'AdminCalendarController::availableSlots');
+    $routes->post('calendar/check-conflicts', 'AdminCalendarController::checkConflicts');
     
     // Dental management routes (moved to DentalController)
     $routes->get('dental-records', 'DentalController::records'); // → dental/records.php
@@ -95,6 +100,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('services', 'AdminController::services'); // → management/services.php
     $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
     $routes->get('branches', 'AdminController::branches'); // → management/branches.php
+    $routes->post('branches/(:num)/save-hours', 'AdminController::saveBranchHours/$1');
     $routes->get('settings', 'AdminController::settings'); // → management/settings.php
     
     // Procedure management routes
@@ -152,6 +158,11 @@ $routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/available-dentists', 'Dentist::getAvailableDentists');
     $routes->post('appointments/check-conflicts', 'Dentist::checkAppointmentConflicts');
     $routes->get('appointments/details/(:num)', 'Dentist::getAppointmentDetails/$1');
+
+    // Dentist role-scoped calendar endpoints
+    $routes->post('calendar/day-appointments', 'DentistCalendarController::dayAppointments');
+    $routes->post('calendar/available-slots', 'DentistCalendarController::availableSlots');
+    $routes->post('calendar/check-conflicts', 'DentistCalendarController::checkConflicts');
     
     // Patients Module (accessible by dentist)
     $routes->get('patients', 'Dentist::patients');
@@ -260,9 +271,20 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
     $routes->get('waitlist', 'StaffController::waitlist');
+    // Allow staff to approve or decline appointments (matches admin/dentist endpoints)
+    $routes->post('appointments/approve/(:num)', 'StaffController::approveAppointment/$1');
+    $routes->post('appointments/decline/(:num)', 'StaffController::declineAppointment/$1');
     // Approve/reject patient-submitted change requests
     $routes->post('appointments/approve-change/(:num)', 'Staff::approveChangeRequest/$1');
     $routes->post('appointments/reject-change/(:num)', 'Staff::rejectChangeRequest/$1');
+    // Approve/reject patient-submitted cancellation requests
+    $routes->post('appointments/approve-cancel/(:num)', 'Staff::approveCancellation/$1');
+    $routes->post('appointments/reject-cancel/(:num)', 'Staff::rejectCancellation/$1');
+
+    // Staff role-scoped calendar endpoints
+    $routes->post('calendar/day-appointments', 'StaffCalendarController::dayAppointments');
+    $routes->post('calendar/available-slots', 'StaffCalendarController::availableSlots');
+    $routes->post('calendar/check-conflicts', 'StaffCalendarController::checkConflicts');
 });
 
 // Public appointments AJAX endpoints (used by patient calendar JS)

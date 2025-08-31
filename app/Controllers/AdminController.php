@@ -57,13 +57,88 @@ class AdminController extends BaseAdminController
                 'selectedBranchId' => $selectedBranchId,
                 'branch' => $branch
             ], ['branchNotifications' => $branchNotifications], $appointmentData, $statistics);
+            // include pending cancellation requests for this branch
+            $viewData['pendingCancellationRequests'] = [];
+            try {
+                $bnModel = new \App\Models\BranchNotificationModel();
+                $cancels = $bnModel->where('branch_id', $selectedBranchId)
+                                   ->where('sent', 0)
+                                   ->like('payload', 'appointment_cancellation_request')
+                                   ->orderBy('created_at', 'DESC')
+                                   ->findAll();
+                $appointmentModel = new \App\Models\AppointmentModel();
+                foreach ($cancels as $bn) {
+                    $apt = $appointmentModel->find($bn['appointment_id']);
+                    if (!$apt) continue;
+                    $payload = json_decode($bn['payload'], true) ?: [];
+                    $viewData['pendingCancellationRequests'][] = [
+                        'notification' => $bn,
+                        'appointment' => $apt,
+                        'reason' => $payload['reason'] ?? null,
+                        'requested_by' => $payload['user_id'] ?? null,
+                    ];
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading pending cancellation notifications (admin): ' . $e->getMessage());
+            }
             return view('admin/branch_dashboard', $viewData);
         }
 
-        return view('admin/dashboard', array_merge([
+        $data = array_merge([
             'user' => $user,
             'selectedBranchId' => $selectedBranchId
-        ], $appointmentData, $statistics));
+        ], $appointmentData, $statistics);
+        // include pending cancellation requests across all branches (limit to unread)
+        $data['pendingCancellationRequests'] = [];
+        try {
+            $bnModel = new \App\Models\BranchNotificationModel();
+            $cancels = $bnModel->where('sent', 0)->like('payload', 'appointment_cancellation_request')->orderBy('created_at', 'DESC')->findAll();
+            $appointmentModel = new \App\Models\AppointmentModel();
+            foreach ($cancels as $bn) {
+                $apt = $appointmentModel->find($bn['appointment_id']);
+                if (!$apt) continue;
+                $payload = json_decode($bn['payload'], true) ?: [];
+                $data['pendingCancellationRequests'][] = [
+                    'notification' => $bn,
+                    'appointment' => $apt,
+                    'reason' => $payload['reason'] ?? null,
+                    'requested_by' => $payload['user_id'] ?? null,
+                ];
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Error loading pending cancellation notifications (admin): ' . $e->getMessage());
+        }
+        return view('admin/dashboard', $data);
+    }
+
+    // Simple branches management (list + edit hours)
+    public function branches()
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) return $user;
+
+        $branchModel = new \App\Models\BranchModel();
+        $branches = $branchModel->orderBy('name','ASC')->findAll();
+
+        return view('admin/management/branches', ['user' => $user, 'branches' => $branches]);
+    }
+
+    public function saveBranchHours($id)
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) return $user;
+
+        $start = $this->request->getPost('start_time');
+        $end = $this->request->getPost('end_time');
+
+        $branchModel = new \App\Models\BranchModel();
+        $branch = $branchModel->find($id);
+        if (!$branch) return redirect()->back()->with('error', 'Branch not found');
+
+        $update = ['start_time' => $start ?: '08:00:00', 'end_time' => $end ?: '20:00:00'];
+        $branchModel->update($id, $update);
+
+        return redirect()->back()->with('success', 'Branch hours updated');
     }
 
     // ==================== PATIENT MANAGEMENT ====================
@@ -492,23 +567,6 @@ class AdminController extends BaseAdminController
         return view('admin/management/roles', ['user' => $user]);
     }
 
-    public function branches()
-    {
-        $user = $this->checkAdminAuth();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-        return view('admin/management/branches', ['user' => $user]);
-    }
-
-    public function settings()
-    {
-        $user = $this->checkAdminAuth();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-        return view('admin/management/settings', ['user' => $user]);
-    }
 
     // ==================== USERS MANAGEMENT ====================
     public function users()

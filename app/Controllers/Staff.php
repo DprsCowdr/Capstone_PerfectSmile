@@ -99,6 +99,35 @@ class Staff extends BaseController
                                                      ->findAll();
         }
 
+        // Fetch pending cancellation requests (separate frame)
+        $pendingCancellationRequests = [];
+        if (!empty($branchIds) && class_exists('\App\\Models\\BranchNotificationModel')) {
+            try {
+                $bnModel = new \App\Models\BranchNotificationModel();
+                // Only load unhandled cancellation request notifications
+                $cancels = $bnModel->whereIn('branch_id', $branchIds)
+                                   ->where('sent', 0)
+                                   ->like('payload', 'appointment_cancellation_request')
+                                   ->orderBy('created_at', 'DESC')
+                                   ->findAll();
+                // attach appointment and parsed payload info
+                foreach ($cancels as $bn) {
+                    $apt = $appointmentModel->find($bn['appointment_id']);
+                    if (!$apt) continue;
+                    $payload = json_decode($bn['payload'], true) ?: [];
+                    $pendingCancellationRequests[] = [
+                        'notification' => $bn,
+                        'appointment' => $apt,
+                        'reason' => $payload['reason'] ?? null,
+                        'requested_by' => $payload['user_id'] ?? null,
+                    ];
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading pending cancellation notifications: ' . $e->getMessage());
+                $pendingCancellationRequests = [];
+            }
+        }
+
         // Fetch recently cancelled appointments (last 24 hours) for quick visibility
         $recentCancelledAppointments = [];
         if (!empty($branchIds)) {
@@ -118,6 +147,7 @@ class Staff extends BaseController
             'pendingAppointments' => $pendingAppointments,
             'pendingChangeRequests' => $pendingChangeRequests,
             'recentCancelledAppointments' => $recentCancelledAppointments,
+            'pendingCancellationRequests' => $pendingCancellationRequests,
             'todayAppointments' => $todayAppointments,
             'totalPatients' => $totalPatients,
             'totalDentists' => $totalDentists,
@@ -348,7 +378,8 @@ class Staff extends BaseController
         }
 
         $user = Auth::getCurrentUser();
-        if ($user['user_type'] !== 'staff') {
+        // allow staff or admin to perform this action
+        if (!in_array($user['user_type'], ['staff', 'admin'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
         }
 
@@ -438,9 +469,42 @@ class Staff extends BaseController
             'dentist_id' => $dentistId,
             'appointment_date' => $this->request->getPost('date'),
             'appointment_time' => $this->request->getPost('time'),
+            'procedure_duration' => $this->request->getPost('procedure_duration') ?? $this->request->getPost('duration') ?? null,
             'appointment_type' => $appointmentType,
             'remarks' => $this->request->getPost('remarks')
         ];
+
+        // Debug JSON mode: if debug_json=1 is present in POST, return computed timing info
+        if ($this->request->getPost('debug_json')) {
+            $debugDur = (int) ($this->request->getPost('procedure_duration') ?? $this->request->getPost('duration') ?? 0);
+            // fall back to 30 when duration missing or zero
+            $duration = ($debugDur > 0) ? $debugDur : 30;
+            $defaultInterval = 30; // default interval used in calendar labels
+
+            $date = $data['appointment_date'];
+            $start = $data['appointment_time'];
+            // compute appointment datetime and end times
+            $startTs = strtotime($date . ' ' . $start);
+            $endTs = $startTs + ($duration * 60);
+            $end = date('H:i', $endTs);
+            $endWithInterval = date('H:i', $endTs + ($defaultInterval * 60));
+
+            $payload = [
+                'debug' => true,
+                'appointment_date' => $date,
+                'start' => $start,
+                'duration' => $duration,
+                'default_interval' => $defaultInterval,
+                'end' => $end,
+                'end_with_interval' => $endWithInterval,
+                'appointment_datetime' => date('Y-m-d H:i:s', $startTs),
+                // friendly labels the day/week view would normally use
+                'day_view_label' => $start . '–' . $end,
+                'week_view_label' => $start . ' (' . $duration . 'm)'
+            ];
+
+            return $this->response->setJSON($payload);
+        }
 
         // Validate required fields
         if (empty($data['user_id']) || empty($data['appointment_date']) || empty($data['appointment_time'])) {
@@ -516,10 +580,12 @@ class Staff extends BaseController
         $appointment = $appointmentModel->find($appointmentId);
         if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
 
-        // Check branch assignment
-        $branchUserModel = new \App\Models\BranchUserModel();
-        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
-            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+        // If user is staff, enforce branch assignment; admins bypass branch ownership
+        if ($user['user_type'] === 'staff') {
+            $branchUserModel = new \App\Models\BranchUserModel();
+            if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+                return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+            }
         }
 
         // Look up a branch notification for this appointment with change request
@@ -544,6 +610,9 @@ class Staff extends BaseController
             if (isset($requestedChanges['appointment_date'])) $updateData['appointment_date'] = $requestedChanges['appointment_date'];
             if (isset($requestedChanges['appointment_time'])) $updateData['appointment_time'] = $requestedChanges['appointment_time'];
         }
+    // Preserve procedure duration if requested by patient (they may send 'duration' or 'procedure_duration')
+    if (isset($requestedChanges['duration'])) $updateData['procedure_duration'] = $requestedChanges['duration'];
+    if (isset($requestedChanges['procedure_duration'])) $updateData['procedure_duration'] = $requestedChanges['procedure_duration'];
         if (isset($requestedChanges['remarks'])) $updateData['remarks'] = $requestedChanges['remarks'];
         if (isset($requestedChanges['service_id'])) $updateData['service_id'] = $requestedChanges['service_id'];
 
@@ -565,6 +634,154 @@ class Staff extends BaseController
         } catch (\Exception $e) {
             log_message('error', 'Error applying change request: ' . $e->getMessage());
             return $this->response->setJSON(['success' => false, 'message' => 'Failed to apply change request']);
+        }
+    }
+
+    /**
+     * Staff approves a patient's cancellation request
+     */
+    public function approveCancellation($appointmentId)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($appointmentId);
+        if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
+
+        // Check branch assignment
+        $branchUserModel = new \App\Models\BranchUserModel();
+        if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+        }
+
+        try {
+            // Mark as cancelled and clear pending flag
+            $appointmentModel->update($appointmentId, [
+                'pending_change' => 0,
+                'approval_status' => 'approved',
+                'status' => 'cancelled',
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+
+            // Mark related branch notification as sent/handled
+            if (class_exists('\App\\Models\\BranchNotificationModel')) {
+                $bnModel = new \App\Models\BranchNotificationModel();
+                $bn = $bnModel->where('appointment_id', $appointmentId)
+                              ->where('sent', 0)
+                              ->like('payload', 'appointment_cancellation_request')
+                              ->orderBy('created_at', 'DESC')
+                              ->first();
+                if ($bn) $bnModel->update($bn['id'], ['sent' => 1, 'sent_at' => date('Y-m-d H:i:s')]);
+            }
+
+            return $this->response->setJSON(['success' => true, 'message' => 'Cancellation approved and appointment cancelled']);
+        } catch (\Exception $e) {
+            log_message('error', 'Error approving cancellation: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to approve cancellation']);
+        }
+    }
+
+    /**
+     * Staff rejects a patient's cancellation request
+     */
+    public function rejectCancellation($appointmentId)
+    {
+        if (!Auth::isAuthenticated()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $user = Auth::getCurrentUser();
+        // allow staff or admin
+        if (!in_array($user['user_type'], ['staff', 'admin'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Access denied']);
+        }
+
+        // Accept reason from POST form or JSON payload. Be defensive when parsing JSON to avoid exceptions.
+        $reason = $this->request->getPost('reason');
+        $json = [];
+        if (empty($reason)) {
+            try {
+                $contentType = $this->request->getHeaderLine('Content-Type') ?? '';
+                if (stripos($contentType, 'application/json') !== false) {
+                    $json = $this->request->getJSON(true) ?: [];
+                } else {
+                    // If content-type wasn't explicitly set but body looks like JSON, try safe decode
+                    $raw = $this->request->getBody();
+                    $rawTrim = trim($raw ?? '');
+                    if ($rawTrim !== '' && in_array($rawTrim[0], ['{', '['])) {
+                        $decoded = json_decode($rawTrim, true);
+                        if (json_last_error() === JSON_ERROR_NONE) $json = $decoded;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Log and ignore parse errors; we'll fallback to default reason
+                log_message('warning', 'Staff::rejectCancellation - failed to parse JSON body: ' . $e->getMessage());
+                $json = [];
+            }
+            $reason = $reason ?: ($json['reason'] ?? null) ?: 'Cancellation rejected by staff';
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($appointmentId);
+        if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
+
+        // If user is staff, enforce branch assignment; admins bypass branch ownership
+        if ($user['user_type'] === 'staff') {
+            $branchUserModel = new \App\Models\BranchUserModel();
+            if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
+                return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
+            }
+        }
+
+        try {
+            // Clear pending flag and mark approval_status as declined with reason
+            $appointmentModel->update($appointmentId, [
+                'pending_change' => 0,
+                'approval_status' => 'declined',
+                'decline_reason' => $reason,
+                'status' => ($appointment['status'] === 'cancelled' ? 'cancelled' : $appointment['status']),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+
+            // Mark any original cancellation request notifications as handled
+            if (class_exists('\App\\Models\\BranchNotificationModel')) {
+                $bnModel = new \App\Models\BranchNotificationModel();
+                try {
+                    $orig = $bnModel->where('appointment_id', $appointmentId)
+                                    ->like('payload', 'appointment_cancellation_request')
+                                    ->where('sent', 0)
+                                    ->findAll();
+                    if (!empty($orig)) {
+                        foreach ($orig as $o) {
+                            $bnModel->update($o['id'], ['sent' => 1, 'sent_at' => date('Y-m-d H:i:s')]);
+                        }
+                    }
+
+                    // Create a patient-visible rejection notification so the patient sees the reason
+                    $payload = json_encode(['type' => 'cancellation_rejected', 'appointment_id' => $appointmentId, 'reason' => $reason, 'staff_id' => $user['id']]);
+                    // Sent should be 0 so patient UI or notification pollers can pick it up
+                    $bnModel->insert([
+                        'branch_id' => $appointment['branch_id'] ?? null,
+                        'appointment_id' => $appointmentId,
+                        'payload' => $payload,
+                        'sent' => 0,
+                    ]);
+                } catch (\Exception $e) {
+                    log_message('error', 'Error handling branch notifications during rejection: ' . $e->getMessage());
+                }
+            }
+
+            return $this->response->setJSON(['success' => true, 'message' => 'Cancellation request rejected']);
+        } catch (\Exception $e) {
+            log_message('error', 'Error rejecting cancellation: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to reject cancellation request']);
         }
     }
 

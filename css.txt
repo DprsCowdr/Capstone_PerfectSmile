@@ -737,10 +737,6 @@ video {
   grid-column: span 2 / span 2;
 }
 
-.col-span-1 {
-  grid-column: span 1 / span 1;
-}
-
 .m-0 {
   margin: 0px;
 }
@@ -3109,10 +3105,6 @@ video {
 
 .hover\:bg-opacity-80:hover {
   --tw-bg-opacity: 0.8;
-}
-
-.hover\:bg-opacity-90:hover {
-  --tw-bg-opacity: 0.9;
 }
 
 .hover\:from-blue-100:hover {

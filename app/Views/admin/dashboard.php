@@ -187,6 +187,45 @@
                     </div>
                 </div>
             </div>
+            <!-- Pending Cancellation Requests -->
+            <?php if (!empty($pendingCancellationRequests)): ?>
+            <div class="bg-white shadow rounded-lg mb-6">
+                <div class="border-b px-6 py-3">
+                    <h2 class="text-lg font-bold text-red-700 flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                        Cancellation Requests (<?= count($pendingCancellationRequests) ?>)
+                    </h2>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        <?php foreach ($pendingCancellationRequests as $item):
+                            $apt = $item['appointment'];
+                            $note = $item['notification'];
+                        ?>
+                        <div class="border border-red-200 rounded-lg p-4 bg-red-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 class="font-semibold text-gray-800"><?= esc($apt['user_id'] ? 'Patient ID: ' . $apt['user_id'] : 'Unknown') ?></h3>
+                                    <div class="text-sm text-gray-600"><?= esc($apt['remarks'] ?? '') ?></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm text-gray-500"><?= date('M j, Y', strtotime($apt['appointment_datetime'])) ?></div>
+                                    <div class="font-semibold text-gray-800"><?= date('g:i A', strtotime($apt['appointment_datetime'])) ?></div>
+                                </div>
+                            </div>
+                            <?php if (!empty($item['reason'])): ?>
+                            <div class="text-sm italic text-gray-700 mb-2">Reason: <?= esc($item['reason']) ?></div>
+                            <?php endif; ?>
+                            <div class="flex space-x-2">
+                                <button onclick="approveCancellation(<?= (int)$apt['id'] ?>)" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-check mr-1"></i>Approve Cancel</button>
+                                <button onclick="rejectCancellation(<?= (int)$apt['id'] ?>)" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"><i class="fas fa-times mr-1"></i>Reject Cancel</button>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </main>
         <footer class="bg-white py-4 mt-auto shadow-inner">
             <div class="text-center text-gray-500 text-sm">
@@ -197,6 +236,48 @@
 </div>
 
 <script>
+// Helpers for cancellation approval/rejection (send CSRF as form data)
+function postForm(url, data){
+    data = data || {};
+    data['<?= csrf_token() ?>'] = '<?= csrf_hash() ?>';
+    const params = new URLSearchParams();
+    Object.keys(data).forEach(k => { if (data[k] !== undefined && data[k] !== null) params.append(k, data[k]); });
+    return fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json'
+        },
+        body: params.toString()
+    }).then(r => r.json().catch(() => ({ success: false, message: 'Invalid JSON response', status: r.status })));
+}
+
+function approveCancellation(id){
+    if(!confirm('Approve cancellation for appointment #' + id + '?')) return;
+    postForm('<?= base_url('staff/appointments/approve-cancel') ?>/' + id, {}).then(res => {
+        console.log('approveCancellation response', res);
+        if(res && res.success){
+            alert('Cancellation approved. The timeslot is now freed.');
+            location.reload();
+        } else {
+            alert('Failed to approve: ' + (res?.message || 'Unknown error'));
+        }
+    }).catch(e => { console.error(e); alert('Network error'); });
+}
+
+function rejectCancellation(id){
+    var reason = prompt('Enter a reason for rejecting this cancellation request (optional):');
+    postForm('<?= base_url('staff/appointments/reject-cancel') ?>/' + id, { reason: reason }).then(res => {
+        console.log('rejectCancellation response', res);
+        if(res && res.success){
+            alert('Cancellation request rejected.');
+            location.reload();
+        } else {
+            alert('Failed to reject: ' + (res?.message || 'Unknown error'));
+        }
+    }).catch(e => { console.error(e); alert('Network error'); });
+}
 function approveAppointment(appointmentId) {
     if (confirm('Are you sure you want to approve this appointment?')) {
         // Show dentist selection dialog

@@ -152,8 +152,8 @@ class AppointmentModel extends Model
                 throw new \Exception('Cannot book an appointment in the past.');
             }
             $hour = (int)date('H', $dt);
-            if ($hour < 8 || $hour > 17) {
-                throw new \Exception('Appointments can only be booked between 08:00 and 17:00.');
+            if ($hour < 8 || $hour > 20) {
+                throw new \Exception('Appointments can only be booked between 08:00 and 20:00.');
             }
         }
         return parent::update($id, $data);

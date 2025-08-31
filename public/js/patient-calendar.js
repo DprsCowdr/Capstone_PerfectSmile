@@ -65,7 +65,11 @@
     appointments.forEach(a => {
       const opt = document.createElement('option');
       opt.value = a.start; // e.g. "08:00"
-      opt.textContent = `${a.patient_name || '—'} — ${formatTimeHM(a.start)} to ${formatTimeHM(a.end)} (${a.procedure_duration || '30'}m)`;
+  // If appointment belongs to current patient, show full details; otherwise show generic 'Booked'
+  const patientLabel = (a.is_owner || a.patient_name) ? (a.patient_name || 'You') : 'Booked';
+  const procLabel = a.procedure || a.service_name || a.procedure_name || a.procedure_label || '';
+  const procText = procLabel ? ` | ${procLabel}` : '';
+  opt.textContent = `${patientLabel} — ${formatTimeHM(a.start)} to ${formatTimeHM(a.end)} (${a.procedure_duration || '30'}m)${procText}`;
       selectEl.appendChild(opt);
     });
   }
@@ -142,6 +146,79 @@
     containerEl.appendChild(ul);
   }
 
+  // Slot granularity in minutes (configurable). Use global override if provided.
+  const SLOT_GRANULARITY = (window.SLOT_GRANULARITY && Number(window.SLOT_GRANULARITY)) ? Number(window.SLOT_GRANULARITY) : 30;
+
+  // Simple cache for available-slots responses by date+duration to avoid repeated calls while rendering month
+  const slotsCache = {};
+  function cacheKey(date, duration, dentist, branch){
+    return `${date}::${duration || ''}::${dentist || ''}::${branch || ''}`;
+  }
+  async function getAvailableSlotsForDate(date, duration, dentist){
+    const branch = (document.querySelector('select[name="branch_id"]') || {}).value || '';
+    const key = cacheKey(date, duration || SLOT_GRANULARITY, dentist || '', branch || '');
+    if(slotsCache[key]) return slotsCache[key];
+    try{
+  const res = await postForm('/appointments/available-slots', { branch_id: branch, date, duration: Number(duration || SLOT_GRANULARITY), dentist_id: dentist || '', granularity: Number(SLOT_GRANULARITY) });
+  const slots = (res && res.success) ? (res.slots || []) : [];
+  // Cache entire response object so callers can use totals if present
+  slotsCache[key] = res || { slots };
+  return slotsCache[key];
+    }catch(e){ console.error('[patient-calendar] getAvailableSlotsForDate error', e); slotsCache[key] = []; return []; }
+  }
+
+  function computeOccupiedSlotsForDate(date, granularity){
+    const appointments = (window.appointments || []).filter(a => {
+      const aptDate = a.appointment_date || (a.appointment_datetime ? a.appointment_datetime.substring(0,10) : null);
+      return aptDate === date;
+    });
+    const g = Number(granularity) || SLOT_GRANULARITY;
+    let occupied = 0;
+    appointments.forEach(a => {
+      const dur = Number(a.procedure_duration || a.duration_minutes || a.duration || 30) || 30;
+      occupied += Math.ceil(dur / g);
+    });
+    return { occupied, appointmentsCount: appointments.length };
+  }
+
+  // Update month view badges to show occupied/total slots dynamically
+  async function updateMonthSlotCounts(){
+    try{
+      const monthView = document.getElementById('monthView');
+      if(!monthView) return;
+      const tds = monthView.querySelectorAll('td[data-date]');
+      if(!tds || tds.length === 0) return;
+      // For each date cell that contains an appointment badge, compute totals and update
+      for(const td of Array.from(tds)){
+        const date = td.getAttribute('data-date');
+        if(!date) continue;
+        // Find the appointment badge span created by calendar scripts
+        const badge = td.querySelector('.relative.z-10 .bg-blue-100') || td.querySelector('.relative .bg-blue-100');
+        // Only update cells that previously had an appointment indicator
+        if(!badge) continue;
+        // Compute occupied units (sum of ceil(duration/granularity))
+        const { occupied, appointmentsCount } = computeOccupiedSlotsForDate(date, SLOT_GRANULARITY);
+        // Fetch available starting slots and totals (server returns total_possible_starting_slots and remaining_starting_slots)
+        const availResp = await getAvailableSlotsForDate(date, SLOT_GRANULARITY, '');
+        const serverTotal = (availResp && availResp.total_possible_starting_slots) ? Number(availResp.total_possible_starting_slots) : null;
+        const serverRemaining = (availResp && (typeof availResp.remaining_starting_slots !== 'undefined')) ? Number(availResp.remaining_starting_slots) : null;
+        if (serverTotal !== null && serverRemaining !== null) {
+          // serverRemaining is how many starting slots fit the requested duration; we display occupied units vs possible starting slots
+          badge.innerHTML = `<i class=\"fas fa-calendar-check mr-1 text-blue-600\"></i>${occupied}/${serverTotal} slots`;
+        } else {
+          // fallback to previous computation: available.length + occupied
+          const available = (availResp && availResp.slots) ? availResp.slots : (availResp || []);
+          const total = (available ? available.length : 0) + occupied;
+          if(total > 0){
+            badge.innerHTML = `<i class=\"fas fa-calendar-check mr-1 text-blue-600\"></i>${occupied}/${total} slots`;
+          } else {
+            badge.innerHTML = `<i class=\"fas fa-calendar-check mr-1 text-blue-600\"></i>${appointmentsCount} apt${appointmentsCount>1?'s':''}`;
+          }
+        }
+      }
+    }catch(e){ console.error('[patient-calendar] updateMonthSlotCounts error', e); }
+  }
+
   function init(){
     const branchEl = qs('select[name="branch_id"]');
     const dateEl = qs('input[name="appointment_date"]');
@@ -151,7 +228,12 @@
     const slotsContainer = qs('#availableSlots');
     const conflictsContainer = qs('#timeConflicts');
 
-    if(!dateEl) return; // not on calendar/create page
+  // If there's no appointment form date input, don't bail out completely because
+  // we still want header-only features (Available slots / Time Taken) to work
+  // on staff calendar pages. Only return early if nothing relevant exists.
+  const headerAvailableBtn = qs('#availableSlotsBtn');
+  const headerTimeTakenBtn = qs('#timeTakenBtn');
+  if(!dateEl && !headerAvailableBtn && !headerTimeTakenBtn) return;
 
     // Show server-side validation errors on the form
     function showFormValidationErrors(form, errors){
@@ -269,9 +351,11 @@
         }).catch(console.error);
     }
 
-    // initial load
-    loadDayAppointments();
-    loadSlots();
+  // initial load
+  loadDayAppointments();
+  loadSlots();
+  // Update month badges to show dynamic occupied/total slots
+  setTimeout(() => { try{ if(typeof updateMonthSlotCounts === 'function') updateMonthSlotCounts(); }catch(e){console.error(e);} }, 600);
 
     // listeners
     if(dateEl) dateEl.addEventListener('change', () => { loadDayAppointments(); loadSlots(); });
@@ -351,7 +435,7 @@
           if(!payload.branch_id && branchEl) payload.branch_id = branchEl.value || '';
           // Make the request
           const res = await postForm(bookingEndpoint, payload);
-          if(res && res.success){
+            if(res && res.success){
             if(res.appointment){ window.appointments = window.appointments || []; window.appointments.push(res.appointment); }
             const msgEl = document.getElementById('appointmentSuccessMessage');
             const main = document.getElementById('appointmentSuccessMain');
@@ -381,14 +465,12 @@
       });
     }
 
-    // Buttons in the header to jump to side-panel
-    const availableBtn = qs('#availableSlotsBtn');
-    const timeTakenBtn = qs('#timeTakenBtn');
-    const sidePanel = qs('aside');
-  const availableMenu = qs('#availableSlotsMenu');
+    // When appointments are created elsewhere in the app, refresh month slot counts
+    window.addEventListener('appointmentCreated', function(){ if(typeof updateMonthSlotCounts === 'function') updateMonthSlotCounts(); });
+
+  // Header buttons removed: Available Slots & Time Taken UI are deprecated
+  const sidePanel = qs('aside');
   const availableMenuContent = qs('#availableSlotsMenuContent');
-  const timeTakenMenu = qs('#timeTakenMenu');
-  const timeTakenMenuContent = qs('#timeTakenMenuContent');
     function showSidePanel(){
       if(!sidePanel) return;
       sidePanel.style.display = 'block';
@@ -400,124 +482,8 @@
       if(timeTakenMenu) timeTakenMenu.classList.add('hidden');
     }
 
-    async function preloadAvailableSlots(){
-      try {
-        if(!availableMenuContent) return;
-        console.log('[patient-calendar] preloadAvailableSlots start');
-        availableMenuContent.textContent = 'Loading...';
-        const branch = branchEl ? branchEl.value : '';
-        const date = dateEl ? dateEl.value : '';
-        const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
-        const dentist = dentistEl ? dentistEl.value : '';
-        const res = await postForm('/appointments/available-slots', {branch_id: branch, date, duration, dentist_id: dentist});
-        if(res && res.success){
-          const slots = res.slots || [];
-          if(slots.length === 0){
-            availableMenuContent.textContent = 'No available slots';
-          } else {
-            // render full list in a small scrollable panel
-            availableMenuContent.innerHTML = '';
-            const ul = document.createElement('ul');
-            ul.style.listStyle = 'none';
-            ul.style.margin = '0';
-            ul.style.padding = '0';
-            ul.style.maxHeight = '220px';
-            ul.style.overflowY = 'auto';
-            slots.forEach(s => {
-              const li = document.createElement('li');
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
-              const timeStr = (typeof s === 'string') ? s : (s.time || s);
-              btn.textContent = timeStr;
-              if(s && typeof s === 'object' && s.dentist_id) btn.dataset.dentist = s.dentist_id;
-              btn.addEventListener('click', () => {
-                const timeInput = qs('input[name="appointment_time"]') || qs('#timeSelect') || qs('select[name="appointment_time"]');
-                if(timeInput) timeInput.value = timeStr;
-                // if slot contains dentist, select it
-                if(btn.dataset && btn.dataset.dentist){ const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect'); if(dentistSelect) dentistSelect.value = btn.dataset.dentist; }
-                hideAllMenus();
-                checkConflictFor(timeStr);
-              });
-              li.appendChild(btn);
-              ul.appendChild(li);
-            });
-            availableMenuContent.appendChild(ul);
-          }
-        } else {
-          availableMenuContent.textContent = 'No available slots';
-        }
-        console.log('[patient-calendar] preloadAvailableSlots done');
-      } catch(err) {
-        availableMenuContent.textContent = 'Error loading slots';
-        console.error('[patient-calendar] preloadAvailableSlots error', err);
-      }
-    }
-
-    async function preloadTimeTaken(){
-      try {
-        if(!timeTakenMenuContent) return;
-        console.log('[patient-calendar] preloadTimeTaken start');
-        timeTakenMenuContent.textContent = 'Loading...';
-        const branch = branchEl ? branchEl.value : '';
-        const date = dateEl ? dateEl.value : '';
-        const res = await postForm('/appointments/day-appointments', {branch_id: branch, date});
-        if(res && res.success){
-          const appts = res.appointments || [];
-          if(appts.length === 0) timeTakenMenuContent.textContent = 'No appointments for selected day';
-          else{
-            timeTakenMenuContent.innerHTML = '';
-            const ul = document.createElement('ul');
-            ul.style.listStyle = 'none';
-            ul.style.margin = '0';
-            ul.style.padding = '0';
-            ul.style.maxHeight = '220px';
-            ul.style.overflowY = 'auto';
-            appts.forEach(a => {
-              const li = document.createElement('li');
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
-              // Hide patient name: only show time, date, duration, branch
-              const datePart = a.date || '';
-              const branch = a.branch_name || '';
-              const duration = a.procedure_duration || '30';
-              btn.textContent = `${a.start} - ${a.end} (${duration}m) ${branch ? '• ' + branch : ''}`;
-              btn.addEventListener('click', () => {
-                const timeInput = qs('input[name="appointment_time"]') || qs('#timeSelect') || qs('select[name="appointment_time"]');
-                if(timeInput) timeInput.value = a.start;
-                hideAllMenus();
-                checkConflictFor(a.start);
-              });
-              li.appendChild(btn);
-              ul.appendChild(li);
-            });
-            timeTakenMenuContent.appendChild(ul);
-          }
-        } else timeTakenMenuContent.textContent = 'No appointments';
-        console.log('[patient-calendar] preloadTimeTaken done');
-      } catch(err) {
-        timeTakenMenuContent.textContent = 'Error loading appointments';
-        console.error('[patient-calendar] preloadTimeTaken error', err);
-      }
-    }
-
-    if(availableBtn){
-      availableBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if(availableMenu) availableMenu.classList.toggle('hidden');
-        if(timeTakenMenu) timeTakenMenu.classList.add('hidden');
-        if(!availableMenu.classList.contains('hidden')) await preloadAvailableSlots();
-      });
-    }
-    if(timeTakenBtn){
-      timeTakenBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if(timeTakenMenu) timeTakenMenu.classList.toggle('hidden');
-        if(availableMenu) availableMenu.classList.add('hidden');
-        if(!timeTakenMenu.classList.contains('hidden')) await preloadTimeTaken();
-      });
-    }
+  // Previously there were header buttons for Available Slots / Time Taken. Those UI elements
+  // were removed. We now show dynamic slot counts inside the Month view and inline hints.
 
     // close menus when clicking outside
     document.addEventListener('click', (e) => {
