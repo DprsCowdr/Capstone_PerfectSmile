@@ -31,7 +31,7 @@ class Database extends Config
         'password'     => '',
 
 
-        'database'     => 'perfectsmile_db-v1',
+        'database'     => 'perfectsmile_db',
 
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
@@ -201,6 +201,36 @@ class Database extends Config
         // we don't overwrite live data on accident.
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
+            // Allow overriding test DB settings via environment variables (phpunit.xml.dist)
+            $dbDriver = getenv('database.tests.DBDriver');
+            if ($dbDriver) {
+                $this->tests['DBDriver'] = $dbDriver;
+            }
+
+            $hostname = getenv('database.tests.hostname');
+            if ($hostname) {
+                $this->tests['hostname'] = $hostname;
+            }
+
+            $username = getenv('database.tests.username');
+            if ($username) {
+                $this->tests['username'] = $username;
+            }
+
+            $password = getenv('database.tests.password');
+            if ($password !== false && $password !== null) {
+                $this->tests['password'] = $password;
+            }
+
+            $database = getenv('database.tests.database');
+            if ($database) {
+                $this->tests['database'] = $database;
+            }
+
+            $dbPrefix = getenv('database.tests.DBPrefix');
+            if ($dbPrefix) {
+                $this->tests['DBPrefix'] = $dbPrefix;
+            }
         }
     }
 }

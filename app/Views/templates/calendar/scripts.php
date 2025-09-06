@@ -1,4 +1,10 @@
 <script>
+// Marker: global calendar scripts loaded
+window.globalCalendarLoaded = window.globalCalendarLoaded || true;
+// Ensure the booking panel opener exists as a safe fallback so inline onclick handlers never throw
+window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime || function(date, time){
+  console.warn('Fallback openAddAppointmentPanelWithTime called before calendar initialization', date, time);
+};
 // Make showWeekAppointmentDetails globally available for week view appointment clicks
 window.showWeekAppointmentDetails = function(appointmentId) {
   const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
@@ -22,20 +28,22 @@ window.showWeekAppointmentDetails = function(appointmentId) {
   }
   // Populate details
   const list = modal.querySelector('#dayAppointmentsList');
-  list.innerHTML = `
-    <div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>
+  // Respect patient privacy: only show patient name to non-patient users
+  let patientLine = '';
+  if (window.userType !== 'patient') {
+    patientLine = `<div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>`;
+  }
+  list.innerHTML = patientLine + `
     <div class="mb-2"><span class="font-semibold">Date:</span> ${appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '')}</div>
     <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
+    <div class="mb-2"><span class="font-semibold">Status:</span> ${appointment.status || ''}</div>
     <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
     <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
   `;
-  modal.classList.remove('hidden');
-  modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
-    modal.classList.add('hidden');
-  };
 }
   // Handles the All Appointments modal logic for the calendar
-function showAllAppointments() {
+function showAllAppointments(limitToPatient = false) {
+  // Build or reuse modal
   let modal = document.getElementById('allAppointmentsModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -44,64 +52,79 @@ function showAllAppointments() {
     modal.innerHTML = `
       <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 relative animate-fade-in">
         <button id="closeAllAppointmentsModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
-        <h2 class="text-xl font-bold mb-4 text-blue-700">All Appointments <span class='ml-2 text-base text-gray-500 font-normal'>(${getFilteredAppointments().length})</span></h2>
+        <h2 class="text-xl font-bold mb-4 text-blue-700">All Appointments <span id="allAppointmentsCount" class='ml-2 text-base text-gray-500 font-normal'></span></h2>
         <div id="allAppointmentsList" class="max-h-[60vh] overflow-y-auto"></div>
       </div>
     `;
     document.body.appendChild(modal);
   }
-  // Populate the list
+
   const list = modal.querySelector('#allAppointmentsList');
-  const appointments = getFilteredAppointments(); // Use branch-filtered appointments
-  if (appointments.length === 0) {
+  const countEl = modal.querySelector('#allAppointmentsCount');
+  let appointments = getFilteredAppointments();
+  if (limitToPatient && window.currentUserId) {
+    appointments = appointments.filter(a => Number(a.user_id) === Number(window.currentUserId));
+  }
+
+  countEl.textContent = `(${appointments.length})`;
+
+  if (!appointments || appointments.length === 0) {
     list.innerHTML = '<div class="text-gray-500">No appointments found.</div>';
   } else {
+    // Build a simple table listing
+    const rows = appointments.map((apt, i) => {
+      const date = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : '');
+      const time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : '');
+      const patient = (window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Unknown');
+      const statusClass = getStatusBadgeClass(apt.status);
+      return `
+        <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-blue-50'} hover:bg-blue-100 transition">
+          <td class="px-4 py-2 font-semibold text-blue-800">${patient}</td>
+          <td class="px-4 py-2 text-gray-600">${date}</td>
+          <td class="px-4 py-2 text-gray-600">${time}</td>
+          <td class="px-4 py-2 text-xs"><span class="inline-block rounded-full px-2 py-1 ${statusClass}">${apt.status || ''}</span></td>
+          <td class="px-4 py-2 text-gray-500">${apt.dentist_name || ''}</td>
+        </tr>
+      `;
+    }).join('');
+
     list.innerHTML = `
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 rounded-xl shadow">
-          <thead class="bg-blue-50 sticky top-0 z-10">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
             <tr>
-              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Patient</th>
-              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Date</th>
-              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Time</th>
-              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Status</th>
-              <th class="px-4 py-2 text-left text-xs font-bold text-blue-700 uppercase">Dentist</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Patient</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Time</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Dentist</th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-100">
-            ${appointments.map((apt, i) => `
-              <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-blue-50'} hover:bg-blue-100 transition">
-                <td class="px-4 py-2 font-semibold text-blue-800">${apt.patient_name || 'Unknown'}</td>
-                <td class="px-4 py-2 text-gray-600">${apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : '')}</td>
-                <td class="px-4 py-2 text-gray-600">${apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : '')}</td>
-                <td class="px-4 py-2 text-xs">
-                  <span class="inline-block rounded-full px-2 py-1 ${getStatusBadgeClass(apt.status)}">${apt.status || ''}</span>
-                </td>
-                <td class="px-4 py-2 text-gray-500">${apt.dentist_name || ''}</td>
-              </tr>
-            `).join('')}
+            ${rows}
           </tbody>
         </table>
       </div>
     `;
   }
-// Helper for status badge color
-function getStatusBadgeClass(status) {
-  switch ((status||'').toLowerCase()) {
-    case 'pending': return 'bg-yellow-100 text-yellow-800';
-    case 'scheduled': return 'bg-blue-100 text-blue-800';
-    case 'confirmed': return 'bg-green-100 text-green-800';
-    case 'completed': return 'bg-green-200 text-green-900';
-    case 'cancelled': return 'bg-red-100 text-red-800';
-    case 'no_show': return 'bg-gray-100 text-gray-800';
-    default: return 'bg-gray-100 text-gray-800';
+
+  // Helper for status badge color (kept local to avoid global overwrite)
+  function getStatusBadgeClass(status) {
+    switch ((status||'').toLowerCase()) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'confirmed': return 'bg-green-100 text-green-800';
+      case 'completed': return 'bg-green-200 text-green-900';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'no_show': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   }
-}
+
+  // Show modal and wire close
   modal.classList.remove('hidden');
-  // Close handler
-  modal.querySelector('#closeAllAppointmentsModal').onclick = () => {
-    modal.classList.add('hidden');
-  };
+  const closeBtn = modal.querySelector('#closeAllAppointmentsModal');
+  if (closeBtn) closeBtn.onclick = () => { modal.classList.add('hidden'); };
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -113,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
  
 <script>
+try {
 // Pass data to JavaScript
 window.userType = '<?= $user['user_type'] ?>';
 let _apts = <?= json_encode($appointments ?? []) ?>;
@@ -124,6 +148,7 @@ if (!Array.isArray(_apts)) {
 }
 window.baseUrl = '<?= base_url() ?>';
 window.branches = <?= json_encode($branches ?? []) ?>;
+window.currentUserId = <?= isset($user['id']) ? $user['id'] : 'null' ?>;
 
 // Initialize branch filter dropdown
 document.addEventListener('DOMContentLoaded', function() {
@@ -215,9 +240,9 @@ function populateAvailableTimeSlots(selectedDate, timeSelect) {
     return aptDate === selectedDate;
   });
   
-  // Create time slots from 8:00 AM to 6:00 PM (30-minute intervals)
+  // Create time slots from 8:00 AM to 8:00 PM (30-minute intervals)
   const startHour = 8;
-  const endHour = 18;
+  const endHour = 20;
   let availableSlots = 0;
   let bookedSlots = 0;
   
@@ -301,6 +326,12 @@ const views = {
   Month: document.getElementById('monthView')
 };
 
+// If user is a patient, hide the 'All' view option
+if (window.userType === 'patient' && dropdownMenu) {
+  const allOpt = dropdownMenu.querySelector('[data-view="All"]');
+  if (allOpt) allOpt.classList.add('hidden');
+}
+
 // Show/hide dropdown
 if (dropdownBtn && dropdownMenu) {
   dropdownBtn.addEventListener('click', function(e) {
@@ -368,10 +399,19 @@ viewOptions.forEach(opt => {
   opt.addEventListener('click', function(e) {
     const view = opt.getAttribute('data-view');
     if (view === 'All') {
-      if (typeof showAllAppointments === 'function') {
-        showAllAppointments();
+      if (window.userType === 'patient') {
+        // For patients, show only their own appointments
+        if (typeof showAllAppointments === 'function') {
+          showAllAppointments(true); // pass flag to limit to patient
+        } else {
+          alert('All Appointments function not loaded.');
+        }
       } else {
-        alert('All Appointments function not loaded.');
+        if (typeof showAllAppointments === 'function') {
+          showAllAppointments(false);
+        } else {
+          alert('All Appointments function not loaded.');
+        }
       }
       dropdownMenu.classList.add('hidden');
       return;
@@ -689,8 +729,12 @@ window.showDayAppointmentDetails = function(appointmentId) {
   }
   // Populate details
   const list = modal.querySelector('#dayAppointmentsList');
-  list.innerHTML = `
-    <div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>
+  // Respect patient privacy: do not show patient name to patient users
+  let patientLine = '';
+  if (window.userType !== 'patient') {
+    patientLine = `<div class="mb-2"><span class="font-semibold">Patient:</span> ${appointment.patient_name || ''}</div>`;
+  }
+  list.innerHTML = patientLine + `
     <div class="mb-2"><span class="font-semibold">Date:</span> ${appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '')}</div>
     <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
     <div class="mb-2"><span class="font-semibold">Status:</span> ${appointment.status || ''}</div>
@@ -780,8 +824,13 @@ function rebuildCalendarGrid() {
           return aptDateStr === cellDateStr;
         });
         let showCount = true;
-        if (typeof window.showPastAppointments === 'function') {
-          if (isPast && !window.showPastAppointments()) showCount = false;
+        // Patients should be able to see their past and current appointments (read-only)
+        if (window.userType === 'patient') {
+          showCount = true;
+        } else {
+          if (typeof window.showPastAppointments === 'function') {
+            if (isPast && !window.showPastAppointments()) showCount = false;
+          }
         }
         if (dayAppointments.length > 0 && showCount) {
           td.classList.add('relative');
@@ -824,7 +873,7 @@ function showDayAppointmentsModal(dayAppointments) {
   } else {
     list.innerHTML = dayAppointments.map(apt => `
       <div class="border rounded p-2 mb-2 bg-blue-50 hover:bg-blue-100 cursor-pointer" onclick="editAppointment(${apt.id})">
-        <div class="font-semibold text-blue-800">${apt.patient_name || 'Unknown'}</div>
+        <div class="font-semibold text-blue-800">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Unknown')}</div>
         <div class="text-xs text-gray-500">${apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : '')}</div>
         <div class="text-xs text-gray-400">${apt.remarks ? apt.remarks : ''}</div>
       </div>
@@ -851,7 +900,11 @@ function updateWeekView() {
 
   // Checkbox: show past appointments? (shared toggle)
   const showPastCheckbox = document.getElementById('showPastAppointmentsToggle');
-  const showPast = showPastCheckbox && showPastCheckbox.checked;
+  let showPast = showPastCheckbox && showPastCheckbox.checked;
+  // Patients always see past/current appointments in week view (read-only)
+  if (window.userType === 'patient') {
+    showPast = true;
+  }
 
   // Calculate week days based on currentWeekStart
   let weekDays = [];
@@ -927,7 +980,7 @@ function updateWeekView() {
           appointments.forEach(apt => {
             html += `
               <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" onclick="event.stopPropagation();showWeekAppointmentDetails(${apt.id})">
-                <span class="font-bold text-blue-900 text-xs sm:text-sm">${apt.patient_name || 'Appointment'}</span>
+                <span class="font-bold text-blue-900 text-xs sm:text-sm">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Appointment')}</span>
               </div>
             `;
           });
@@ -947,7 +1000,7 @@ function updateWeekView() {
         appointments.forEach(apt => {
           html += `
             <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" onclick="event.stopPropagation();showWeekAppointmentDetails(${apt.id})">
-              <span class="font-bold text-blue-900 text-xs sm:text-sm">${apt.patient_name || 'Appointment'}</span>
+              <span class="font-bold text-blue-900 text-xs sm:text-sm">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Appointment')}</span>
             </div>
           `;
         });
@@ -1229,65 +1282,19 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Global functions for appointment actions
+// Admin handlers are moved to an external script (public/js/calendar-admin.js)
 function editAppointment(appointmentId) {
-  const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
-  if (!appointment) {
-    alert('Appointment not found');
-    return;
+  if (window.calendarAdmin && typeof window.calendarAdmin.editAppointment === 'function') {
+    return window.calendarAdmin.editAppointment(appointmentId);
   }
-  const panel = document.getElementById('editAppointmentPanel');
-  if (!panel) {
-    alert('Edit panel not found.');
-    return;
-  }
-  // Populate form fields
-  const form = panel.querySelector('form');
-  if (form) {
-    form.action = `${window.baseUrl}admin/appointments/update/${appointmentId}`;
-    if (form.elements['patient']) form.elements['patient'].value = appointment.patient_id || '';
-    if (form.elements['branch']) form.elements['branch'].value = appointment.branch_id || '';
-    if (form.elements['date']) form.elements['date'].value = appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '');
-    if (form.elements['time']) form.elements['time'].value = appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '');
-    if (form.elements['remarks']) form.elements['remarks'].value = appointment.remarks || '';
-  }
-  panel.classList.add('active');
-  // Hide the day appointments modal if open
-  const modal = document.getElementById('dayAppointmentsModal');
-  if (modal) modal.classList.add('hidden');
+  alert('Edit function not available');
 }
 
 function deleteAppointment(appointmentId) {
-  if (!confirm('Are you sure you want to delete this appointment?')) return;
-  fetch(`${window.baseUrl}admin/appointments/delete/${appointmentId}`, {
-    method: 'DELETE',
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({
-      '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert('Appointment deleted successfully');
-      // Remove from window.appointments and update calendar UI
-      window.appointments = (window.appointments || []).filter(apt => apt.id != appointmentId);
-      updateCalendarDisplay();
-      // Also close any open modals/panels
-      const editPanel = document.getElementById('editAppointmentPanel');
-      if (editPanel) editPanel.classList.remove('active');
-      const dayModal = document.getElementById('dayAppointmentsModal');
-      if (dayModal) dayModal.classList.add('hidden');
-    } else {
-      alert('Failed to delete appointment: ' + (data.message || 'Unknown error'));
-    }
-  })
-  .catch(() => {
-    alert('Failed to delete appointment');
-  });
+  if (window.calendarAdmin && typeof window.calendarAdmin.deleteAppointment === 'function') {
+    return window.calendarAdmin.deleteAppointment(appointmentId);
+  }
+  alert('Delete function not available');
 }
 // Intercept edit appointment form submit to update via AJAX and refresh UI
 document.addEventListener('DOMContentLoaded', function() {
@@ -1323,67 +1330,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function approveAppointment(appointmentId) {
-    const appointment = window.appointments.find(apt => apt.id == appointmentId);
-    if (!appointment) {
-        alert('Appointment not found');
-        return;
-    }
-    
-    const dentistId = prompt('Enter dentist ID to assign to this appointment:');
-    if (!dentistId) {
-        alert('Dentist ID is required');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('dentist_id', dentistId);
-    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-    
-    fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Appointment approved successfully');
-            location.reload();
-        } else {
-            alert('Failed to approve appointment: ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('Failed to approve appointment');
-    });
+  if (window.calendarAdmin && typeof window.calendarAdmin.approveAppointment === 'function') {
+    return window.calendarAdmin.approveAppointment(appointmentId);
+  }
+  alert('Approve function not available');
 }
 
 function declineAppointment(appointmentId) {
-    const reason = prompt('Please provide a reason for declining this appointment:');
-    if (!reason) {
-        alert('Decline reason is required');
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('reason', reason);
-    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-    
-    fetch(`<?= base_url() ?>admin/appointments/decline/${appointmentId}`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Appointment declined successfully');
-            location.reload();
-        } else {
-            alert('Failed to decline appointment: ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('Failed to decline appointment');
-    });
+  if (window.calendarAdmin && typeof window.calendarAdmin.declineAppointment === 'function') {
+    return window.calendarAdmin.declineAppointment(appointmentId);
+  }
+  alert('Decline function not available');
 }
 // Helper: Always use Asia/Manila timezone for all calendar logic
 function getPHDate(dateStr) {
@@ -1602,4 +1559,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+} catch (e) { console.error('Calendar runtime error', e); }
 </script> 
+<?php if (!isset($user) || ($user['user_type'] ?? '') !== 'patient'): ?>
+  <script src="<?= base_url('js/calendar-admin.js') ?>"></script>
+<?php endif; ?>

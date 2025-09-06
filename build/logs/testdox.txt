@@ -1,0 +1,3 @@
+Appointment Model DB
+ [ ] Insert via model persists procedure duration and split date time
+

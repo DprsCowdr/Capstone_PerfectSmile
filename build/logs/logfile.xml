@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="AppointmentModelDBTest" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AppointmentModelDBTest.php" tests="1" assertions="0" errors="1" failures="0" skipped="0" time="0.000000">
+    <testcase name="testInsertViaModelPersistsProcedureDurationAndSplitDateTime" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AppointmentModelDBTest.php" line="44" class="AppointmentModelDBTest" classname="AppointmentModelDBTest" assertions="0" time="0.000000">
+      <error type="CodeIgniter\Exceptions\CriticalError">AppointmentModelDBTest::testInsertViaModelPersistsProcedureDurationAndSplitDateTime&#13;
+CodeIgniter\Exceptions\CriticalError: The required PHP extension "sqlite3" is not loaded. Install and enable it to use "SQLite3" driver.
+&#13;
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Database.php:182
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Database.php:59
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Database\Config.php:82
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Test\DatabaseTestTrait.php:82
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Test\DatabaseTestTrait.php:59
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\vendor\codeigniter4\framework\system\Test\CIUnitTestCase.php:251
+C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AppointmentModelDBTest.php:17</error>
+    </testcase>
+  </testsuite>
+</testsuites>

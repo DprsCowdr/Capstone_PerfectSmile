@@ -33,6 +33,40 @@
                 <!-- Quick Actions -->
  
                 <!-- Pending Approvals -->
+                    <?php if (!empty($branchNotifications)): ?>
+                    <div class="bg-white shadow rounded-lg mb-6">
+                        <div class="border-b px-6 py-3">
+                            <h2 class="text-lg font-bold text-gray-700 flex items-center">
+                                <i class="fas fa-bell text-gray-500 mr-2"></i>
+                                Branch Notifications (<?= count($branchNotifications) ?>)
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4 max-h-72 overflow-y-auto">
+                                <?php foreach ($branchNotifications as $note): ?>
+                                <div class="border rounded-lg p-3 bg-gray-50">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="text-sm font-semibold text-gray-800"><?php if(!empty($note['appointment'])): ?>Appointment Request<?php else: ?>Message<?php endif; ?></div>
+                                            <div class="text-xs text-gray-600"><?php if(!empty($note['appointment'])): ?>From <?= esc($note['appointment']['appointment_datetime']) ?><?php else: ?><?= esc(substr($note['payload'],0,120)) ?>...<?php endif; ?></div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-xs text-gray-500"><?php echo date('M j, Y g:i A', strtotime($note['created_at'])); ?></div>
+                                            <div class="mt-2">
+                                                <?php if(!empty($note['appointment'])): ?>
+                                                    <a href="<?= base_url('staff/appointments') ?>" class="text-sm text-blue-600 hover:underline">View Appointment</a>
+                                                <?php else: ?>
+                                                    <button onclick="markNotificationHandled(<?= $note['id'] ?>)" class="text-sm text-blue-600 hover:underline">Mark handled</button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 <?php if (!empty($pendingAppointments)): ?>
                 <div class="bg-white shadow rounded-lg mb-6">
                     <div class="border-b px-6 py-3">
@@ -83,6 +117,94 @@
                     </div>
                 </div>
                 <?php endif; ?>
+                <?php if (!empty($recentCancelledAppointments)): ?>
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="border-b px-6 py-3">
+                        <h2 class="text-lg font-bold text-red-700 flex items-center">
+                            <i class="fas fa-ban text-red-500 mr-2"></i>
+                            Recently Cancelled (<?= count($recentCancelledAppointments) ?>)
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4 max-h-96 overflow-y-auto">
+                            <?php foreach ($recentCancelledAppointments as $apt): ?>
+                            <div class="border border-red-200 rounded-lg p-4 bg-red-50">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-800"><?= esc($apt['patient_name'] ?? 'Unknown') ?></h3>
+                                        <div class="text-sm text-gray-600"><?= esc($apt['patient_email'] ?? '') ?></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm text-gray-500"><?= date('M j, Y', strtotime($apt['appointment_datetime'])) ?></div>
+                                        <div class="font-semibold text-gray-800"><?= date('g:i A', strtotime($apt['appointment_datetime'])) ?></div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-600 mb-2">
+                                    <i class="fas fa-building mr-1"></i> <?= esc($apt['branch_name'] ?? 'Unknown') ?>
+                                    <?php if (!empty($apt['dentist_id'])): ?>
+                                        <span class="ml-4"><i class="fas fa-user-md mr-1"></i> Dentist ID: <?= esc($apt['dentist_id']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if (!empty($apt['decline_reason'])): ?>
+                                <div class="text-sm text-gray-600 italic mb-2">
+                                    <i class="fas fa-comment mr-1"></i> <?= esc($apt['decline_reason']) ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Pending Change Requests -->
+                <?php if (!empty($pendingChangeRequests)): ?>
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="border-b px-6 py-3">
+                        <h2 class="text-lg font-bold text-blue-700 flex items-center">
+                            <i class="fas fa-edit text-blue-500 mr-2"></i>
+                            Pending Change Requests (<?= count($pendingChangeRequests) ?>)
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4 max-h-96 overflow-y-auto">
+                            <?php foreach ($pendingChangeRequests as $appointment): ?>
+                            <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h3 class="font-semibold text-gray-800"><?= $appointment['patient_name'] ?></h3>
+                                        <p class="text-sm text-gray-600"><?= $appointment['patient_email'] ?></p>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm text-gray-500">Current: <?= date('M j, Y', strtotime($appointment['appointment_date'])) ?> at <?= date('g:i A', strtotime($appointment['appointment_time'])) ?></div>
+                                        <div class="text-xs text-blue-600 mt-1">Change requested</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-600 mb-3">
+                                    <i class="fas fa-building mr-1"></i> <?= $appointment['branch_name'] ?>
+                                    <?php if ($appointment['dentist_id']): ?>
+                                        <span class="ml-4"><i class="fas fa-user-md mr-1"></i> Dentist assigned</span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($appointment['remarks']): ?>
+                                <div class="text-sm text-gray-600 italic mb-3">
+                                    <i class="fas fa-comment mr-1"></i> <?= $appointment['remarks'] ?>
+                                </div>
+                                <?php endif; ?>
+                                <div class="flex space-x-2">
+                                    <button onclick="approveChangeRequest(<?= $appointment['id'] ?>)" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
+                                        <i class="fas fa-check mr-1"></i>Approve Changes
+                                    </button>
+                                    <button onclick="rejectChangeRequest(<?= $appointment['id'] ?>)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                        <i class="fas fa-times mr-1"></i>Reject Changes
+                                    </button>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
                  
             
@@ -125,6 +247,68 @@ function staffDeclineAppointment(appointmentId) {
     })
     .then(r => r.json())
     .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
+    .catch(e => { console.error(e); alert('An error occurred'); });
+}
+</script>
+<script>
+function markNotificationHandled(notificationId) {
+    if (!confirm('Mark this notification as handled?')) return;
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    fetch(`<?= base_url() ?>staff/notifications/handle/${notificationId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
+    .catch(e => { console.error(e); alert('An error occurred'); });
+}
+
+function approveChangeRequest(appointmentId) {
+    if (!confirm('Approve this change request? The requested changes will be applied to the appointment.')) return;
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    fetch(`<?= base_url() ?>staff/appointments/approve-change/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => { 
+        if (data.success) {
+            alert('Change request approved successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Unknown'));
+        }
+    })
+    .catch(e => { console.error(e); alert('An error occurred'); });
+}
+
+function rejectChangeRequest(appointmentId) {
+    const reason = prompt('Reason for rejecting the change request (required):');
+    if (!reason || !reason.trim()) { 
+        alert('Rejection reason is required'); 
+        return; 
+    }
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    formData.append('reason', reason);
+    fetch(`<?= base_url() ?>staff/appointments/reject-change/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => { 
+        if (data.success) {
+            alert('Change request rejected successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Unknown'));
+        }
+    })
     .catch(e => { console.error(e); alert('An error occurred'); });
 }
 </script>
