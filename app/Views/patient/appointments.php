@@ -8,10 +8,7 @@
         <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6 flex-shrink-0">
             <h1 class="text-xl font-semibold text-gray-800">My Appointments</h1>
             <div class="flex items-center">
-                <a href="<?= base_url('patient/book-appointment') ?>" class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md shadow hover:bg-green-700 text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Book Appointment
-                </a>
+                <!-- Booking disabled from My Appointments module; patients should use the Book page or contact clinic -->
             </div>
         </nav>
 
@@ -54,20 +51,6 @@
                                             <strong>Notes:</strong> <?= esc($appointment['remarks']) ?>
                                         </div>
                                     <?php endif; ?>
-                                    <?php if (!empty($appointment['decline_reason'])): ?>
-                                        <div class="mt-3 text-sm text-red-600">
-                                            <i class="fas fa-exclamation-circle mr-2"></i>
-                                            <strong>Rejected by staff:</strong> <?= esc($appointment['decline_reason']) ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($rejectionNotifications[$appointment['id']] ?? null)): ?>
-                                        <?php foreach ($rejectionNotifications[$appointment['id']] as $rn): ?>
-                                            <div class="mt-2 text-sm text-red-600">
-                                                <i class="fas fa-comment-dots mr-2"></i>
-                                                <strong>Staff note:</strong> <?= esc($rn['reason'] ?? '') ?>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
                                 </div>
                                 <div class="text-right md:ml-4">
                                     <div class="mb-2">
@@ -109,17 +92,11 @@
                                         <!-- Patient actions: View, Cancel -->
                                         <div class="flex items-center justify-end space-x-2">
                                             <a href="<?= base_url('appointments/view/' . ($appointment['id'] ?? '')) ?>" class="text-sm text-indigo-600 hover:underline">View</a>
-                                                <!-- Cancel form: show only when appointment is not already cancelled and no pending cancellation exists -->
-                                                <?php if (($appointment['status'] ?? '') !== 'cancelled' && empty($appointment['pending_change'])): ?>
-                                                <form method="post" action="<?= base_url('patient/appointments/cancel/' . ($appointment['id'] ?? '')) ?>" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
-                                                    <input type="hidden" name="csrf_test_name" value="<?= csrf_hash() ?>">
-                                                    <button type="submit" class="text-sm text-yellow-600 hover:underline">Cancel</button>
-                                                </form>
-                                                <?php elseif (($appointment['status'] ?? '') === 'cancelled'): ?>
-                                                    <div class="text-sm text-gray-600">This appointment has been cancelled.</div>
-                                                <?php else: ?>
-                                                    <div class="text-sm text-orange-600">Cancellation requested — pending staff approval</div>
-                                                <?php endif; ?>
+                                            <!-- Cancel form: patients can still cancel their appointment -->
+                                            <form method="post" action="<?= base_url('patient/appointments/cancel/' . ($appointment['id'] ?? '')) ?>" onsubmit="return confirm('Are you sure you want to cancel this appointment?');">
+                                                <input type="hidden" name="csrf_test_name" value="<?= csrf_hash() ?>">
+                                                <button type="submit" class="text-sm text-yellow-600 hover:underline">Cancel</button>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -133,8 +110,7 @@
                     <h3 class="text-xl font-semibold text-gray-600 mb-2">No Appointments Yet</h3>
                     <p class="text-gray-500 mb-6">You haven't booked any appointments yet.</p>
                     <div class="text-center">
-                        <div class="text-gray-500 mb-4">To book an appointment, please use the Booking page or contact the clinic.</div>
-                        <a href="<?= base_url('patient/book-appointment') ?>" class="inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Book an appointment</a>
+                        <div class="text-gray-500">To book an appointment, please use the Booking page or contact the clinic.</div>
                     </div>
                 </div>
             <?php endif; ?>
@@ -210,44 +186,16 @@
         fetch(action, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded'}, body: payload})
             .then(r => r.json())
             .then(j => {
-                        if (j.success) {
-                            const card = activeCancelForm.closest('.bg-white.rounded-lg');
-                            if (card) {
-                                // Find status badges and update to show cancellation requested (pending staff review)
-                                const statusBadges = card.querySelectorAll('span.rounded-full');
-                                if (statusBadges.length > 0) {
-                                    // appointment status badge is usually the second badge
-                                    const aptBadge = statusBadges[statusBadges.length - 1];
-                                    if (aptBadge) {
-                                        aptBadge.textContent = 'Cancellation Requested';
-                                        aptBadge.className = 'px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800';
-                                    }
-                                }
-
-                                // Insert a visible note about pending cancellation if not present
-                                if (!card.querySelector('.cancellation-requested-badge')) {
-                                    const note = document.createElement('div');
-                                    note.className = 'mt-2 cancellation-requested-badge';
-                                    note.innerHTML = '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 flex items-center"><i class="fas fa-clock mr-1"></i> Cancellation requested — pending staff approval</span>';
-                                    const rightCol = card.querySelector('.text-right');
-                                    if (rightCol) rightCol.appendChild(note);
-                                    else card.appendChild(note);
-                                }
-
-                                // Disable the cancel button to prevent duplicate requests
-                                try {
-                                    const cancelFormEl = activeCancelForm;
-                                    if (cancelFormEl) {
-                                        const btn = cancelFormEl.querySelector('button');
-                                        if (btn) {
-                                            btn.disabled = true;
-                                            btn.textContent = 'Cancellation Requested';
-                                            btn.classList.add('opacity-50');
-                                        }
-                                    }
-                                } catch (e) { /* ignore */ }
-                            }
-                            alert('Cancellation request submitted. Staff will review and approve or reject this request.');
+                if (j.success) {
+                    const card = activeCancelForm.closest('.bg-white.rounded-lg');
+                    if (card) {
+                        // update status badge visually
+                        const status = card.querySelector('span.rounded-full');
+                        if (status) status.textContent = 'Cancelled';
+                        // optionally remove after short delay
+                        setTimeout(() => { if (card) card.remove(); }, 800);
+                    }
+                    alert('Appointment cancelled');
                 } else {
                     alert(j.message || 'Failed to cancel');
                 }

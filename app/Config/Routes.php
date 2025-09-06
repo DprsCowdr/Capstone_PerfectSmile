@@ -86,6 +86,19 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('dental-records/update/(:num)', 'DentalController::updateDentalRecord/$1');
     $routes->get('records', 'AdminController::records'); // → dental/all_records.php
     $routes->delete('dental-records/delete/(:num)', 'AdminController::deleteRecord/$1'); // Delete dental record
+
+    // Prescriptions management
+    $routes->get('prescriptions', 'Prescriptions::index');
+    $routes->get('prescriptions/create', 'Prescriptions::create');
+    $routes->post('prescriptions/store', 'Prescriptions::store');
+    $routes->get('prescriptions/edit/(:num)', 'Prescriptions::edit/$1');
+    $routes->get('prescriptions/(:num)/edit', 'Prescriptions::edit/$1');
+    $routes->post('prescriptions/update/(:num)', 'Prescriptions::update/$1');
+    $routes->get('prescriptions/(:num)', 'Prescriptions::show/$1');
+    $routes->get('prescriptions/(:num)/download', 'Prescriptions::downloadPdf/$1');
+    $routes->get('prescriptions/(:num)/preview', 'Prescriptions::previewPdf/$1');
+    $routes->get('prescriptions/(:num)/download-file', 'Prescriptions::downloadPdfFile/$1');
+    $routes->delete('prescriptions/(:num)', 'Prescriptions::delete/$1');
     
     // Patient records popup routes
     $routes->get('patient-info/(:num)', 'AdminController::getPatientInfo/$1');

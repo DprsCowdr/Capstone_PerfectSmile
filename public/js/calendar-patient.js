@@ -264,59 +264,6 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
     if(branchEl) branchEl.addEventListener('change', checkConflicts);
     if(dateEl) dateEl.addEventListener('change', checkConflicts);
 
-    // --- Admin/Staff: populate suggested times when branch or date changes ---
-    const adminTimeSelect = document.getElementById('adminTimeSelect');
-    const adminTimeInput = document.getElementById('appointmentTime') || document.querySelector('input[name="time"]');
-    async function populateAdminSuggestedTimes(){
-      try{
-        if(!adminTimeSelect) return;
-        const branch = (branchEl && branchEl.value) ? branchEl.value : (document.querySelector('select[name="branch"]') ? document.querySelector('select[name="branch"]').value : '');
-        const date = (dateEl && dateEl.value) ? dateEl.value : (document.getElementById('selectedDateDisplay') ? document.getElementById('selectedDateDisplay').value : '');
-        if(!branch || !date){
-          adminTimeSelect.innerHTML = '<option value="">Select Suggested Time</option>';
-          return;
-        }
-        // call existing endpoint used by patient available button
-        const res = await postForm('/appointments/available-slots', { branch_id: branch, date: date, duration: (durationEl ? (durationEl.value || 30) : 30) });
-        if(res && res.success && Array.isArray(res.slots)){
-          adminTimeSelect.innerHTML = '<option value="">Select Suggested Time</option>';
-          res.slots.slice(0,50).forEach(s => {
-            const timeStr = (typeof s === 'string') ? s : (s.time || s.slot || '');
-            const opt = document.createElement('option'); opt.value = timeStr; opt.textContent = timeStr;
-            adminTimeSelect.appendChild(opt);
-          });
-        } else {
-          adminTimeSelect.innerHTML = '<option value="">No suggested times</option>';
-        }
-      }catch(e){
-        console.error('populateAdminSuggestedTimes error', e);
-        if(adminTimeSelect) adminTimeSelect.innerHTML = '<option value="">Error loading times</option>';
-      }
-    }
-
-    // Trigger population for admin/staff forms
-    if(adminTimeSelect){
-      // when branch or date changes
-      if(branchEl) branchEl.addEventListener('change', populateAdminSuggestedTimes);
-      if(dateEl) dateEl.addEventListener('change', populateAdminSuggestedTimes);
-      // when selecting a suggested time, fill the manual time input
-      adminTimeSelect.addEventListener('change', function(e){
-        const v = adminTimeSelect.value;
-        if(!v) return;
-        // set time input value (HH:MM) if possible
-        try{
-          if(adminTimeInput){
-            // If API returns HH:MM or HH:MM:SS, trim seconds
-            let t = v;
-            if(t.length === 8 && t.indexOf(':')>=0) t = t.slice(0,5);
-            adminTimeInput.value = t;
-            // trigger conflict check
-            if(typeof checkConflicts === 'function') checkConflicts();
-          }
-        }catch(err){ console.error('fill admin time input error', err); }
-      });
-    }
-
     // Open add-appointment panel when clicking calendar cells (month/day views use onclick="openAddAppointmentPanelWithTime(date,time)")
     window.openAddAppointmentPanelWithTime = function(date, time){
       const panel = document.getElementById('addAppointmentPanel');

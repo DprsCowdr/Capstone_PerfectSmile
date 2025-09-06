@@ -787,7 +787,6 @@ class Dentist extends BaseController
             'appointment_datetime' => $this->request->getPost('appointment_datetime'),
             'service' => $this->request->getPost('service'),
             'notes' => $this->request->getPost('notes'),
-            'procedure_duration' => $this->request->getPost('procedure_duration') ?? $this->request->getPost('duration') ?? null,
             'status' => 'confirmed', // Dentist can directly confirm
             'approval_status' => 'approved',
             'created_by' => Auth::getCurrentUser()['id']
@@ -812,8 +811,7 @@ class Dentist extends BaseController
             'appointment_datetime' => $this->request->getPost('appointment_datetime'),
             'service' => $this->request->getPost('service'),
             'notes' => $this->request->getPost('notes'),
-            'status' => $this->request->getPost('status'),
-            'procedure_duration' => $this->request->getPost('procedure_duration') ?? $this->request->getPost('duration') ?? null,
+            'status' => $this->request->getPost('status')
         ];
 
         if ($appointmentModel->update($id, $data)) {

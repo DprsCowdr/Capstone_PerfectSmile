@@ -13,7 +13,7 @@ class BranchModel extends Model
     protected $useSoftDeletes = false;
     protected $protectFields = true;
     protected $allowedFields = [
-        'name', 'address', 'contact_number', 'contact_email', 'start_time', 'end_time', 'created_at', 'updated_at'
+        'name', 'address', 'contact_number', 'contact_email', 'created_at', 'updated_at'
     ];
 
     // Dates

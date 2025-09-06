@@ -260,6 +260,8 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('admin/patient-checkups'), 'fas fa-clipboard-check', 'Patient Checkups', $currentUrl) ?>
                 <?= nav_link(base_url('admin/dental-records'), 'fas fa-file-medical-alt', 'Dental Records', $currentUrl) ?>
                 <?= nav_link(base_url('admin/dental-charts'), 'fas fa-tooth', 'Dental Charts', $currentUrl) ?>
+                <?= nav_link(base_url('admin/prescriptions'), 'fas fa-file-prescription', 'Prescriptions', $currentUrl) ?>
+
             </div>
 
             <!-- Administration Section -->

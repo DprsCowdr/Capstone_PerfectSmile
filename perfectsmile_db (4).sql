@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 31, 2025 at 05:08 PM
+-- Generation Time: Sep 06, 2025 at 02:02 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `perfectsmile_db-v1`
+-- Database: `perfectsmile_db`
 --
 
 -- --------------------------------------------------------
@@ -377,12 +377,27 @@ CREATE TABLE `payments` (
 CREATE TABLE `prescriptions` (
   `id` int(11) NOT NULL,
   `dentist_id` int(11) NOT NULL,
+  `dentist_name` varchar(255) DEFAULT NULL,
+  `license_no` varchar(100) DEFAULT NULL,
+  `ptr_no` varchar(100) DEFAULT NULL,
   `patient_id` int(11) NOT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `issue_date` date NOT NULL,
+  `next_appointment` date DEFAULT NULL,
+  `status` enum('draft','final','cancelled') DEFAULT 'draft',
   `notes` text DEFAULT NULL,
-  `signature_url` varchar(255) DEFAULT NULL
+  `signature_url` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `prescriptions`
+--
+
+INSERT INTO `prescriptions` (`id`, `dentist_id`, `dentist_name`, `license_no`, `ptr_no`, `patient_id`, `appointment_id`, `issue_date`, `next_appointment`, `status`, `notes`, `signature_url`, `created_at`, `updated_at`) VALUES
+(9, 1, 'Dr. Gonowon Minnie Arroyo', '1234', '12345', 3, NULL, '2025-09-05', '2025-09-11', 'draft', 'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.', NULL, '2025-09-05 06:21:12', '2025-09-05 07:36:39'),
+(10, 1, 'Dr. Gonowon Minnie Arroyo', '01122', '554', 22, NULL, '2025-09-05', '2025-09-12', 'draft', 'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.', NULL, '2025-09-05 11:59:50', '2025-09-05 12:14:55');
 
 -- --------------------------------------------------------
 
@@ -399,6 +414,14 @@ CREATE TABLE `prescription_items` (
   `duration` varchar(50) DEFAULT NULL,
   `instructions` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+--
+-- Dumping data for table `prescription_items`
+--
+
+INSERT INTO `prescription_items` (`id`, `prescription_id`, `medicine_name`, `dosage`, `frequency`, `duration`, `instructions`) VALUES
+(13, 9, 'Amoxicillin', '500 mg', '3 times daily', '7 days', 'Take after meals with water.'),
+(15, 10, 'Amoxicillin', '100 kg', '3 times daily', 'everyday', 'wag inumin');
 
 -- --------------------------------------------------------
 
@@ -518,14 +541,14 @@ CREATE TABLE `user` (
 
 INSERT INTO `user` (`id`, `user_type`, `name`, `address`, `email`, `gender`, `password`, `phone`, `created_at`, `updated_at`, `occupation`, `nationality`, `date_of_birth`, `age`, `status`) VALUES
 (1, 'admin', 'Admin User', '123 Admin Street', 'admin@perfectsmile.com', 'male', '$2y$12$Tau0ciyH4Ny3A/P0I.qEbO5i63Ja4AtTPBd4OblwwAnoQLCYokErS', '1234567890', '2025-06-28 16:02:14', '2025-06-28 16:02:14', NULL, NULL, NULL, NULL, 'active'),
-(3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$12$IT16i/hQXaqPB4bgvBy23.isY3vix20H5snsASckANyzP3HcwpJ0e', '1234567892', '2025-06-28 16:02:14', '2025-08-08 11:10:37', 'hh', 'oo', '2025-07-08', 9, 'active'),
-(5, 'patient', 'Brandon Brandon Brandon', 'Brandon@gmail.com', 'Brandon@gmail.com', 'Male', '$2y$10$Yxaynjci.9n395MxVkRpBeOGRRAaB3aWT5QCwSS9hCbCPuhvEYFj.', '89078007077', '2025-07-08 13:39:16', '2025-08-28 10:15:18', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'active'),
+(3, 'patient', 'Patient Jane', '789 Patient Road', 'patient@perfectsmile.com', 'Female', '$2y$12$IT16i/hQXaqPB4bgvBy23.isY3vix20H5snsASckANyzP3HcwpJ0e', '1234567892', '2025-06-28 16:02:14', '2025-09-05 07:36:39', 'hh', 'oo', '2025-07-08', 9, 'active'),
+(5, 'patient', 'Brandon Brandon Brandon', 'san jose baybayon sugong', 'Brandon@gmail.com', 'Male', '$2y$10$Yxaynjci.9n395MxVkRpBeOGRRAaB3aWT5QCwSS9hCbCPuhvEYFj.', '89078007077', '2025-07-08 13:39:16', '2025-09-05 05:27:33', 'Brandon', 'Brandon@gmail.com', '2025-07-03', 18, 'active'),
 (10, 'admin', 'Brandon Dentist', NULL, 'don@gmail.com', 'male', '$2y$12$9BzUNUBkE5idKzb1qdz78ePPo8HsVRgCMm9ZJnjaZDIvRIqcnYW8S', '09150540702', '2025-08-07 05:30:50', '2025-08-07 07:25:15', 'na', 'na', NULL, NULL, 'active'),
 (15, 'patient', 'Eden Caritos', 'PIli Camsur', 'eden@gmail.com', 'Female', '$2y$12$UCxvaWFzAwxJSjK2LBqTGuRXUJaDYbc7rtU9culVbP2SqV/pV/DeS', '099150540702', '2025-08-08 11:06:41', '2025-08-22 20:00:49', 'Nurse', 'Filipino', '2001-09-11', 23, 'active'),
 (16, 'dentist', 'Nabua Dentist', NULL, 'nabua@perfectsmile.com', 'Male', '$2y$12$saFau/p7z3Tu6x/vMg6Q4OkN8o34aUQTMj3Do.zwIVU0l/ii1QVw2', '09150540702', '2025-08-09 03:14:00', '2025-08-09 03:14:00', 'na', 'na', '2000-09-23', 24, 'active'),
 (18, 'dentist', 'Iriga Dentist', NULL, 'iriga@gmail.com', '', '$2y$12$1X4TeOBfzyXYR8rjHrLU4.ifGgz3mJS.KtW4Hr9h5mI3s.wODqGfy', '3903983098809', '2025-08-09 11:43:06', '2025-08-09 11:43:06', 'nnn', 'nnn', '2000-08-23', 24, 'active'),
 (20, 'staff', 'Brandon Dentist', NULL, 'adminn@perfectsmile.com', 'Male', '$2y$12$nw2ocoPA/fAScG/vvSSO..H0AmbVOV.K6WY2YULYbX9hMFuUCekkW', '09150540702', '2025-08-13 04:12:57', '2025-08-13 04:12:57', 'nnnn', 'nnnnn', '2007-05-11', 18, 'active'),
-(22, 'patient', 'Testing 001 ', 'testing', 'testing@gmail.com', 'Male', NULL, '123456789', '2025-08-16 13:07:00', '2025-08-16 13:07:00', 'testing', 'testing', '2003-08-08', 22, 'active'),
+(22, 'patient', 'Testing 001 ', 'san jose baybayon sugong', 'testing@gmail.com', 'Male', NULL, '123456789', '2025-08-16 13:07:00', '2025-09-05 12:14:55', 'testing', 'testing', '2003-08-08', 22, 'active'),
 (24, 'staff', 'diana ', NULL, 'd@gmail.com', 'Female', '$2y$12$WrH1I/NedwIb4JwJ3TE2Ou5hT0DHF1nJjqg5TlKUWzPSJHZWtb09S', '09150540702', '2025-08-22 17:40:48', '2025-08-22 17:40:48', 'd@gmail.com', 'd@gmail.com', '1992-01-08', 33, 'active'),
 (26, 'dentist', 'Dr. Minnie Gonowon', NULL, 'perfectsmile-nabua@gmail.com', 'Female', '$2y$10$tBgRKEL3PjZoUCY2aJAtYezBfbAdLG67fZoKkE/PDqJjXx7dkK.T.', '09948804320', '2025-08-23 05:44:10', '2025-08-23 05:44:10', 'Doctor', 'filipino', '1987-03-22', 38, 'active'),
 (30, 'patient', 'testuser', 'san jose baybayon sugong', 'testuser@gmail.com', 'Male', NULL, '09948804318', '2025-08-25 06:27:13', '2025-08-25 06:27:13', 'student', 'filipino', '2003-08-14', NULL, 'active'),
@@ -797,13 +820,13 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `prescription_items`
 --
 ALTER TABLE `prescription_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `procedures`

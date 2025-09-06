@@ -155,11 +155,6 @@ class Auth extends BaseController
      */
     public static function getCurrentUser()
     {
-        // Allow tests and some code paths to set a session-backed user array directly to avoid DB lookups
-        if (!empty($_SESSION['user']) && is_array($_SESSION['user'])) {
-            return $_SESSION['user'];
-        }
-
         if (self::isAuthenticated()) {
             $userModel = new UserModel();
             return $userModel->find(session()->get('user_id'));

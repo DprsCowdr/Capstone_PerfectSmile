@@ -37,17 +37,9 @@
       <?php endif; ?>
     </div>
 
-    <?php if ($flashSuccess = session()->getFlashdata('success')): ?>
+    <?php if (session()->getFlashdata('success')): ?>
       <div class="bg-green-100 border border-green-400 text-green-800 px-3 sm:px-4 py-3 rounded mb-4 sm:mb-5 text-sm sm:text-base">
-        <?php if (is_array($flashSuccess)): ?>
-          <ul class="list-disc pl-5">
-            <?php foreach ($flashSuccess as $msg): ?>
-              <li><?= esc($msg) ?></li>
-            <?php endforeach; ?>
-          </ul>
-        <?php else: ?>
-          <?= esc($flashSuccess) ?>
-        <?php endif; ?>
+        <?= session()->getFlashdata('success') ?>
       </div>
     <?php endif; ?>
 

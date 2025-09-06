@@ -289,28 +289,7 @@ class Patient extends BaseController
             ->orderBy('appointments.appointment_datetime', 'DESC')
             ->findAll();
 
-    // Load any branch notifications (rejections) related to these appointments so patient can see reject reasons
-    $rejectionNotifications = [];
-    if (class_exists('\App\\Models\\BranchNotificationModel')) {
-        try {
-            $bnModel = new \App\Models\BranchNotificationModel();
-            $aptIds = array_map(function($a){ return $a['id']; }, $appointments ?: []);
-            if (!empty($aptIds)) {
-                $rows = $bnModel->whereIn('appointment_id', $aptIds)
-                                ->like('payload', 'cancellation_rejected')
-                                ->orderBy('created_at', 'DESC')
-                                ->findAll();
-                foreach ($rows as $r) {
-                    $payload = json_decode($r['payload'], true) ?: [];
-                    $rejectionNotifications[$r['appointment_id']][] = $payload;
-                }
-            }
-        } catch (\Exception $e) {
-            log_message('error', 'Error loading rejection notifications for patient appointments: ' . $e->getMessage());
-        }
-    }
-
-    return view('patient/appointments', ['user' => $user, 'appointments' => $appointments, 'rejectionNotifications' => $rejectionNotifications]);
+    return view('patient/appointments', ['user' => $user, 'appointments' => $appointments]);
     }
 
     /**
@@ -372,24 +351,24 @@ class Patient extends BaseController
         $reason = $this->request->getPost('reason') ?? null;
 
         try {
-            // Instead of cancelling immediately, mark as a pending cancellation request
-            $appointmentModel->update((int)$id, [
-                'pending_change' => 1,
-                'approval_status' => 'pending',
-                'status' => 'pending_approval',
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            // Use model helper which supports a cancel reason
+            if (method_exists($appointmentModel, 'cancelAppointment')) {
+                $appointmentModel->cancelAppointment((int)$id, $reason);
+            } else {
+                $appointmentModel->update((int)$id, ['status' => 'cancelled', 'decline_reason' => $reason]);
+            }
 
-            // Create a branch notification for staff to review the cancellation request
+            // Create a branch notification for staff to review the cancellation (best-effort)
             try {
                 if (class_exists('\App\\Models\\BranchNotificationModel')) {
                     $bnModel = new \App\Models\BranchNotificationModel();
                     $payload = json_encode([
-                        'type' => 'appointment_cancellation_request',
+                        'type' => 'appointment_cancellation',
                         'appointment_id' => (int)$id,
                         'user_id' => (int)$user['id'],
                         'reason' => $reason,
                     ]);
+                    // branch_id may be null; handle gracefully
                     $bnModel->insert([
                         'branch_id' => $appointment['branch_id'] ?? null,
                         'appointment_id' => (int)$id,
@@ -398,20 +377,20 @@ class Patient extends BaseController
                     ]);
                 }
             } catch (\Exception $e) {
-                log_message('error', 'Branch notification error (cancel request): ' . $e->getMessage());
+                log_message('error', 'Branch notification error (cancel): ' . $e->getMessage());
             }
 
             if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => true, 'message' => 'Cancellation request submitted']);
+                return $this->response->setJSON(['success' => true, 'message' => 'Appointment cancelled']);
             }
 
-            return redirect()->back()->with('success', 'Cancellation request submitted. A staff member will review and confirm the cancellation.');
+            return redirect()->back()->with('success', 'Appointment cancelled');
         } catch (\Exception $e) {
-            log_message('error', 'Error submitting cancellation request: ' . $e->getMessage());
+            log_message('error', 'Error cancelling appointment: ' . $e->getMessage());
             if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Failed to submit cancellation request'])->setStatusCode(500);
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to cancel appointment'])->setStatusCode(500);
             }
-            return redirect()->back()->with('error', 'Failed to submit cancellation request');
+            return redirect()->back()->with('error', 'Failed to cancel appointment');
         }
     }
 

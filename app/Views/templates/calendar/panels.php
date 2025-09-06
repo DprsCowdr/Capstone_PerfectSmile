@@ -253,56 +253,11 @@
     </div>
 
     <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Procedure / Service</label>
-      <select name="service_id" id="serviceSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
-        <option value="">Select Service (optional)</option>
-        <?php if (isset($services) && is_array($services)): ?>
-          <?php foreach ($services as $s): ?>
-            <option value="<?= $s['id'] ?>"><?= esc($s['name']) ?><?= isset($s['duration']) ? ' — ' . $s['duration'] . 'm' : '' ?></option>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </select>
-    </div>
-
-    <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
-      <select name="procedure_duration" id="procedureDuration" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
-        <?php $durOptions = [15,30,45,60,90,120,150,180,240]; foreach($durOptions as $d): ?>
-          <option value="<?= $d ?>"><?= $d ?> minutes</option>
-        <?php endforeach; ?>
-      </select>
-      <div class="text-xs text-gray-500 mt-1">Staff can create long procedures up to 240 minutes.</div>
-    </div>
-
-    <div class="mb-3 sm:mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
-      <div style="position:relative">
-        <input type="time" name="time" id="appointmentTime" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
-        <!-- Suggestion list (click to apply) - populated by JS; visible when suggestions exist or input focused -->
-        <ul id="adminTimeList" style="display:none; position:absolute; left:0; right:0; top:calc(100% + 6px); background:#fff; border:1px solid #e5e7eb; border-radius:6px; max-height:180px; overflow:auto; z-index:60; padding:6px 0; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
-          <!-- items injected by JS -->
-        </ul>
-      </div>
+      <input type="time" name="time" id="appointmentTime" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
       <div id="timeConflictWarning" class="text-xs text-red-600 mt-1 hidden">
         <i class="fas fa-exclamation-triangle"></i> <span id="conflictMessage"></span>
       </div>
-    </div>
-
-    <?php if ($user['user_type'] === 'staff'): ?>
-    <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">End Time (calculated)</label>
-      <input type="time" name="end_time" id="appointmentEnd" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" readonly>
-      <div class="text-xs text-gray-500 mt-1">Automatically calculated from selected start time and duration.</div>
-    </div>
-    <?php endif; ?>
-
-    <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Suggested Times</label>
-      <select name="suggested_time" id="adminTimeSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
-        <option value="">Select Suggested Time</option>
-        <!-- Options populated by JS when branch/date changes -->
-      </select>
-      <div class="text-xs text-gray-600 mt-1">Choose a suggested time to auto-fill the time field above, or enter a time manually.</div>
     </div>
 
     <div class="mb-4 sm:mb-6">

@@ -17,4 +17,4 @@ if (window.branches && window.branches.length) window.currentBranchId = window.b
 </script>
 
 <script src="<?= base_url('js/calendar-core.js') ?>"></script>
-<script src="<?= base_url('js/calendar-patient.js') ?>"></script>
+<script src="<?= base_url('js/patient-calendar.js') ?>"></script>

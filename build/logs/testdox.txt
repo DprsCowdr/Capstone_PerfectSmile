@@ -1,34 +1,3 @@
-Admin Calendar Controller (Tests\Unit\AdminCalendarController)
- [x] Ensure admin false when no user
- [x] Ensure admin true when admin
-
-Appointment Model
- [x] Split date time logic and duration math
-
 Appointment Model DB
- [x] Insert via model persists procedure duration and split date time
-
-Appointment Service Create
- [x] Create appointment via service persists duration and computes end times
-
-Appointment Service Unit
- [x] Smoke
-
-Example Database
- [x] Model find all
- [x] Soft delete leaves row
-
-Example Session
- [x] Session simple
-
-Health
- [x] Is defined app path
- [x] Base url has been set
-
-Staff Calendar Controller (Tests\Unit\StaffCalendarController)
- [x] Ensure staff false when no user
- [x] Ensure staff true for staff
-
-Staff Controller Create
- [x] Staff create appointment debug json returns computed times
+ [ ] Insert via model persists procedure duration and split date time
 

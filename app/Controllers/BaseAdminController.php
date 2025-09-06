@@ -267,35 +267,6 @@ abstract class BaseAdminController extends BaseController
      */
     protected function createAppointmentLogic($redirectPath, $userType = 'admin')
     {
-        // Allow a test/debug path that returns computed times without requiring full auth.
-        // This is intended for automated tests that post debug_json=1 from the CLI PHPUnit process.
-        if (php_sapi_name() === 'cli' && $this->request->getPost('debug_json')) {
-            $date = $this->request->getPost('date');
-            $start = $this->request->getPost('time');
-            $debugDur = (int) ($this->request->getPost('procedure_duration') ?? $this->request->getPost('duration') ?? 0);
-            $duration = ($debugDur > 0) ? $debugDur : 30;
-            $defaultInterval = 30;
-            $startTs = strtotime($date . ' ' . $start);
-            $endTs = $startTs + ($duration * 60);
-            $end = date('H:i', $endTs);
-            $endWithInterval = date('H:i', $endTs + ($defaultInterval * 60));
-
-            $payload = [
-                'debug' => true,
-                'appointment_date' => $date,
-                'start' => $start,
-                'duration' => $duration,
-                'default_interval' => $defaultInterval,
-                'end' => $end,
-                'end_with_interval' => $endWithInterval,
-                'appointment_datetime' => date('Y-m-d H:i:s', $startTs),
-                'day_view_label' => $start . '–' . $end,
-                'week_view_label' => $start . ' (' . $duration . 'm)'
-            ];
-
-            return $this->response->setJSON($payload);
-        }
-
         $user = $this->getAuthenticatedUser();
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
@@ -307,7 +278,6 @@ abstract class BaseAdminController extends BaseController
             'dentist_id' => $this->request->getPost('dentist') ?: null,
             'appointment_date' => $this->request->getPost('date'),
             'appointment_time' => $this->request->getPost('time'),
-            'procedure_duration' => $this->request->getPost('procedure_duration') ?? $this->request->getPost('duration') ?? null,
             'appointment_type' => $this->request->getPost('appointment_type') ?? 'scheduled',
             'remarks' => $this->request->getPost('remarks')
         ];
