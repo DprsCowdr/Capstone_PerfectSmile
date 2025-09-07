@@ -80,7 +80,8 @@ class PatientCheckup {
             if (conditionSelect && conditionSelect.value) {
                 // Update both 2D chart appearance and 3D model color
                 this.updateToothAppearance(i);
-                // 3D model colors will be updated when model loads via onModelLoaded callback
+                // Immediately color in 3D too (safe if model already loaded)
+                this.update3DToothColor(i);
             }
         }
     }

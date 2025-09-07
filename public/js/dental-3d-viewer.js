@@ -33,7 +33,8 @@ class Dental3DViewer {
         
         // Tooth mapping configuration
         this.toothMapping = null; // Will be set to manual mapping or auto-generated
-        this.mappingMethod = 'manual'; // 'auto', 'position', or 'manual'
+        // Prefer robust auto/position mapping so saved colors apply reliably
+        this.mappingMethod = 'position'; // 'auto', 'position', or 'manual'
         this.debugMapping = true; // Enable detailed mapping debug output
         
         // Manual mapping from user - integrated tooth mapping data
@@ -668,9 +669,9 @@ class Dental3DViewer {
         
         const mesh = this.toothMeshes[toothIndex];
         if (mesh && mesh.material) {
-            // Store current material as temporary
-            if (!mesh.userData.tempMaterial) {
-                mesh.userData.tempMaterial = mesh.material.clone();
+            // Store current material so we can restore it when closing popup
+            if (!mesh.userData.prevMaterial) {
+                mesh.userData.prevMaterial = mesh.material.clone();
             }
             
             // Check if this is a missing tooth (completely transparent)
@@ -819,17 +820,18 @@ class Dental3DViewer {
     resetHighlights() {
         // Reset only the highlight effects, keep condition colors
         this.toothMeshes.forEach((tooth) => {
+            if (tooth.userData.prevMaterial) {
+                tooth.material = tooth.userData.prevMaterial.clone();
+                tooth.userData.prevMaterial = null;
+                return;
+            }
             // If tooth has a condition color, restore it
             if (tooth.userData.conditionMaterial) {
                 tooth.material = tooth.userData.conditionMaterial.clone();
-            } 
-            // Otherwise restore original material
-            else if (tooth.userData.originalMaterial) {
+            } else if (tooth.userData.originalMaterial) {
+                // Otherwise restore original material
                 tooth.material = tooth.userData.originalMaterial.clone();
             }
-            
-            // Clear temporary highlight material
-            tooth.userData.tempMaterial = null;
         });
     }
     
@@ -847,16 +849,15 @@ class Dental3DViewer {
     resetHighlights() {
         // Reset only the highlight effects, keep condition colors
         this.toothMeshes.forEach((tooth) => {
-            // If tooth has a condition color, restore it
+            if (tooth.userData.prevMaterial) {
+                tooth.material = tooth.userData.prevMaterial.clone();
+                tooth.userData.prevMaterial = null;
+                return;
+            }
             if (tooth.userData.conditionMaterial) {
                 tooth.material = tooth.userData.conditionMaterial.clone();
             } else if (tooth.userData.originalMaterial) {
                 tooth.material = tooth.userData.originalMaterial.clone();
-            }
-            
-            // Clear temporary highlight material
-            if (tooth.userData.tempMaterial) {
-                tooth.userData.tempMaterial = null;
             }
         });
     }
