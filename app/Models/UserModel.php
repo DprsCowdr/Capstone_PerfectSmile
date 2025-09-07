@@ -17,25 +17,20 @@ class UserModel extends Model
         'gender', 'password', 'phone', 'created_at', 'updated_at', 'occupation', 'nationality', 'age', 'status', 'special_notes'
     ];
 
-    // Dates
     protected $useTimestamps = true;
     protected $dateFormat = 'datetime';
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
 
-    // Validation
     protected $validationRules = [
         'name' => 'required|min_length[2]|max_length[100]',
         'email' => 'required|valid_email|is_unique[user.email,id,{id}]',
         'phone' => 'required|min_length[10]|max_length[15]',
         'password' => 'permit_empty|min_length[6]',
-        // Accept both cases; will normalize to lowercase before save
         'gender' => 'permit_empty|in_list[male,female,other,Male,Female,Other]',
-        // Include dentist (legacy doctor kept for backward compatibility)
         'user_type' => 'required|in_list[admin,doctor,dentist,patient,staff,guest]',
         'status' => 'permit_empty|in_list[active,inactive]'
     ];
-
     protected $validationMessages = [
         'email' => [
             'required' => 'Email is required',
@@ -59,24 +54,16 @@ class UserModel extends Model
     protected $skipValidation = false;
     protected $cleanValidationRules = true;
 
-    /**
-     * Authenticate user login
-     */
     public function authenticate($email, $password)
     {
         $user = $this->where('email', $email)->first();
         
-        // Check if user exists, password is correct, and user is active
         if ($user && password_verify($password, $user['password']) && $user['status'] === 'active') {
             return $user;
         }
         
         return false;
     }
-
-    /**
-     * Hash password before saving
-     */
     protected function hashPassword($data)
     {
         if (isset($data['data']['password'])) {
@@ -126,17 +113,12 @@ class UserModel extends Model
         return $data;
     }
 
-    /**
-     * Get user by email
-     */
     public function getUserByEmail($email)
     {
         return $this->where('email', $email)->first();
     }
 
-    /**
-     * Get users by type
-     */
+
     public function getUsersByType($userType)
     {
         return $this->where('user_type', $userType)->findAll();

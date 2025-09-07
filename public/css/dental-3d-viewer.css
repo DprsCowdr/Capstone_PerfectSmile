@@ -167,9 +167,15 @@
     border: 1px solid rgba(229, 231, 235, 0.8);
     min-width: 280px;
     max-width: 320px;
-    z-index: 20;
+    z-index: 1000;
     display: none;
-    overflow: hidden;
+    overflow: visible;
+    visibility: hidden;
+}
+
+.treatment-popup[style*="display: block"] {
+    display: block !important;
+    visibility: visible !important;
 }
 
 /* Mobile popup adjustments */
@@ -187,11 +193,8 @@
         min-width: 240px;
         max-width: 280px;
         border-radius: 8px;
-        /* Ensure popup doesn't go off screen */
-        max-width: calc(100vw - 20px);
-        left: 10px !important;
-        right: 10px !important;
-        width: auto !important;
+        /* Ensure popup fits on small screens */
+        max-width: calc(100vw - 30px);
     }
 }
 
