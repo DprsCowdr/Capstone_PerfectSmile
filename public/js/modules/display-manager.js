@@ -194,6 +194,13 @@ class DisplayManager {
     displayDentalChart(chartResponse) {
         const content = this.generateDentalChartHTML(chartResponse);
         this.setModalContent(content);
+        
+        // Initialize visual charts after content is loaded
+        if (chartResponse.visual_charts && chartResponse.visual_charts.length > 0) {
+            setTimeout(() => {
+                this.initializeVisualCharts(chartResponse.visual_charts);
+            }, 100);
+        }
     }
 
     generateDentalChartHTML(chartResponse) {
@@ -204,6 +211,8 @@ class DisplayManager {
                 Dental Chart
                 <span class="text-sm font-normal text-gray-600 ml-2">(Interactive View)</span>
             </h3>
+            
+            ${this.generateVisualChartsSection(chartResponse)}
             
             <!-- Enhanced 3D Dental Model Viewer -->
             <div class="bg-gray-50 rounded-lg p-6">
@@ -354,6 +363,148 @@ class DisplayManager {
                 </div>
             </div>
         `;
+    }
+
+    generateVisualChartsSection(chartResponse) {
+        if (!chartResponse.visual_charts || chartResponse.visual_charts.length === 0) {
+            return `
+                <div class="bg-yellow-50 rounded-lg p-4 mb-6 border border-yellow-200">
+                    <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                        <i class="fas fa-image text-yellow-500 mr-2"></i>
+                        Visual Dental Charts
+                    </h4>
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-info-circle text-yellow-500 mr-1"></i>
+                        No visual chart annotations found for this patient.
+                    </p>
+                </div>
+            `;
+        }
+
+        const visualChartsHTML = chartResponse.visual_charts.map((chart, index) => `
+            <div class="border border-gray-200 rounded-lg overflow-hidden mb-4">
+                <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h5 class="text-sm font-semibold text-gray-700">
+                            <i class="fas fa-calendar text-blue-500 mr-1"></i>
+                            ${this.formatDate(chart.record_date)}
+                        </h5>
+                        <button onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')" 
+                                class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                            <i class="fas fa-eye mr-1"></i>Toggle View
+                        </button>
+                    </div>
+                </div>
+                <div class="hidden p-4 bg-white">
+                    <div class="flex justify-center">
+                        <div class="border-2 border-gray-200 rounded-lg overflow-hidden bg-white max-w-full relative">
+                            <!-- Container for the visual chart -->
+                            <div class="visual-chart-container" data-chart-data="${chart.visual_chart_data}" data-chart-index="${index}">
+                                <canvas class="visual-chart-canvas" style="max-height: 600px; max-width: 100%; display: block;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-3 bg-green-50 rounded-lg">
+                        <p class="text-xs text-green-700">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            This visual chart shows the dentist's markings and annotations made during the examination on <strong>${this.formatDate(chart.record_date)}</strong>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <div class="bg-green-50 rounded-lg p-4 mb-6 border border-green-200">
+                <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-image text-green-500 mr-2"></i>
+                    Visual Dental Charts 
+                    <span class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded">${chartResponse.visual_charts.length}</span>
+                </h4>
+                <p class="text-sm text-gray-600 mb-4">
+                    <i class="fas fa-info-circle text-green-500 mr-1"></i>
+                    Visual annotations and markings made by dentists during examinations.
+                </p>
+                ${visualChartsHTML}
+            </div>
+        `;
+    }
+
+    initializeVisualCharts(visualCharts) {
+        visualCharts.forEach((chart, index) => {
+            const container = document.querySelector(`[data-chart-index="${index}"]`);
+            if (!container) return;
+            
+            const canvas = container.querySelector('.visual-chart-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const chartData = chart.visual_chart_data;
+            
+            // Load the visual chart data
+            const chartImg = new Image();
+            chartImg.onload = () => {
+                // Set canvas size
+                canvas.width = chartImg.width;
+                canvas.height = chartImg.height;
+                
+                // Check if this is a composite image (has background) or drawings-only
+                this.renderVisualChart(ctx, chartImg, canvas);
+            };
+            chartImg.onerror = () => {
+                console.warn('Failed to load visual chart data for chart', index);
+                canvas.style.display = 'none';
+            };
+            chartImg.src = chartData;
+        });
+    }
+
+    renderVisualChart(ctx, chartImg, canvas) {
+        // Create temporary canvas to analyze the image
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = chartImg.width;
+        tempCanvas.height = chartImg.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(chartImg, 0, 0);
+        
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        let hasBackground = false;
+        
+        // Sample pixels to detect if background is present
+        for (let i = 0; i < imageData.data.length; i += 4 * 200) { // Sample every 200th pixel
+            const r = imageData.data[i];
+            const g = imageData.data[i + 1];
+            const b = imageData.data[i + 2];
+            const a = imageData.data[i + 3];
+            
+            // Check for beige/cream colors typical of dental chart background
+            if (a > 200 && r > 200 && g > 200 && b > 180 && b < 220) {
+                hasBackground = true;
+                break;
+            }
+        }
+        
+        if (hasBackground) {
+            // This is a composite image, display it directly
+            ctx.drawImage(chartImg, 0, 0);
+            console.log('Rendered composite visual chart');
+        } else {
+            // This is drawings-only, add background first
+            const bgImg = new Image();
+            bgImg.onload = () => {
+                // Draw background first
+                ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                // Then draw the annotations on top
+                ctx.drawImage(chartImg, 0, 0);
+                console.log('Rendered visual chart with background added');
+            };
+            bgImg.onerror = () => {
+                // Fallback: just draw the annotations without background
+                ctx.drawImage(chartImg, 0, 0);
+                console.warn('Failed to load background, showing annotations only');
+            };
+            bgImg.src = `${window.BASE_URL}/img/d.jpg`;
+        }
     }
 
     // ==================== OTHER DISPLAY METHODS ====================

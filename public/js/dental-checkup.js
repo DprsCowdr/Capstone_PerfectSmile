@@ -44,6 +44,8 @@ class PatientCheckup {
                 
                 // Update 3D model colors when model is loaded
                 this.update3DModelColors();
+                // Safety re-apply after a tick in case materials settle
+                setTimeout(() => this.update3DModelColors(), 150);
                 
                 // Log successful initialization
                 console.log('✅ 3D Dental viewer initialization complete');
@@ -186,7 +188,7 @@ class PatientCheckup {
         this.showTreatmentPopup(toothNumber, clickPoint, event, data);
     }
     
-    showTreatmentPopup(toothNumber, worldPosition, event, data) {
+    showTreatmentPopup(toothNumber, worldPosition, event, data, options = {}) {
         const popup = document.getElementById('treatmentPopup');
         const highlight = document.getElementById('toothHighlight');
         const title = document.getElementById('popupTitle');
@@ -206,55 +208,71 @@ class PatientCheckup {
         const currentTreatment = treatmentSelect ? treatmentSelect.value : '';
         const currentNotes = notesTextarea ? notesTextarea.value : '';
         
-        // Create form content
+        // Create compact form content with Surface focus + Condition/Add Service/Notes
+        const selectedSurface = (options.surface || '').toLowerCase();
         content.innerHTML = `
-            <div class="treatment-popup-icon">
-                <i class="fas fa-tooth"></i>
-            </div>
-            <div class="space-y-3">
-                <div>
-                    <label for="popup-condition-${toothNumber}" class="block text-xs font-medium text-gray-700 mb-1">Condition:</label>
-                    <select id="popup-condition-${toothNumber}" class="w-full px-2 py-1.5 border-2 border-gray-200 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all text-xs">
-                        <option value="">Select condition</option>
-                        <option value="healthy" ${currentCondition === 'healthy' ? 'selected' : ''}>Healthy</option>
-                        <option value="cavity" ${currentCondition === 'cavity' ? 'selected' : ''}>Cavity</option>
-                        <option value="filled" ${currentCondition === 'filled' ? 'selected' : ''}>Filled</option>
-                        <option value="crown" ${currentCondition === 'crown' ? 'selected' : ''}>Crown</option>
-                        <option value="missing" ${currentCondition === 'missing' ? 'selected' : ''}>Missing</option>
-                        <option value="root_canal" ${currentCondition === 'root_canal' ? 'selected' : ''}>Root Canal</option>
-                        <option value="extraction_needed" ${currentCondition === 'extraction_needed' ? 'selected' : ''}>Extraction Needed</option>
-                    </select>
+            <div class="space-y-2 text-xs">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="popup-surface-${toothNumber}" class="block font-medium text-gray-700 mb-1">Surface</label>
+                        <select id="popup-surface-${toothNumber}" class="w-full px-2 py-1.5 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200" onchange="onPopupSurfaceChange(${toothNumber})">
+                            <option value="">None</option>
+                            <option value="Crown" ${selectedSurface === 'crown' ? 'selected' : ''}>Crown</option>
+                            <option value="Middle" ${selectedSurface === 'middle' ? 'selected' : ''}>Middle</option>
+                            <option value="Root" ${selectedSurface === 'root' ? 'selected' : ''}>Root</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="popup-condition-${toothNumber}" class="block font-medium text-gray-700 mb-1">Condition</label>
+                        <select id="popup-condition-${toothNumber}" class="w-full px-2 py-1.5 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200" onchange="onPopupConditionChange(${toothNumber})">
+                            <option value="">Select condition</option>
+                            <option value="healthy" ${currentCondition === 'healthy' ? 'selected' : ''}>Healthy</option>
+                            <option value="cavity" ${currentCondition === 'cavity' ? 'selected' : ''}>Cavity</option>
+                            <option value="filled" ${currentCondition === 'filled' ? 'selected' : ''}>Filled</option>
+                            <option value="crown" ${currentCondition === 'crown' ? 'selected' : ''}>Crown</option>
+                            <option value="missing" ${currentCondition === 'missing' ? 'selected' : ''}>Missing</option>
+                            <option value="root_canal" ${currentCondition === 'root_canal' ? 'selected' : ''}>Root Canal</option>
+                            <option value="extraction_needed" ${currentCondition === 'extraction_needed' ? 'selected' : ''}>Extraction Needed</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
-                    <label for="popup-treatment-${toothNumber}" class="block text-xs font-medium text-gray-700 mb-1">Treatment:</label>
-                    <select id="popup-treatment-${toothNumber}" class="w-full px-2 py-1.5 border-2 border-gray-200 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all text-xs">
-                        <option value="">Select treatment</option>
-                        <option value="no_treatment" ${currentTreatment === 'no_treatment' ? 'selected' : ''}>No Treatment Needed</option>
-                        <option value="cleaning" ${currentTreatment === 'cleaning' ? 'selected' : ''}>Cleaning</option>
-                        <option value="filling" ${currentTreatment === 'filling' ? 'selected' : ''}>Filling</option>
-                        <option value="crown" ${currentTreatment === 'crown' ? 'selected' : ''}>Crown</option>
-                        <option value="root_canal" ${currentTreatment === 'root_canal' ? 'selected' : ''}>Root Canal</option>
-                        <option value="extraction" ${currentTreatment === 'extraction' ? 'selected' : ''}>Extraction</option>
-                        <option value="bridge" ${currentTreatment === 'bridge' ? 'selected' : ''}>Bridge</option>
-                        <option value="implant" ${currentTreatment === 'implant' ? 'selected' : ''}>Implant</option>
-                    </select>
+                    <label class="block font-medium text-gray-700 mb-1">Add Service</label>
+                    <div class="grid grid-cols-4 gap-2 items-center">
+                        <div class="col-span-3">
+                            <select id="popup-service-${toothNumber}" class="w-full px-2 py-1.5 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200">
+                                <option value="">Select procedure/service</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1">
+                            <button type="button" class="w-full bg-green-600 hover:bg-green-700 text-white px-2 py-1.5 rounded" onclick="patientCheckup.addServiceFrom3D(${toothNumber})">Add</button>
+                        </div>
+                    </div>
+                    <div id="popup-tooth-services-${toothNumber}" class="mt-2 space-y-1 max-h-24 overflow-y-auto"></div>
                 </div>
                 <div>
-                    <label for="popup-notes-${toothNumber}" class="block text-xs font-medium text-gray-700 mb-1">Notes:</label>
-                    <textarea id="popup-notes-${toothNumber}" rows="2" class="w-full px-2 py-1.5 border-2 border-gray-200 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all resize-none text-xs" placeholder="Additional notes...">${currentNotes}</textarea>
+                    <label for="popup-notes-${toothNumber}" class="block font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea id="popup-notes-${toothNumber}" rows="3" class="w-full px-2 py-1.5 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200 resize-y" placeholder="Additional notes...">${currentNotes}</textarea>
                 </div>
-                <div class="flex space-x-2 pt-1">
-                    <button onclick="patientCheckup.saveToothData(${toothNumber})" class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-3 py-2 rounded-md font-medium transition-all transform hover:-translate-y-0.5 shadow-sm hover:shadow-md text-xs">
-                        <i class="fas fa-save mr-1"></i>Save
-                    </button>
-                    <button onclick="patientCheckup.closeTreatmentPopup()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-md font-medium transition-all border border-gray-200 hover:border-gray-300 text-xs">
-                        <i class="fas fa-times mr-1"></i>Close
-                    </button>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="patientCheckup.saveToothData(${toothNumber})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded font-medium">Save</button>
+                    <button type="button" onclick="patientCheckup.closeTreatmentPopup()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded border border-gray-200">Close</button>
                 </div>
             </div>
         `;
         
-        // Position the popup
+        // Show first to measure actual size, then position and clamp height
+        popup.style.display = 'block';
+
+        // Constrain popup max-height to viewer height with small margin
+        const viewerEl = document.getElementById('dentalModelViewer');
+        if (viewerEl) {
+            const vRect = viewerEl.getBoundingClientRect();
+            const maxH = Math.max(200, Math.floor(vRect.height - 20));
+            popup.style.maxHeight = `${maxH}px`;
+        }
+
+        // Position the popup after it is visible for accurate sizing
         this.positionPopup(popup, worldPosition, event);
         
         // Show highlight
@@ -272,7 +290,9 @@ class PatientCheckup {
             highlight.style.display = 'block';
         }
         
-        popup.style.display = 'block';
+        // Populate services dropdown and list
+        this.populate3DServiceUI(toothNumber);
+
         this.popupVisible = true;
     }
     
@@ -287,9 +307,10 @@ class PatientCheckup {
         const x = (vector.x * 0.5 + 0.5) * rect.width;
         const y = (vector.y * -0.5 + 0.5) * rect.height;
         
-        // Get popup dimensions - smaller sizes
-        const popupWidth = window.innerWidth <= 480 ? 240 : window.innerWidth <= 768 ? 280 : 300;
-        const popupHeight = 250; // Reduced from 320
+    // Measure actual popup dimensions now that it's visible
+    const pRect = popup.getBoundingClientRect();
+    const popupWidth = pRect.width || (window.innerWidth <= 480 ? 240 : window.innerWidth <= 768 ? 280 : 300);
+    const popupHeight = Math.min(pRect.height || 260, rect.height - 20);
         
         // Calculate initial position
         let popupX = x + 20;
@@ -327,9 +348,9 @@ class PatientCheckup {
             popupY = viewportHeight - canvasTop - popupHeight - 10;
         }
         
-        // Final bounds check
-        popupX = Math.max(10, Math.min(popupX, rect.width - popupWidth - 10));
-        popupY = Math.max(10, Math.min(popupY, rect.height - popupHeight - 10));
+    // Final bounds check inside viewer
+    popupX = Math.max(10, Math.min(popupX, rect.width - popupWidth - 10));
+    popupY = Math.max(10, Math.min(popupY, rect.height - popupHeight - 10));
         
         popup.style.left = popupX + 'px';
         popup.style.top = popupY + 'px';
@@ -350,22 +371,47 @@ class PatientCheckup {
         this.selectedTooth = null;
         this.popupVisible = false;
     }
+
+    // Focus the camera based on a surface selection
+    focus3DBySurface(toothNumber, surface) {
+        if (!this.dental3DViewer || !surface) return;
+        const indices = this.dental3DViewer.getToothMeshIndices(toothNumber);
+        if (!indices || indices.length === 0) return;
+        const meshIndex = indices[0];
+        const mesh = this.dental3DViewer.toothMeshes[meshIndex];
+        if (!mesh) return;
+        const bbox = new THREE.Box3().setFromObject(mesh);
+        const center = bbox.getCenter(new THREE.Vector3());
+        const isUpper = center.y > 0;
+        const cam = this.dental3DViewer.camera;
+        const controls = this.dental3DViewer.controls;
+        const up = isUpper ? 1 : -1;
+        const crownOffset = new THREE.Vector3(0, 1.2 * up, 0.25);
+        const midOffset   = new THREE.Vector3(0, 0.4 * up, 1.4);
+        const rootOffset  = new THREE.Vector3(0, -1.0 * up, 0.6);
+        const s = surface.toLowerCase();
+        let offset = midOffset;
+        if (s.includes('crown')) offset = crownOffset;
+        else if (s.includes('root')) offset = rootOffset;
+        cam.position.set(center.x + offset.x, center.y + offset.y, center.z + offset.z);
+        controls.target.copy(center);
+        cam.lookAt(center);
+        controls.update();
+        this.dental3DViewer.highlightTooth(meshIndex);
+    }
     
     saveToothData(toothNumber) {
         // Get values from popup form
         const conditionSelect = document.getElementById(`popup-condition-${toothNumber}`);
-        const treatmentSelect = document.getElementById(`popup-treatment-${toothNumber}`);
         const notesTextarea = document.getElementById(`popup-notes-${toothNumber}`);
         
-        if (!conditionSelect || !treatmentSelect || !notesTextarea) return;
+        if (!conditionSelect || !notesTextarea) return;
         
         // Update the actual form fields
         const formConditionSelect = document.querySelector(`select[name="dental_chart[${toothNumber}][condition]"]`);
-        const formTreatmentSelect = document.querySelector(`select[name="dental_chart[${toothNumber}][treatment]"]`);
         const formNotesTextarea = document.querySelector(`textarea[name="dental_chart[${toothNumber}][notes]"]`);
         
         if (formConditionSelect) formConditionSelect.value = conditionSelect.value;
-        if (formTreatmentSelect) formTreatmentSelect.value = treatmentSelect.value;
         if (formNotesTextarea) formNotesTextarea.value = notesTextarea.value;
         
         // Update tooth appearance in both 2D chart and 3D model
@@ -380,6 +426,114 @@ class PatientCheckup {
         
         // Show success feedback
         this.showSaveSuccess();
+    }
+
+    // Populate Add Service dropdown and current services list in 3D popup
+    populate3DServiceUI(toothNumber) {
+        const selectId = `popup-service-${toothNumber}`;
+        const listId = `popup-tooth-services-${toothNumber}`;
+        this.loadServicesIntoSelect(selectId);
+        this.loadToothServicesList(toothNumber, listId);
+    }
+
+    loadServicesIntoSelect(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        fetch('/checkup/services/all', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                const services = Array.isArray(data) ? data : (data.services || []);
+                select.innerHTML = '<option value="">Select procedure/service</option>';
+                services.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = `${s.name} - $${parseFloat(s.price).toFixed(2)}`;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(() => {});
+    }
+
+    loadToothServicesList(toothNumber, listId) {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        const apptEl = document.querySelector('input[name="appointment_id"]');
+        if (!apptEl) return;
+        const apptId = apptEl.value;
+        fetch(`/checkup/${apptId}/services?tooth_number=${toothNumber}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                const services = Array.isArray(data) ? data : (data.services || []);
+                list.innerHTML = '';
+                if (!services.length) {
+                    list.innerHTML = '<p class="text-gray-500">No services for this tooth</p>';
+                    return;
+                }
+                services.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-1 bg-gray-50 rounded border text-xs';
+                    div.innerHTML = `
+                        <div class="flex-1">
+                            <span class="font-medium">${s.name}</span>
+                            ${s.surface ? `<span class="text-gray-600"> (${s.surface})</span>` : ''}
+                            <div class="text-green-600 font-medium">$${parseFloat(s.price).toFixed(2)}</div>
+                        </div>
+                        <button class="text-red-500 hover:text-red-700 p-1" onclick="patientCheckup.removeServiceFrom3D(${s.id}, ${toothNumber})">✕</button>
+                    `;
+                    list.appendChild(div);
+                });
+            })
+            .catch(() => {});
+    }
+
+    addServiceFrom3D(toothNumber) {
+        const select = document.getElementById(`popup-service-${toothNumber}`);
+        if (!select || !select.value) {
+            alert('Please select a service');
+            return;
+        }
+        const apptEl = document.querySelector('input[name="appointment_id"]');
+        if (!apptEl) return;
+        const apptId = apptEl.value;
+        fetch(`/checkup/${apptId}/services`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({
+                service_id: select.value,
+                tooth_number: toothNumber,
+                surface: null,
+                notes: `Service added for tooth #${toothNumber} (3D)`
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res && res.success) {
+                select.value = '';
+                this.loadToothServicesList(toothNumber, `popup-tooth-services-${toothNumber}`);
+                // Refresh services table total if present by triggering existing loader
+                try { if (typeof loadAppointmentServices === 'function') loadAppointmentServices(); } catch (e) {}
+            } else {
+                alert(res.message || 'Error adding service');
+            }
+        })
+        .catch(() => alert('Error adding service'));
+    }
+
+    removeServiceFrom3D(appointmentServiceId, toothNumber) {
+        const apptEl = document.querySelector('input[name="appointment_id"]');
+        if (!apptEl) return;
+        const apptId = apptEl.value;
+        fetch(`/checkup/${apptId}/services/${appointmentServiceId}`, { method: 'DELETE', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.success) {
+                    this.loadToothServicesList(toothNumber, `popup-tooth-services-${toothNumber}`);
+                    try { if (typeof loadAppointmentServices === 'function') loadAppointmentServices(); } catch (e) {}
+                } else {
+                    alert(res.message || 'Error removing service');
+                }
+            })
+            .catch(() => alert('Error removing service'));
     }
     
     showSaveSuccess() {
@@ -778,6 +932,28 @@ class PatientCheckup {
     }
 }
 
+// Global handlers for popup controls
+function onPopupSurfaceChange(toothNumber) {
+    const select = document.getElementById(`popup-surface-${toothNumber}`);
+    if (!select) return;
+    const surface = select.value;
+    if (window.patientCheckup && surface) {
+        window.patientCheckup.focus3DBySurface(toothNumber, surface);
+    }
+}
+
+function onPopupConditionChange(toothNumber) {
+    const conditionSelect = document.getElementById(`popup-condition-${toothNumber}`);
+    if (!conditionSelect) return;
+    const condition = conditionSelect.value;
+    // Sync to the main form and 3D immediately
+    const formCondition = document.querySelector(`select[name="dental_chart[${toothNumber}][condition]"]`);
+    if (formCondition) formCondition.value = condition;
+    if (window.patientCheckup) {
+        window.patientCheckup.update3DToothColor(toothNumber);
+    }
+}
+
 // Global functions for backward compatibility
 let patientCheckup;
 
@@ -939,4 +1115,29 @@ Example Usage:
 - patientCheckup.dental3DViewer.switchMappingMethod('manual')
 =====================================
     `);
+
+    // 3D Panel Minimize/Expand
+    const toggleBtn = document.getElementById('toggle3DMinBtn');
+    const bodyEl = document.getElementById('threeDPanelBody');
+    const key = 'threeDPanelMinimized';
+    const applyState = (min) => {
+        if (!toggleBtn || !bodyEl) return;
+        if (min) {
+            bodyEl.style.display = 'none';
+            toggleBtn.textContent = 'Expand';
+        } else {
+            bodyEl.style.display = '';
+            toggleBtn.textContent = 'Minimize';
+        }
+    };
+    const saved = localStorage.getItem(key);
+    const initialMin = saved === 'true';
+    applyState(initialMin);
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const nowMin = bodyEl.style.display !== 'none';
+            applyState(nowMin);
+            localStorage.setItem(key, String(nowMin));
+        });
+    }
 }); 
