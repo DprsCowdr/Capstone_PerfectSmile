@@ -520,96 +520,58 @@
                 </div>
             </div>
 
-            <!-- Diagnosis and Treatment Section -->
+            <!-- Treatment Section -->
             <div class="bg-white rounded-xl shadow-lg">
                 <div class="p-4 sm:p-6 border-b border-gray-200">
                     <h2 class="text-lg sm:text-xl font-bold text-gray-800 flex items-center">
                         <i class="fas fa-stethoscope text-blue-500 mr-2 sm:mr-3"></i>
-                        Diagnosis & Treatment <span class="text-red-500 text-sm font-normal">(Required)</span>
+                        Treatment <span class="text-red-500 text-sm font-normal">(Required)</span>
                     </h2>
-                    <p class="text-sm text-gray-600 mt-2">Complete the essential medical findings and treatment plan for this checkup.</p>
+                    <p class="text-sm text-gray-600 mt-2">Record the services and procedures performed during this checkup.</p>
                 </div>
                 <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                    <div>
-                        <label for="diagnosis" class="block text-sm font-medium text-gray-700 mb-2">
-                            Diagnosis <span class="text-red-500">*</span>
-                            <span class="text-gray-500 font-normal">(Required for medical records)</span>
-                        </label>
-                        
-                        <!-- Quick Diagnosis Templates -->
-                        <div class="mb-3">
-                            <label class="block text-xs font-medium text-gray-600 mb-2">Quick Templates (click to use):</label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                <button type="button" onclick="setDiagnosis('Routine dental cleaning completed. No cavities or issues detected.')" 
-                                        class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 text-xs rounded-lg border border-green-300 transition-colors">
-                                    ✓ Routine Cleaning
-                                </button>
-                                <button type="button" onclick="setDiagnosis('Cavity detected requiring filling treatment.')" 
-                                        class="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs rounded-lg border border-yellow-300 transition-colors">
-                                    ⚠ Cavity Found
-                                </button>
-                                <button type="button" onclick="setDiagnosis('Gingivitis - mild gum inflammation detected.')" 
-                                        class="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs rounded-lg border border-orange-300 transition-colors">
-                                    📋 Gingivitis
-                                </button>
-                                <button type="button" onclick="setDiagnosis('Plaque and tartar buildup - professional cleaning performed.')" 
-                                        class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs rounded-lg border border-blue-300 transition-colors">
-                                    🦷 Plaque Removal
-                                </button>
-                                <button type="button" onclick="setDiagnosis('Tooth sensitivity reported by patient.')" 
-                                        class="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs rounded-lg border border-purple-300 transition-colors">
-                                    😬 Sensitivity
-                                </button>
-                                <button type="button" onclick="setDiagnosis('Orthodontic consultation and evaluation completed.')" 
-                                        class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs rounded-lg border border-indigo-300 transition-colors">
-                                    📐 Orthodontic
-                                </button>
-                                <button type="button" onclick="clearDiagnosis()" 
-                                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg border border-gray-300 transition-colors">
-                                    🗑️ Clear Field
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <textarea id="diagnosis" name="diagnosis" rows="4" required
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                                  placeholder="Enter detailed diagnosis (e.g., 'Routine dental cleaning completed', 'Cavity detected on tooth #14', 'Gingivitis - mild', etc.)..."><?= old('diagnosis') ?></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Include dental conditions found, cleaning performed, or note 'No issues detected' for routine checkups.</p>
-                    </div>
 
                     <div>
                         <label for="treatment" class="block text-sm font-medium text-gray-700 mb-2">
-                            Treatment Plan <span class="text-red-500">*</span>
-                            <span class="text-gray-500 font-normal">(Required for medical records)</span>
+                            Treatment Performed <span class="text-red-500">*</span>
+                            <span class="text-gray-500 font-normal">(Services and procedures completed)</span>
                         </label>
                         
                         <!-- Quick Treatment Templates -->
                         <div class="mb-3">
-                            <label class="block text-xs font-medium text-gray-600 mb-2">Quick Templates (click to use):</label>
+                            <label class="block text-xs font-medium text-gray-600 mb-2">Common Treatments (click to use):</label>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                <button type="button" onclick="setTreatment('Continue regular oral hygiene routine. Return in 6 months for routine cleaning.')" 
+                                <button type="button" onclick="setTreatment('Routine dental cleaning and oral examination completed.')" 
                                         class="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-800 text-xs rounded-lg border border-green-300 transition-colors">
-                                    ✓ Routine Care
+                                    ✓ Routine Cleaning
                                 </button>
-                                <button type="button" onclick="setTreatment('Schedule appointment for filling procedure within 2 weeks.')" 
-                                        class="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs rounded-lg border border-yellow-300 transition-colors">
-                                    🔧 Schedule Filling
-                                </button>
-                                <button type="button" onclick="setTreatment('Improve brushing and flossing technique. Use antibacterial mouthwash daily.')" 
-                                        class="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs rounded-lg border border-orange-300 transition-colors">
-                                    📋 Oral Hygiene
-                                </button>
-                                <button type="button" onclick="setTreatment('Professional cleaning completed. Use sensitive toothpaste as recommended.')" 
+                                <button type="button" onclick="setTreatment('Dental filling procedure completed on affected tooth.')" 
                                         class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs rounded-lg border border-blue-300 transition-colors">
-                                    🦷 Sensitivity Care
+                                    🔧 Filling
                                 </button>
-                                <button type="button" onclick="setTreatment('Follow-up appointment in 3 months to monitor progress.')" 
+                                <button type="button" onclick="setTreatment('Deep cleaning (scaling and root planing) performed.')" 
+                                        class="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs rounded-lg border border-orange-300 transition-colors">
+                                    📋 Deep Cleaning
+                                </button>
+                                <button type="button" onclick="setTreatment('Fluoride treatment applied for cavity prevention.')" 
                                         class="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs rounded-lg border border-purple-300 transition-colors">
-                                    📅 Follow-up
+                                    🦷 Fluoride Treatment
                                 </button>
-                                <button type="button" onclick="setTreatment('Refer to orthodontist for detailed evaluation and treatment planning.')" 
+                                <button type="button" onclick="setTreatment('Crown placement procedure completed.')" 
+                                        class="px-3 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs rounded-lg border border-yellow-300 transition-colors">
+                                    👑 Crown Placement
+                                </button>
+                                <button type="button" onclick="setTreatment('Root canal therapy performed.')" 
+                                        class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-xs rounded-lg border border-red-300 transition-colors">
+                                    � Root Canal
+                                </button>
+                                <button type="button" onclick="setTreatment('Tooth extraction completed.')" 
+                                        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs rounded-lg border border-gray-300 transition-colors">
+                                    ❌ Extraction
+                                </button>
+                                <button type="button" onclick="setTreatment('Oral examination and consultation only - no procedures performed.')" 
                                         class="px-3 py-1 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs rounded-lg border border-indigo-300 transition-colors">
-                                    📐 Orthodontic Referral
+                                    � Consultation
                                 </button>
                                 <button type="button" onclick="clearTreatment()" 
                                         class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg border border-gray-300 transition-colors">
@@ -620,8 +582,8 @@
                         
                         <textarea id="treatment" name="treatment" rows="4" required
                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                                  placeholder="Enter treatment plan (e.g., 'Continue regular oral hygiene', 'Schedule filling for tooth #14', 'Return in 6 months for routine cleaning', etc.)..."><?= old('treatment') ?></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Describe immediate treatments performed and future treatment recommendations.</p>
+                                  placeholder="Enter treatment performed (e.g., 'Routine cleaning completed', 'Filling placed on tooth #14', 'Root canal therapy on tooth #3', etc.)..."><?= old('treatment') ?></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Describe the actual services and procedures performed during this visit.</p>
                     </div>
 
                     <div>
@@ -669,7 +631,6 @@
                                     <h4 class="font-semibold text-gray-800 text-sm sm:text-base"><?= date('M j, Y', strtotime($record['record_date'])) ?></h4>
                                     <span class="text-xs sm:text-sm text-gray-500">Dr. <?= $record['dentist_name'] ?></span>
                                 b</div>
-                                <p class="text-xs sm:text-sm text-gray-600 mb-2"><strong>Diagnosis:</strong> <?= $record['diagnosis'] ?></p>
                                 <p class="text-xs sm:text-sm text-gray-600"><strong>Treatment:</strong> <?= $record['treatment'] ?></p>
                             </div>
                         <?php endforeach; ?>
@@ -700,6 +661,7 @@
 .image-container-checkup {
     position: relative;
     display: inline-block;
+
 }
 
 .visual-drawing-canvas {
@@ -944,18 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Template functions for Diagnosis & Treatment
-function setDiagnosis(text) {
-    const diagnosisField = document.getElementById('diagnosis');
-    diagnosisField.value = text;
-    diagnosisField.focus();
-    // Add a small visual feedback
-    diagnosisField.style.borderColor = '#10B981';
-    setTimeout(() => {
-        diagnosisField.style.borderColor = '';
-    }, 1000);
-}
-
+// Template functions for Treatment
 function setTreatment(text) {
     const treatmentField = document.getElementById('treatment');
     treatmentField.value = text;
@@ -964,17 +915,6 @@ function setTreatment(text) {
     treatmentField.style.borderColor = '#10B981';
     setTimeout(() => {
         treatmentField.style.borderColor = '';
-    }, 1000);
-}
-
-function clearDiagnosis() {
-    const diagnosisField = document.getElementById('diagnosis');
-    diagnosisField.value = '';
-    diagnosisField.focus();
-    // Add a small visual feedback
-    diagnosisField.style.borderColor = '#EF4444';
-    setTimeout(() => {
-        diagnosisField.style.borderColor = '';
     }, 1000);
 }
 

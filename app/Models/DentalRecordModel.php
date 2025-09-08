@@ -17,7 +17,6 @@ class DentalRecordModel extends Model
         'patient_id',
         'appointment_id',
         'record_date',
-        'diagnosis',
         'treatment',
         'notes',
         'xray_image_url',

@@ -236,7 +236,6 @@ class Checkup extends BaseController
         // Validate form data
         $validation = \Config\Services::validation();
         $validation->setRules([
-            'diagnosis' => 'required|min_length[10]',
             'treatment' => 'required|min_length[10]',
             'notes' => 'permit_empty|max_length[1000]',
             'next_appointment_date' => 'permit_empty|valid_date',
@@ -264,7 +263,6 @@ class Checkup extends BaseController
                 'user_id' => $appointment['user_id'],
                 'dentist_id' => $user['id'],
                 'record_date' => date('Y-m-d'),
-                'diagnosis' => $this->request->getPost('diagnosis'),
                 'treatment' => $this->request->getPost('treatment'),
                 'notes' => $this->request->getPost('notes'),
                 'next_appointment_date' => $this->request->getPost('next_appointment_date') ?: null,
@@ -323,7 +321,7 @@ class Checkup extends BaseController
                     'status' => 'pending',
                     'appointment_type' => 'scheduled',
                     'approval_status' => 'pending',
-                    'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('diagnosis')
+                    'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('treatment')
                 ];
                 
                 $newAppointmentId = $this->appointmentModel->insert($nextAppointmentData);

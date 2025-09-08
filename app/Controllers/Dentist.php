@@ -473,7 +473,6 @@ class Dentist extends BaseController
             $recordData = [
                 'user_id' => $this->request->getPost('patient_id'),
                 'appointment_id' => $this->request->getPost('appointment_id'),
-                'diagnosis' => $this->request->getPost('diagnosis'),
                 'treatment' => $this->request->getPost('treatment'),
                 'notes' => $this->request->getPost('notes'),
                 'xray_image_url' => $this->request->getPost('xray_image_url'),

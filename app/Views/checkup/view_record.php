@@ -150,19 +150,12 @@
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center">
                     <i class="fas fa-stethoscope text-blue-500 mr-3"></i>
-                    Diagnosis & Treatment
+                    Treatment Performed
                 </h2>
             </div>
             <div class="p-6 space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Diagnosis</label>
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <p class="text-gray-800"><?= nl2br(htmlspecialchars($record['diagnosis'])) ?></p>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Treatment Plan</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Treatment</label>
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <p class="text-gray-800"><?= nl2br(htmlspecialchars($record['treatment'])) ?></p>
                     </div>
