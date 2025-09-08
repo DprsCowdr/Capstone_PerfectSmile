@@ -53,15 +53,508 @@ class Patient extends BaseController
         $pendingAppointments = $appointmentModel->where('user_id', $user['id'])
                                                ->whereIn('status', ['pending', 'scheduled'])
                                                ->countAllResults();
-        
+
+        // Load branches for the dashboard booking panel
+        $branches = [];
+        if (class_exists('\App\\Models\\BranchModel')) {
+            try {
+                $branchModel = new \App\Models\BranchModel();
+                $branches = $branchModel->orderBy('name', 'ASC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading branches for dashboard: ' . $e->getMessage());
+                $branches = [];
+            }
+        }
+
+        // Load dentists for the booking panel (prefer DentistModel, fall back to UserModel filter)
+        $dentists = [];
+        if (class_exists('\App\\Models\\DentistModel')) {
+            try {
+                $dentistModel = new \App\Models\DentistModel();
+                $dentists = $dentistModel->orderBy('name', 'ASC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading dentists for dashboard (DentistModel): ' . $e->getMessage());
+                $dentists = [];
+            }
+        } elseif (class_exists('\App\\Models\\UserModel')) {
+            try {
+                $userModel = new \App\Models\UserModel();
+                $dentists = $userModel->where('user_type', 'dentist')->orderBy('name', 'ASC')->findAll();
+                if (empty($dentists)) {
+                    // fallback to legacy 'doctor' entries if present
+                    try {
+                        $dentists = $userModel->whereIn('user_type', ['dentist', 'doctor'])->orderBy('name', 'ASC')->findAll();
+                    } catch (\Exception $e) {
+                        $dentists = $userModel->where('user_type', 'dentist')->orWhere('user_type', 'doctor')->orderBy('name', 'ASC')->findAll();
+                    }
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading dentists for dashboard (UserModel): ' . $e->getMessage());
+                $dentists = [];
+            }
+        }
+
         return view('patient/dashboard', [
             'user' => $user,
             'myAppointments' => $myAppointments,
             'upcomingAppointments' => $upcomingAppointments,
             'totalAppointments' => $totalAppointments,
             'completedTreatments' => $completedTreatments,
-            'pendingAppointments' => $pendingAppointments
+            'pendingAppointments' => $pendingAppointments,
+            'branches' => $branches,
+            'dentists' => $dentists
         ]);
+    }
+
+    // Render patient calendar page
+    public function calendar()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        // If the calendar refactor feature is enabled, render the new patient calendar
+        $appConfig = config('App');
+        if (!empty($appConfig->enableCalendarRefactor)) {
+            // Load patient's appointments and branch list for the patient calendar JS
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $appointments = $appointmentModel->where('user_id', $user['id'])
+                                             ->orderBy('appointment_datetime', 'DESC')
+                                             ->findAll();
+
+            // Load branches (if Branch model exists)
+            $branches = [];
+            if (class_exists('\App\\Models\\BranchModel')) {
+                try {
+                    $branchModel = new \App\Models\BranchModel();
+                    $branches = $branchModel->orderBy('name', 'ASC')->findAll();
+                } catch (\Exception $e) {
+                    // ignore branch loading errors; frontend can handle empty list
+                    log_message('error', 'Error loading branches for patient calendar: ' . $e->getMessage());
+                    $branches = [];
+                }
+            }
+
+            // Load dentists for patient calendar (prefer DentistModel, fall back to UserModel)
+            $dentists = [];
+            if (class_exists('\App\\Models\\DentistModel')) {
+                try {
+                    $dentistModel = new \App\Models\DentistModel();
+                    $dentists = $dentistModel->orderBy('name', 'ASC')->findAll();
+                } catch (\Exception $e) {
+                    log_message('error', 'Error loading dentists for patient calendar (DentistModel): ' . $e->getMessage());
+                    $dentists = [];
+                }
+            } elseif (class_exists('\App\\Models\\UserModel')) {
+                try {
+                    $userModel = new \App\Models\UserModel();
+                    $dentists = $userModel->where('user_type', 'dentist')->orderBy('name', 'ASC')->findAll();
+                    if (empty($dentists)) {
+                        // fallback to legacy 'doctor' entries
+                        try {
+                            $dentists = $userModel->whereIn('user_type', ['dentist', 'doctor'])->orderBy('name', 'ASC')->findAll();
+                        } catch (\Exception $e) {
+                            $dentists = $userModel->where('user_type', 'dentist')->orWhere('user_type', 'doctor')->orderBy('name', 'ASC')->findAll();
+                        }
+                    }
+                } catch (\Exception $e) {
+                    log_message('error', 'Error loading dentists for patient calendar (UserModel): ' . $e->getMessage());
+                    $dentists = [];
+                }
+            }
+
+            // Optional selected date param
+            $selectedDate = $this->request->getGet('date') ?? date('Y-m-d');
+
+            return view('patient/calendar', [
+                'user' => $user,
+                'appointments' => $appointments,
+                'branches' => $branches,
+                'dentists' => $dentists,
+                'selectedDate' => $selectedDate,
+            ]);
+        }
+
+        // Fallback to legacy view if feature flag is off
+        return view('patient/calendar', ['user' => $user]);
+    }
+
+    // Show book appointment form
+    public function bookAppointment()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        // Load branches and dentists for the booking form if available; guard errors so view still renders.
+        $branches = [];
+        if (class_exists('\App\\Models\\BranchModel')) {
+            try {
+                $branchModel = new \App\Models\BranchModel();
+                $branches = $branchModel->orderBy('name', 'ASC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading branches for bookAppointment: ' . $e->getMessage());
+                $branches = [];
+            }
+        }
+
+        $dentists = [];
+        // Prefer a DentistModel, but fall back to User model filtered by user_type if not present
+        if (class_exists('\App\\Models\\DentistModel')) {
+            try {
+                $dentistModel = new \App\Models\DentistModel();
+                $dentists = $dentistModel->orderBy('name', 'ASC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading dentists for bookAppointment (DentistModel): ' . $e->getMessage());
+                $dentists = [];
+            }
+        } elseif (class_exists('\App\\Models\\UserModel')) {
+            try {
+                $userModel = new \App\Models\UserModel();
+                // Prefer explicit 'dentist' type, but also accept legacy 'doctor' entries
+                $dentists = $userModel->where('user_type', 'dentist')->orderBy('name', 'ASC')->findAll();
+                if (empty($dentists)) {
+                    // fallback: include legacy 'doctor' user_type values
+                    try {
+                        $dentists = $userModel->whereIn('user_type', ['dentist', 'doctor'])->orderBy('name', 'ASC')->findAll();
+                    } catch (\Exception $e) {
+                        // some DBs or versions may not support whereIn in the same way; try OR clause
+                        $dentists = $userModel->where('user_type', 'dentist')->orWhere('user_type', 'doctor')->orderBy('name', 'ASC')->findAll();
+                    }
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading dentists for bookAppointment (UserModel): ' . $e->getMessage());
+                $dentists = [];
+            }
+        }
+        // Load services so patient booking can select a service (Guest submit expects 'service'/'service_id')
+        $services = [];
+        if (class_exists('\App\\Models\\ServiceModel')) {
+            try {
+                $serviceModel = new \App\Models\ServiceModel();
+                $services = $serviceModel->orderBy('name', 'ASC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading services for bookAppointment: ' . $e->getMessage());
+                $services = [];
+            }
+        }
+
+        return view('patient/book_appointment', ['user' => $user, 'branches' => $branches, 'dentists' => $dentists, 'services' => $services]);
+    }
+
+    // Accept appointment submission (simple wrapper to existing guest flow)
+    public function submitAppointment()
+    {
+        // For now, reuse Guest controller logic if available.
+        // If we call Guest from another controller, ensure it has request/response objects
+        // Add lightweight logging to confirm this method is hit for patient POSTs
+        try {
+            log_message('debug', 'Patient::submitAppointment invoked; headers: ' . json_encode($this->request->getHeaders()));
+        } catch (\Exception $e) {
+            // ignore
+        }
+
+        // If client requested a debug echo via X-Debug-Booking header, return the received payload as JSON
+        $debugHeader = $this->request->getHeaderLine('X-Debug-Booking');
+        if (!empty($debugHeader)) {
+            return $this->response->setJSON([
+                'received' => $this->request->getPost(),
+                'headers' => $this->request->getHeaders()
+            ]);
+        }
+
+        $guest = new \App\Controllers\Guest();
+        if (isset($this->request)) $guest->request = $this->request;
+        if (isset($this->response)) $guest->response = $this->response;
+        return $guest->submitAppointment();
+    }
+
+    // Render patient appointments list
+    public function appointments()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+    $appointmentModel = new \App\Models\AppointmentModel();
+    // Join branch and dentist/user to include readable names for the view
+    $appointments = $appointmentModel
+            ->select('appointments.*, branches.name AS branch_name, dentist_user.name AS dentist_name')
+            ->join('branches', 'branches.id = appointments.branch_id', 'left')
+            ->join('user AS dentist_user', 'dentist_user.id = appointments.dentist_id', 'left')
+            ->where('appointments.user_id', $user['id'])
+            ->orderBy('appointments.appointment_datetime', 'DESC')
+            ->findAll();
+
+    return view('patient/appointments', ['user' => $user, 'appointments' => $appointments]);
+    }
+
+    /**
+     * Display a read-only appointment details page for the patient.
+     * URL: /appointments/view/{id}
+     */
+    public function viewAppointment($id = null)
+    {
+        $id = (int) $id;
+        if (! $id) {
+            return redirect()->to('/appointments');
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+
+        // Ensure we only show appointments belonging to the logged-in patient
+        $patientId = session()->get('user_id');
+
+        $appointment = $appointmentModel->select('appointments.*, branches.name as branch_name, users.first_name as dentist_first_name, users.last_name as dentist_last_name')
+            ->join('branches', 'branches.id = appointments.branch_id', 'left')
+            ->join('users', 'users.id = appointments.dentist_id', 'left')
+            ->where('appointments.id', $id)
+            ->where('appointments.patient_id', $patientId)
+            ->first();
+
+        if (! $appointment) {
+            return redirect()->to('/appointments')->with('error', 'Appointment not found.');
+        }
+
+        $data = [
+            'appointment' => $appointment,
+            'title' => 'Appointment details',
+        ];
+
+        return view('patient/view_appointment', $data);
+    }
+
+    // editAppointment removed: patient edits are handled via the change-request workflow (view-only UI)
+
+    /**
+     * Cancel appointment owned by the current patient
+     */
+    public function cancelAppointment($id)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find((int)$id);
+        if (!$appointment || (int)$appointment['user_id'] !== (int)$user['id']) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found or access denied'])->setStatusCode(404);
+            }
+            return redirect()->back()->with('error', 'Appointment not found or access denied');
+        }
+
+        $reason = $this->request->getPost('reason') ?? null;
+
+        try {
+            // Use model helper which supports a cancel reason
+            if (method_exists($appointmentModel, 'cancelAppointment')) {
+                $appointmentModel->cancelAppointment((int)$id, $reason);
+            } else {
+                $appointmentModel->update((int)$id, ['status' => 'cancelled', 'decline_reason' => $reason]);
+            }
+
+            // Create a branch notification for staff to review the cancellation (best-effort)
+            try {
+                if (class_exists('\App\\Models\\BranchNotificationModel')) {
+                    $bnModel = new \App\Models\BranchNotificationModel();
+                    $payload = json_encode([
+                        'type' => 'appointment_cancellation',
+                        'appointment_id' => (int)$id,
+                        'user_id' => (int)$user['id'],
+                        'reason' => $reason,
+                    ]);
+                    // branch_id may be null; handle gracefully
+                    $bnModel->insert([
+                        'branch_id' => $appointment['branch_id'] ?? null,
+                        'appointment_id' => (int)$id,
+                        'payload' => $payload,
+                        'sent' => 0,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Branch notification error (cancel): ' . $e->getMessage());
+            }
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Appointment cancelled']);
+            }
+
+            return redirect()->back()->with('success', 'Appointment cancelled');
+        } catch (\Exception $e) {
+            log_message('error', 'Error cancelling appointment: ' . $e->getMessage());
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to cancel appointment'])->setStatusCode(500);
+            }
+            return redirect()->back()->with('error', 'Failed to cancel appointment');
+        }
+    }
+
+    // deleteAppointment removed: deletions are not allowed from patient UI; cancellations remain supported
+
+    /**
+     * Handle appointment update (patient editing their own appointment)
+     */
+    public function updateAppointment($id)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find((int)$id);
+        if (!$appointment || (int)$appointment['user_id'] !== (int)$user['id']) {
+            return redirect()->back()->with('error', 'Appointment not found or access denied');
+        }
+
+        $post = $this->request->getPost();
+
+        // Normalize dentist_id
+        $dentistRaw = $post['dentist_id'] ?? null;
+        $dentistId = null;
+        if ($dentistRaw !== null && $dentistRaw !== '') {
+            if (!is_numeric($dentistRaw)) {
+                return redirect()->back()->with('error', 'Invalid dentist selection')->withInput();
+            }
+            $dentistId = (int)$dentistRaw;
+        }
+
+        // Build requested changes payload
+        $requestedChanges = [
+            'branch_id' => $post['branch_id'] ?? $appointment['branch_id'] ?? null,
+            'dentist_id' => $dentistId ?? $appointment['dentist_id'] ?? null,
+            'appointment_date' => $post['appointment_date'] ?? $appointment['appointment_date'] ?? null,
+            'appointment_time' => $post['appointment_time'] ?? $appointment['appointment_time'] ?? null,
+            'remarks' => $post['remarks'] ?? $appointment['remarks'] ?? null,
+            'duration' => $post['duration'] ?? $appointment['duration_minutes'] ?? null,
+            'service_id' => $post['service_id'] ?? $appointment['service_id'] ?? null,
+        ];
+
+        try {
+            // Instead of applying the changes immediately, mark as pending and queue for staff approval
+            $appointmentModel->update((int)$id, [
+                'pending_change' => 1,
+                'approval_status' => 'pending',
+                'status' => 'pending_approval',
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+
+            // Insert branch notification for staff to review the change
+            try {
+                if (class_exists('\App\\Models\\BranchNotificationModel')) {
+                    $bnModel = new \App\Models\BranchNotificationModel();
+                    $payload = json_encode([
+                        'type' => 'appointment_change_request',
+                        'appointment_id' => (int)$id,
+                        'user_id' => (int)$user['id'],
+                        'requested_changes' => $requestedChanges,
+                    ]);
+                    $bnModel->insert([
+                        'branch_id' => $appointment['branch_id'] ?? null,
+                        'appointment_id' => (int)$id,
+                        'payload' => $payload,
+                        'sent' => 0,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'Branch notification error (update request): ' . $e->getMessage());
+            }
+
+            return redirect()->to('/patient/appointments')->with('success', 'Appointment change submitted for review. A staff member will approve or decline this change.');
+        } catch (\Exception $e) {
+            log_message('error', 'Error creating appointment change request: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to submit appointment change')->withInput();
+        }
+    }
+
+    // Patient records page (simple placeholder)
+    public function records()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $dentalRecordModel = new \App\Models\DentalRecordModel();
+        $records = $dentalRecordModel->where('user_id', $user['id'])->orderBy('record_date', 'DESC')->findAll();
+
+        return view('patient/records', ['user' => $user, 'records' => $records]);
+    }
+
+    // Profile page (placeholder)
+    public function profile()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        // Load dentists for profile preference selector
+        $dentists = [];
+        if (class_exists('\App\\Models\\UserModel')) {
+            try {
+                $userModel = new \App\Models\UserModel();
+                $dentists = $userModel->where('user_type', 'dentist')->orderBy('name', 'ASC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading dentists for profile: ' . $e->getMessage());
+                $dentists = [];
+            }
+        }
+
+        return view('patient/profile', ['user' => $user, 'dentists' => $dentists]);
+    }
+
+    /**
+     * Save profile changes including preferred dentist
+     */
+    public function saveProfile()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $post = $this->request->getPost();
+        $preferred = $post['preferred_dentist_id'] ?? null;
+
+        // Validate preferred dentist if provided
+        if (!empty($preferred)) {
+            if (!is_numeric($preferred)) {
+                return redirect()->back()->with('error', 'Invalid dentist selection')->withInput();
+            }
+            $userModel = new \App\Models\UserModel();
+            $dentist = $userModel->find((int)$preferred);
+            if (!$dentist || ($dentist['user_type'] ?? '') !== 'dentist') {
+                return redirect()->back()->with('error', 'Selected dentist not found')->withInput();
+            }
+        } else {
+            $preferred = null; // clear
+        }
+
+        try {
+            $userModel = new \App\Models\UserModel();
+            $userModel->update($user['id'], ['preferred_dentist_id' => $preferred]);
+            // Update session user data if stored there
+            try {
+                $session = session();
+                $sessionUser = $session->get('user');
+                if (is_array($sessionUser)) {
+                    $sessionUser['preferred_dentist_id'] = $preferred;
+                    $session->set('user', $sessionUser);
+                }
+            } catch (\Exception $e) {
+                // ignore session update failures
+            }
+            return redirect()->back()->with('success', 'Profile updated');
+        } catch (\Exception $e) {
+            log_message('error', 'Error saving profile preferred dentist: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update profile');
+        }
     }
 
     /**
@@ -71,13 +564,6 @@ class Patient extends BaseController
     {
         // Check if user is logged in and has appropriate permissions
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Unauthorized access'
-            ])->setStatusCode(403);
-        }
-
         // Get patient ID from request
         $patientId = $this->request->getPost('patient_id');
         if (!$patientId) {
@@ -85,6 +571,19 @@ class Patient extends BaseController
                 'success' => false,
                 'message' => 'Patient ID is required'
             ])->setStatusCode(400);
+        }
+
+        // Authorize: admin/staff/doctor can save for any patient; a patient can save their own history
+        $isAuthorized = $user && (
+            in_array($user['user_type'], ['admin', 'staff', 'doctor']) ||
+            ($user['user_type'] === 'patient' && (int) $user['id'] === (int) $patientId)
+        );
+
+        if (!$isAuthorized) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Unauthorized access'
+            ])->setStatusCode(403);
         }
 
         try {
@@ -153,7 +652,12 @@ class Patient extends BaseController
     {
         // Check if user is logged in and has appropriate permissions
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
+        $isAuthorized = $user && (
+            in_array($user['user_type'], ['admin', 'staff', 'doctor']) ||
+            ($user['user_type'] === 'patient' && (int) $user['id'] === (int) $patientId)
+        );
+
+        if (!$isAuthorized) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Unauthorized access'
@@ -274,7 +778,12 @@ class Patient extends BaseController
     {
         // Check if user is logged in and has appropriate permissions
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
+        $isAuthorized = $user && (
+            in_array($user['user_type'], ['admin', 'staff', 'doctor']) ||
+            ($user['user_type'] === 'patient' && (int) $user['id'] === (int) $patientId)
+        );
+
+        if (!$isAuthorized) {
             log_message('error', 'Unauthorized access attempt to getPatientTreatments');
             return $this->response->setJSON([
                 'success' => false,
@@ -330,7 +839,12 @@ class Patient extends BaseController
     {
         // Check if user is logged in and has appropriate permissions
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['admin', 'staff', 'doctor'])) {
+        $isAuthorized = $user && (
+            in_array($user['user_type'], ['admin', 'staff', 'doctor']) ||
+            ($user['user_type'] === 'patient' && (int) $user['id'] === (int) $patientId)
+        );
+
+        if (!$isAuthorized) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Unauthorized access'
@@ -393,5 +907,124 @@ class Patient extends BaseController
                 'message' => 'An error occurred while getting patient bills'
             ])->setStatusCode(500);
         }
+    }
+
+    /**
+     * Billing page for patient
+     */
+    public function billing()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $bills = [];
+        if (class_exists('\App\\Models\\PaymentModel')) {
+            try {
+                $paymentModel = new \App\Models\PaymentModel();
+                $bills = $paymentModel->where('patient_id', $user['id'])->orderBy('created_at', 'DESC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading bills for patient: ' . $e->getMessage());
+                $bills = [];
+            }
+        }
+
+        return view('patient/billing', ['user' => $user, 'bills' => $bills]);
+    }
+
+    /**
+     * Secure messaging center (simple list)
+     */
+    public function messages()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $messages = [];
+        if (class_exists('\App\\Models\\MessageModel')) {
+            try {
+                $messageModel = new \App\Models\MessageModel();
+                $messages = $messageModel->where('recipient_id', $user['id'])->orderBy('created_at', 'DESC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading messages for patient: ' . $e->getMessage());
+                $messages = [];
+            }
+        }
+
+        return view('patient/messages', ['user' => $user, 'messages' => $messages]);
+    }
+
+    /**
+     * Forms page (medical history, consent)
+     */
+    public function forms()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $medicalHistory = [];
+        try {
+            $patientModel = new PatientModel();
+            $patient = $patientModel->getPatientWithMedicalHistory($user['id']);
+            $medicalHistory = $patient ?? [];
+        } catch (\Exception $e) {
+            log_message('error', 'Error loading medical history for forms: ' . $e->getMessage());
+            $medicalHistory = [];
+        }
+
+        return view('patient/forms', ['user' => $user, 'medicalHistory' => $medicalHistory]);
+    }
+
+    /**
+     * Prescriptions / medication history
+     */
+    public function prescriptions()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $prescriptions = [];
+        if (class_exists('\App\\Models\\PrescriptionModel')) {
+            try {
+                $presModel = new \App\Models\PrescriptionModel();
+                $prescriptions = $presModel->where('patient_id', $user['id'])->orderBy('issued_at', 'DESC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading prescriptions: ' . $e->getMessage());
+                $prescriptions = [];
+            }
+        }
+
+        return view('patient/prescriptions', ['user' => $user, 'prescriptions' => $prescriptions]);
+    }
+
+    /**
+     * Treatment plan & progress
+     */
+    public function treatmentPlan()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $plan = [];
+        if (class_exists('\App\\Models\\TreatmentPlanModel')) {
+            try {
+                $tp = new \App\Models\TreatmentPlanModel();
+                $plan = $tp->where('patient_id', $user['id'])->orderBy('created_at', 'DESC')->findAll();
+            } catch (\Exception $e) {
+                log_message('error', 'Error loading treatment plan: ' . $e->getMessage());
+                $plan = [];
+            }
+        }
+
+        return view('patient/treatment_plan', ['user' => $user, 'plan' => $plan]);
     }
 } 
