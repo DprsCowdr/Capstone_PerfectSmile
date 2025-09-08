@@ -73,16 +73,16 @@
                             </select>
                         </div>
 
-                        <!-- Procedure (Optional) -->
+                        <!-- Service (Optional) -->
                         <div>
-                            <label for="procedure_id" class="block text-sm font-medium text-gray-700 mb-2">Procedure (Optional)</label>
-                            <select id="procedure_id" 
-                                    name="procedure_id" 
+                            <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">Service (Optional)</label>
+                            <select id="service_id" 
+                                    name="service_id" 
                                     class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                                <option value="">Select a procedure</option>
-                                <?php foreach ($procedures as $procedure): ?>
-                                    <option value="<?= $procedure['id'] ?>" <?= old('procedure_id') == $procedure['id'] ? 'selected' : '' ?>>
-                                        <?= esc($procedure['title'] ?? $procedure['procedure_name']) ?> - $<?= number_format($procedure['fee'] ?? 0, 2) ?>
+                                <option value="">Select a service</option>
+                                <?php foreach ($services as $service): ?>
+                                    <option value="<?= $service['id'] ?>" <?= old('service_id') == $service['id'] ? 'selected' : '' ?>>
+                                        <?= esc($service['name']) ?> - $<?= number_format($service['price'] ?? 0, 2) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>

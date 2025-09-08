@@ -32,17 +32,17 @@ $content = '
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-';
-
-if (empty($services)) {
-    $content .= '
+            <tbody class="bg-white divide-y divide-gray-200" id="servicesTableBody">
+                ' . (empty($services) ? '
                 <tr>
                     <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                        No services found. Click "Add New Service" to get started.
+                        No services found. <a href="#" onclick="openAddServiceModal()" class="text-blue-600 hover:text-blue-800">Add the first service</a>
                     </td>
-                </tr>';
-} else {
+                </tr>
+                ' : '') . '
+                ';
+
+if (!empty($services)) {
     foreach ($services as $service) {
         $content .= '
                 <tr>
@@ -76,56 +76,57 @@ $content .= '
     </div>
 </div>
 
-<!-- Service Modal -->
-<div id="serviceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="modalTitle" class="text-xl font-bold text-gray-900">Add New Service</h2>
-                <button onclick="closeServiceModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+<!-- Add/Edit Service Modal -->
+<div id="serviceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="modalTitle" class="text-lg font-medium text-gray-900">Add New Service</h3>
+            <button onclick="closeServiceModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form id="serviceForm">
+            <input type="hidden" id="serviceId" value="">
+            
+            <div class="mb-4">
+                <label for="serviceName" class="block text-sm font-medium text-gray-700 mb-2">Service Name *</label>
+                <input type="text" id="serviceName" name="name" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             </div>
             
-            <form id="serviceForm" method="POST">
-                <input type="hidden" id="serviceId" name="id">
-                
-                <div class="mb-4">
-                    <label for="serviceName" class="block text-sm font-medium text-gray-700 mb-2">Service Name *</label>
-                    <input type="text" id="serviceName" name="name" required 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="mb-4">
+                <label for="serviceDescription" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea id="serviceDescription" name="description" rows="3" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+            </div>
+            
+            <div class="mb-6">
+                <label for="servicePrice" class="block text-sm font-medium text-gray-700 mb-2">Price *</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-2 text-gray-500">$</span>
+                    <input type="number" id="servicePrice" name="price" step="0.01" min="0" required 
+                           class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
-                
-                <div class="mb-4">
-                    <label for="serviceDescription" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea id="serviceDescription" name="description" rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                </div>
-                
-                <div class="mb-6">
-                    <label for="servicePrice" class="block text-sm font-medium text-gray-700 mb-2">Price *</label>
-                    <input type="number" id="servicePrice" name="price" step="0.01" min="0" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeServiceModal()" 
-                            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
-                        Cancel
-                    </button>
-                    <button type="submit" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                        <span id="submitButtonText">Add Service</span>
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeServiceModal()" 
+                        class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <span id="submitButtonText">Add Service</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
 let isEditMode = false;
-const baseUrl = "' . base_url() . '";
+const baseUrl = '<?= base_url() ?>';
 
 function openAddServiceModal() {
     isEditMode = false;
@@ -142,7 +143,7 @@ function editService(id) {
     document.getElementById("submitButtonText").textContent = "Update Service";
     
     // Fetch service data
-    fetch(baseUrl + "/admin/services/" + id)
+    fetch(`${baseUrl}/admin/services/${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -166,8 +167,8 @@ function closeServiceModal() {
 }
 
 function deleteService(id, name) {
-    if (confirm("Are you sure you want to delete the service \\"" + name + "\\"?")) {
-        fetch(baseUrl + "/admin/services/delete/" + id, {
+    if (confirm(`Are you sure you want to delete the service "${name}"?`)) {
+        fetch(`${baseUrl}/admin/services/delete/${id}`, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
@@ -196,8 +197,8 @@ document.getElementById("serviceForm").addEventListener("submit", function(e) {
     const id = document.getElementById("serviceId").value;
     
     const url = isEditMode ? 
-        baseUrl + "/admin/services/update/" + id : 
-        baseUrl + "/admin/services/store";
+        `${baseUrl}/admin/services/update/${id}` : 
+        `${baseUrl}/admin/services/store`;
     
     fetch(url, {
         method: "POST",
@@ -213,7 +214,7 @@ document.getElementById("serviceForm").addEventListener("submit", function(e) {
         } else {
             let errorMessage = data.message || "Error saving service";
             if (data.errors) {
-                errorMessage += "\\n" + Object.values(data.errors).join("\\n");
+                errorMessage += "\n" + Object.values(data.errors).join("\n");
             }
             alert(errorMessage);
         }
@@ -238,4 +239,4 @@ document.getElementById("serviceModal").addEventListener("click", function(e) {
     'title' => $title,
     'content' => $content,
     'user' => $user
-]) ?>
+]) ?> 

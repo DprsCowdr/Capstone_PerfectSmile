@@ -1,4 +1,4 @@
-<?= view('templates/header') ?>
+ <?= view('templates/header') ?>
 <div class="min-h-screen bg-white flex">
     <?= view('templates/sidebar', ['user' => $user]) ?>
     <div class="flex-1 flex flex-col min-h-screen bg-white">

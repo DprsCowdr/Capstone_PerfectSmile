@@ -150,19 +150,12 @@
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center">
                     <i class="fas fa-stethoscope text-blue-500 mr-3"></i>
-                    Diagnosis & Treatment
+                    Treatment Performed
                 </h2>
             </div>
             <div class="p-6 space-y-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Diagnosis</label>
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <p class="text-gray-800"><?= nl2br(htmlspecialchars($record['diagnosis'])) ?></p>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Treatment Plan</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Treatment</label>
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <p class="text-gray-800"><?= nl2br(htmlspecialchars($record['treatment'])) ?></p>
                     </div>
@@ -178,6 +171,35 @@
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- Visual Dental Chart -->
+        <?php if (!empty($record['visual_chart_data'])): ?>
+        <div class="bg-white rounded-xl shadow-lg mb-8">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-image text-green-500 mr-3"></i>
+                    Visual Dental Chart
+                </h2>
+                <p class="text-sm text-gray-600 mt-1">Dentist's visual annotations and markings</p>
+            </div>
+            <div class="p-6">
+                <div class="flex justify-center">
+                    <div class="border-2 border-gray-200 rounded-lg overflow-hidden bg-white max-w-full">
+                        <!-- Display the complete saved visual chart (background + annotations) -->
+                        <img src="<?= htmlspecialchars($record['visual_chart_data']) ?>" alt="Complete Dental Chart with Annotations" class="max-w-full h-auto block">
+                    </div>
+                </div>
+                
+                <!-- Chart Information -->
+                <div class="mt-4 p-4 bg-green-50 rounded-lg">
+                    <p class="text-sm text-green-700">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        This visual chart shows the dentist's markings and annotations made during the examination on <strong><?= date('M j, Y', strtotime($record['record_date'])) ?></strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Dental Chart Details -->
         <?php if (!empty($record['dental_chart'])): ?>

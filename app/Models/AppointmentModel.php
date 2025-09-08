@@ -410,8 +410,14 @@ class AppointmentModel extends Model
                        ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
                        ->find($appointmentId);
         
+        // Debug: Log the raw result
+        log_message('debug', 'AppointmentModel getAppointmentForCheckup raw result: ' . json_encode($result));
+        
         if ($result) {
-            return $this->splitDateTime($result);
+            $processed = $this->splitDateTime($result);
+            log_message('debug', 'AppointmentModel getAppointmentForCheckup processed result keys: ' . implode(', ', array_keys($processed)));
+            log_message('debug', 'AppointmentModel getAppointmentForCheckup patient_name exists: ' . (isset($processed['patient_name']) ? 'YES' : 'NO'));
+            return $processed;
         }
         
         return null;

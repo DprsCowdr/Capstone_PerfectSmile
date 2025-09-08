@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Dental Chart with Precise Polygons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        .image-container {
+            position: relative;
+            text-align: center;
+            margin: 20px 0;
+            display: inline-block;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #dentalChart {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        .tooth-highlight {
+            position: absolute;
+            background-color: rgba(255, 255, 0, 0.6);
+            border: 2px solid #ffd700;
+            pointer-events: none;
+            z-index: 10;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+        .tooth-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            display: none;
+        }
+        .tooth-info.show {
+            display: block;
+        }
+        .tooth-info h3 {
+            margin: 0 0 15px 0;
+            color: #28a745;
+            font-size: 24px;
+        }
+        .tooth-info p {
+            margin: 8px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .tooth-info .tooth-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .detail-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+            font-size: 14px;
+        }
+        .detail-value {
+            color: #007bff;
+            font-size: 16px;
+            margin-top: 4px;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .quadrant {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .quadrant h4 {
+            margin: 0 0 12px 0;
+            color: #495057;
+            font-size: 18px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .quadrant ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 14px;
+        }
+        .quadrant li {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .drawing-controls {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border: 1px solid #ffeaa7;
+        }
+        .drawing-controls h4 {
+            margin: 0 0 15px 0;
+            color: #856404;
+        }
+        .tool-group {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .tool-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            margin: 2px;
+        }
+        .brush-size {
+            width: 100px;
+        }
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 15;
+            pointer-events: none;
+        }
+        .drawing-canvas.active {
+            pointer-events: all;
+            cursor: crosshair;
+        }
+        .drawing-canvas.eraser {
+            cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAFZSURBVCiRpZM9SwNBEIafgwQLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLwcJCG1sLWcAAAAASUVORK5CYII=') 15 15, auto;
+        }
+        .control-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .surface-legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .surface-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .surface-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #333;
+        }
+        .surface-up { background: #ff6b6b; }
+        .surface-middle { background: #4ecdc4; }
+        .surface-bottom { background: #45b7d1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Interactive Dental Chart with Precise Polygons</h1>
+            <p>Click on any tooth surface to see detailed information with exact polygon mapping</p>
+        </div>
+
+        <div class="instructions">
+            <h3>Features:</h3>
+            <ul>
+                <li><strong>Precise Polygon Mapping:</strong> Each tooth surface uses exact traced coordinates from your dental-chart-mapper.html</li>
+                <li><strong>Yellow Highlighting:</strong> Shows the exact clickable area when clicked</li>
+                <li><strong>88 Clickable Surfaces:</strong> Crown, Middle, and Root for all 32 teeth</li>
+                <li><strong>Professional Interface:</strong> Complete tooth information and statistics</li>
+                <li><strong>FDI Notation:</strong> Standard dental numbering (11-48)</li>
+            </ul>
+        </div>
+
+        <div class="surface-legend">
+            <div class="surface-item">
+                <div class="surface-color surface-up"></div>
+                <span>Crown/Up Surface</span>
+            </div>
+            <div class="surface-item">
+                <div class="surface-color surface-middle"></div>
+                <span>Middle Surface</span>
+            </div>
+            <div class="surface-item">
+                <div class="surface-color surface-bottom"></div>
+                <span>Root/Bottom Surface</span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalTeeth">32</div>
+                <div class="stat-label">Total Teeth</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalSurfaces">88</div>
+                <div class="stat-label">Clickable Surfaces</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="clickCount">0</div>
+                <div class="stat-label">Clicks</div>
+            </div>
+        </div>
+
+        <!-- Drawing Controls -->
+        <div class="drawing-controls">
+            <h4>🎨 Drawing Tools</h4>
+            
+            <div class="tool-group">
+                <span class="tool-label">Tools</span>
+                <button class="control-btn btn-primary" id="drawBtn" onclick="enableDrawing()">✏️ Draw</button>
+                <button class="control-btn btn-secondary" id="eraseBtn" onclick="enableEraser()">🧽 Erase</button>
+                <button class="control-btn btn-warning" onclick="clearDrawing()">🗑️ Clear All</button>
+            </div>
+
+            <div class="tool-group">
+                <span class="tool-label">Colors</span>
+                <input type="color" class="color-picker" id="drawColor" value="#ff0000" title="Red - Cavities/Decay">
+                <input type="color" class="color-picker" value="#0000ff" title="Blue - Restorations" onclick="setDrawColor('#0000ff')">
+                <input type="color" class="color-picker" value="#00ff00" title="Green - Healthy" onclick="setDrawColor('#00ff00')">
+                <input type="color" class="color-picker" value="#ffff00" title="Yellow - Crown/Bridge" onclick="setDrawColor('#ffff00')">
+                <input type="color" class="color-picker" value="#ff00ff" title="Purple - Root Canal" onclick="setDrawColor('#ff00ff')">
+                <input type="color" class="color-picker" value="#000000" title="Black - Missing" onclick="setDrawColor('#000000')">
+            </div>
+
+            <div class="tool-group">
+                <span class="tool-label">Brush Size</span>
+                <input type="range" class="brush-size" id="brushSize" min="2" max="20" value="5" onchange="setBrushSize(this.value)">
+                <span id="brushSizeDisplay">5px</span>
+            </div>
+
+            <div class="tool-group">
+                <span class="tool-label">Save/Load</span>
+                <button class="control-btn btn-success" onclick="saveDrawing()">💾 Save</button>
+                <button class="control-btn btn-primary" onclick="loadDrawing()">📁 Load</button>
+                <input type="file" id="fileInput" accept="image/png" style="display:none" onchange="handleFileLoad(event)">
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn btn-primary" onclick="showAllHighlights()">Show All Areas</button>
+            <button class="control-btn btn-warning" onclick="clearHighlights()">Clear Highlights</button>
+            <button class="control-btn btn-success" onclick="exportCoordinates()">Export Coordinates</button>
+        </div>
+
+        <div class="image-container" id="imageContainer">
+            <img id="dentalChart" src="img/d.jpg" alt="Dental Chart" usemap="#dental-map">
+            <canvas id="drawingCanvas" class="drawing-canvas"></canvas>
+            <div id="highlightOverlay"></div>
+        </div>
+
+        <div id="toothInfo" class="tooth-info">
+            <h3 id="toothTitle">Click on a tooth surface to see information</h3>
+            <p id="toothDescription"></p>
+            <div class="tooth-details">
+                <div class="detail-item">
+                    <div class="detail-label">Tooth Number</div>
+                    <div class="detail-value" id="toothNumber">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Surface</div>
+                    <div class="detail-value" id="toothSurface">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Quadrant</div>
+                    <div class="detail-value" id="toothQuadrant">-</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Type</div>
+                    <div class="detail-value" id="toothType">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="quadrant">
+                <h4>Upper Right (Quadrant 1)</h4>
+                <ul>
+                    <li>18 - Third Molar (Wisdom)</li>
+                    <li>17 - Second Molar</li>
+                    <li>16 - First Molar</li>
+                    <li>15 - Second Premolar</li>
+                    <li>14 - First Premolar</li>
+                    <li>13 - Canine</li>
+                    <li>12 - Lateral Incisor</li>
+                    <li>11 - Central Incisor</li>
+                </ul>
+            </div>
+            <div class="quadrant">
+                <h4>Upper Left (Quadrant 2)</h4>
+                <ul>
+                    <li>21 - Central Incisor</li>
+                    <li>22 - Lateral Incisor</li>
+                    <li>23 - Canine</li>
+                    <li>24 - First Premolar</li>
+                    <li>25 - Second Premolar</li>
+                    <li>26 - First Molar</li>
+                    <li>27 - Second Molar</li>
+                    <li>28 - Third Molar (Wisdom)</li>
+                </ul>
+            </div>
+            <div class="quadrant">
+                <h4>Lower Left (Quadrant 3)</h4>
+                <ul>
+                    <li>38 - Third Molar (Wisdom)</li>
+                    <li>37 - Second Molar</li>
+                    <li>36 - First Molar</li>
+                    <li>35 - Second Premolar</li>
+                    <li>34 - First Premolar</li>
+                    <li>33 - Canine</li>
+                    <li>32 - Lateral Incisor</li>
+                    <li>31 - Central Incisor</li>
+                </ul>
+            </div>
+            <div class="quadrant">
+                <h4>Lower Right (Quadrant 4)</h4>
+                <ul>
+                    <li>41 - Central Incisor</li>
+                    <li>42 - Lateral Incisor</li>
+                    <li>43 - Canine</li>
+                    <li>44 - First Premolar</li>
+                    <li>45 - Second Premolar</li>
+                    <li>46 - First Molar</li>
+                    <li>47 - Second Molar</li>
+                    <li>48 - Third Molar (Wisdom)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Your Precise Polygon Image Map from dental-chart-mapper.html -->
+    <map name="dental-map">
+        <!-- Crown Surfaces -->
+        <area alt="Tooth 18 Crown" title="Upper Right Third Molar Crown" href="#" coords="114,276,111,292,109,304,107,316,105,327,105,337,105,346,101,351,97,361,98,372,104,378,111,384,128,381,134,383,138,385,147,387,155,382,157,374,157,367,155,352,152,346,152,338,151,320,148,301,141,285,129,275,120,274" shape="poly" onclick="return handleToothClick(event, '18', 'Crown');">
+        <area alt="Tooth 17 Crown" title="Upper Right Second Molar Crown" href="#" coords="178,260,175,268,177,276,178,284,179,290,181,300,181,308,181,317,181,325,179,331,176,337,172,344,169,356,169,362,173,370,179,374,187,377,196,375,200,370,208,376,214,380,223,381,229,375,234,367,234,354,230,343,227,333,227,327,227,318,228,308,228,301,227,291,227,283,225,275,218,265,209,256,203,249,200,250,198,261,198,269,198,278,196,285,192,290" shape="poly" onclick="return handleToothClick(event, '17', 'Crown');">
+        <area alt="Tooth 16 Crown" title="Upper Right First Molar Crown" href="#" coords="243,253,241,263,241,270,244,280,245,288,249,296,252,306,254,316,255,324,254,330,254,335,248,345,247,355,248,360,250,367,257,373,264,376,270,376,275,373,279,369,280,360,284,371,288,375,294,376,302,375,307,371,311,363,314,357,314,349,311,340,307,330,306,321,307,311,308,303,309,293,309,285,308,274,305,265,298,253,292,245,290,250,293,258,294,267,294,276,294,282,293,288,287,276,277,250,269,241,265,244,265,256,265,263,265,269,264,281,262,287,256,282,251,271,249,264,245,253" shape="poly" onclick="return handleToothClick(event, '16', 'Crown');">
+        <area alt="Tooth 15 Crown" title="Upper Right Second Premolar Crown" href="#" coords="342,263,342,285,340,296,337,306,337,316,337,325,337,335,337,347,334,356,328,368,328,380,340,389,349,394,361,385,370,381,368,366,361,349,363,337,363,321,361,306,358,291,349,265,342,263" shape="poly" onclick="return handleToothClick(event, '15', 'Crown');">
+        <area alt="Tooth 14 Crown" title="Upper Right First Premolar Crown" href="#" coords="389,266,389,274,389,264,389,283,390,298,389,310,389,319,387,333,387,346,387,355,383,365,382,379,387,384,394,388,401,393,407,391,418,383,423,374,418,353,416,341,414,326,413,315,409,302,406,288,397,272" shape="poly" onclick="return handleToothClick(event, '14', 'Crown');">
+        <area alt="Tooth 13 Crown" title="Upper Right Canine Crown" href="#" coords="442,253,444,265,444,275,445,284,445,301,444,310,444,322,440,341,444,353,444,363,438,377,435,385,435,401,442,404,456,413,466,416,473,411,483,406,488,392,485,371,476,354,474,327,468,294,457,268,450,254,444,249" shape="poly" onclick="return handleToothClick(event, '13', 'Crown');">
+        <area alt="Tooth 12 Crown" title="Upper Right Lateral Incisor Crown" href="#" coords="512,283,512,297,511,312,511,324,507,336,505,348,505,362,502,377,499,388,499,398,500,408,511,415,519,417,529,417,536,417,538,398,538,384,531,358,531,343,528,326,526,312,523,298,517,286" shape="poly" onclick="return handleToothClick(event, '12', 'Crown');">
+        <area alt="Tooth 11 Crown" title="Upper Right Central Incisor Crown" href="#" coords="566,274,564,285,566,295,567,304,564,321,560,333,559,350,559,372,554,381,552,390,552,398,552,410,557,417,567,417,579,419,591,417,597,415,598,395,593,371,591,345,590,326,584,305,578,288,572,276,566,274" shape="poly" onclick="return handleToothClick(event, '11', 'Crown');">
+        <area alt="Tooth 21 Crown" title="Upper Left Central Incisor Crown" href="#" coords="658,274,646,285,643,300,638,309,636,321,634,331,633,343,631,355,631,365,627,376,627,391,626,405,627,415,640,419,652,417,665,415,672,412,672,391,665,367,665,352,662,333,657,315,657,290,660,274" shape="poly" onclick="return handleToothClick(event, '21', 'Crown');">
+        <area alt="Tooth 22 Crown" title="Upper Left Lateral Incisor Crown" href="#" coords="707,281,701,297,700,309,696,319,695,331,693,353,693,362,688,379,686,391,684,400,688,415,693,419,703,417,720,412,725,401,724,381,719,367,719,350,713,333,713,317,713,303,712,291,712,285,707,281" shape="poly" onclick="return handleToothClick(event, '22', 'Crown');">
+        <area alt="Tooth 23 Crown" title="Upper Left Canine Crown" href="#" coords="777,249,767,266,762,280,758,294,753,308,751,321,750,330,750,340,748,351,748,359,739,373,737,387,737,399,751,409,758,414,768,413,777,406,789,399,789,378,780,363,782,349,782,315,777,294,777,275,782,253,777,249" shape="poly" onclick="return handleToothClick(event, '23', 'Crown');">
+        <area alt="Tooth 24 Crown" title="Upper Left First Premolar Crown" href="#" coords="827,269,823,281,817,291,815,303,811,317,811,327,810,336,810,346,810,355,803,364,803,374,801,381,810,384,801,381,815,389,823,393,832,388,841,383,842,372,839,357,839,336,837,321,834,303,834,291,835,271,837,264" shape="poly" onclick="return handleToothClick(event, '24', 'Crown');">
+        <area alt="Tooth 25 Crown" title="Upper Left Second Premolar Crown" href="#" coords="880,263,868,277,865,301,861,316,861,332,861,342,861,354,856,370,854,382,877,394,892,385,897,375,887,351,887,323,882,297,882,277" shape="poly" onclick="return handleToothClick(event, '25', 'Crown');">
+        <area alt="Tooth 26 Crown" title="Upper Left First Molar Crown" href="#" coords="933,248,928,249,920,263,916,278,916,289,916,308,916,316,918,327,916,335,911,347,911,358,913,366,918,373,933,378,940,373,946,359,947,371,959,376,975,368,978,349,970,328,971,309,973,301,978,287,982,273,982,254,976,265,968,282,961,289,959,263,958,242,947,249,940,266,928,287,933,248" shape="poly" onclick="return handleToothClick(event, '26', 'Crown');">
+        <area alt="Tooth 27 Crown" title="Upper Left Second Molar Crown" href="#" coords="1025,248,1006,264,997,278,995,298,997,312,995,331,992,350,992,360,992,370,999,379,1009,381,1019,376,1023,360,1025,370,1033,376,1045,377,1056,364,1054,346,1043,329,1043,312,1043,298,1049,278,1045,262,1037,279,1028,288" shape="poly" onclick="return handleToothClick(event, '27', 'Crown');">
+        <area alt="Tooth 28 Crown" title="Upper Left Third Molar Crown" href="#" coords="1102,272,1081,290,1074,302,1071,315,1071,334,1071,348,1066,372,1068,379,1078,386,1086,383,1099,377,1107,381,1117,383,1128,365,1123,353,1117,338,1119,329,1111,295,1111,276" shape="poly" onclick="return handleToothClick(event, '28', 'Crown');">
+        
+        <!-- Lower Crown Surfaces -->
+        <area alt="Tooth 48 Crown" title="Lower Right Third Molar Crown" href="#" coords="124,646,124,656,122,670,122,680,119,694,117,704,115,719,108,726,108,745,119,750,131,750,148,756,160,750,165,735,160,714,155,689,146,668,132,646" shape="poly" onclick="return handleToothClick(event, '48', 'Crown');">
+        <area alt="Tooth 47 Crown" title="Lower Right Second Molar Crown" href="#" coords="175,641,177,660,181,674,182,684,184,698,186,715,179,727,175,741,182,753,194,755,208,751,222,756,232,751,237,741,232,719,230,701,232,679,227,660,222,646,211,638,208,643,215,660,213,677,213,688,206,693,196,669,187,648,179,641" shape="poly" onclick="return handleToothClick(event, '47', 'Crown');">
+        <area alt="Tooth 46 Crown" title="Lower Right First Molar Crown" href="#" coords="258,633,258,644,260,663,261,676,263,687,265,697,265,706,260,716,254,733,254,744,261,750,273,752,289,754,301,754,313,754,325,745,320,719,316,704,318,683,316,656,311,637,299,627,297,630,301,646,301,658,297,670,294,682,291,690,278,663,273,649,260,628" shape="poly" onclick="return handleToothClick(event, '46', 'Crown');">
+        <area alt="Tooth 45 Crown" title="Lower Right Second Premolar Crown" href="#" coords="349,626,346,633,347,650,347,660,346,669,344,681,344,691,342,701,342,712,342,734,340,751,344,758,359,765,368,760,376,753,375,737,368,712,370,696,366,669,361,646,356,634,349,626" shape="poly" onclick="return handleToothClick(event, '45', 'Crown');">
+        <area alt="Tooth 44 Crown" title="Lower Right First Premolar Crown" href="#" coords="402,634,404,648,401,664,401,674,401,682,395,695,395,705,395,719,397,734,390,743,392,755,402,762,409,767,414,767,421,760,428,753,423,739,419,729,419,712,419,695,418,669,414,652,407,633" shape="poly" onclick="return handleToothClick(event, '44', 'Crown');">
+        <area alt="Tooth 43 Crown" title="Lower Right Canine Crown" href="#" coords="454,633,450,660,449,686,447,710,449,731,444,739,440,753,440,763,445,774,464,784,478,777,488,765,487,751,478,732,476,710,466,672,464,653,461,638" shape="poly" onclick="return handleToothClick(event, '43', 'Crown');">
+        <area alt="Tooth 42 Crown" title="Lower Right Lateral Incisor Crown" href="#" coords="514,646,512,674,511,695,507,710,505,724,507,734,502,748,499,762,500,775,509,782,519,782,529,782,538,775,536,755,531,731,531,715,531,698,528,672,523,655" shape="poly" onclick="return handleToothClick(event, '42', 'Crown');">
+        <area alt="Tooth 41 Crown" title="Lower Right Central Incisor Crown" href="#" coords="571,655,566,682,566,708,564,731,562,751,557,762,559,777,567,784,579,784,588,780,591,768,588,739,586,720,583,691,579,674,578,660" shape="poly" onclick="return handleToothClick(event, '41', 'Crown');">
+        <area alt="Tooth 31 Crown" title="Lower Left Central Incisor Crown" href="#" coords="652,656,645,668,643,682,641,692,638,709,638,721,638,731,636,742,634,750,634,773,638,781,646,785,658,783,665,778,665,759,658,737,658,726,658,713,658,702,657,683,655,663" shape="poly" onclick="return handleToothClick(event, '31', 'Crown');">
+        <area alt="Tooth 32 Crown" title="Lower Left Lateral Incisor Crown" href="#" coords="708,648,698,662,696,674,693,707,693,727,691,734,688,744,684,760,686,779,698,784,713,784,725,772,722,753,715,736,719,725,715,700,712,679,710,658" shape="poly" onclick="return handleToothClick(event, '32', 'Crown');">
+        <area alt="Tooth 33 Crown" title="Lower Left Canine Crown" href="#" coords="767,632,760,646,758,658,755,676,751,694,748,709,746,730,741,742,736,752,736,764,739,771,751,778,758,786,774,776,784,771,784,761,782,749,779,740,777,719,775,692,772,652,772,639,767,632,772,639" shape="poly" onclick="return handleToothClick(event, '33', 'Crown');">
+        <area alt="Tooth 34 Crown" title="Lower Left First Premolar Crown" href="#" coords="817,632,810,646,806,659,805,671,805,685,805,704,805,718,805,733,796,752,799,759,806,764,813,768,822,764,834,754,830,737,827,725,829,709,825,682,818,646,818,635" shape="poly" onclick="return handleToothClick(event, '34', 'Crown');">
+        <area alt="Tooth 35 Crown" title="Lower Left Second Premolar Crown" href="#" coords="873,627,861,646,860,665,858,682,856,696,854,713,856,727,849,734,848,753,861,763,877,760,884,750,880,720,882,703,877,662,878,634" shape="poly" onclick="return handleToothClick(event, '35', 'Crown');">
+        <area alt="Tooth 36 Crown" title="Lower Left First Molar Crown" href="#" coords="925,630,911,640,908,652,906,668,904,682,904,692,908,711,901,728,901,737,904,749,911,754,920,757,933,754,946,754,966,747,968,737,966,721,958,711,958,701,959,682,963,670,961,649,964,637,970,632,958,632,952,646,944,666,939,675,930,685,925,670,920,659,928,632" shape="poly" onclick="return handleToothClick(event, '36', 'Crown');">
+        <area alt="Tooth 37 Crown" title="Lower Left Second Molar Crown" href="#" coords="1011,637,999,654,994,670,994,685,994,706,994,718,988,730,987,742,990,750,999,754,1011,754,1018,749,1026,752,1035,756,1043,752,1049,742,1047,726,1040,713,1040,701,1040,685,1043,663,1049,647,1045,642,1035,649,1030,664,1023,680,1016,692,1009,683,1011,651,1016,639,1011,637" shape="poly" onclick="return handleToothClick(event, '37', 'Crown');">
+        <area alt="Tooth 38 Crown" title="Lower Left Third Molar Crown" href="#" coords="1088,646,1076,668,1068,694,1062,709,1061,718,1061,731,1061,740,1062,747,1074,757,1083,754,1093,749,1107,750,1116,742,1116,730,1107,711,1104,695,1100,666,1099,646" shape="poly" onclick="return handleToothClick(event, '38', 'Crown');">
+        
+        <!-- Middle Surfaces -->
+        <area alt="Tooth 18 Middle" title="Upper Right Third Molar Middle" href="#" coords="136,393,120,396,105,405,100,415,100,429,107,443,119,453,136,456,144,448,150,439,153,417,155,407,150,398" shape="poly" onclick="return handleToothClick(event, '18', 'Middle');">
+        <area alt="Tooth 17 Middle" title="Upper Right Second Molar Middle" href="#" coords="213,389,196,395,182,399,175,407,174,423,177,440,184,450,198,452,211,452,222,447,229,435,229,418,232,402,223,392" shape="poly" onclick="return handleToothClick(event, '17', 'Middle');">
+        <area alt="Tooth 16 Middle" title="Upper Right First Molar Middle" href="#" coords="282,388,265,391,254,398,249,417,249,434,253,446,263,455,278,455,291,455,301,455,309,441,311,429,313,407,313,396,304,388,294,386" shape="poly" onclick="return handleToothClick(event, '16', 'Middle');">
+        <area alt="Tooth 15 Middle" title="Upper Right Second Premolar Middle" href="#" coords="346,400,335,405,325,415,327,424,334,439,344,448,352,448,363,438,368,420,364,408,354,403" shape="poly" onclick="return handleToothClick(event, '15', 'Middle');">
+        <area alt="Tooth 14 Middle" title="Upper Right First Premolar Middle" href="#" coords="401,401,387,407,382,419,383,429,387,441,392,448,402,453,414,448,418,431,423,419,414,405" shape="poly" onclick="return handleToothClick(event, '14', 'Middle');">
+        <area alt="Tooth 24 Middle" title="Upper Left First Premolar Middle" href="#" coords="817,401,806,407,801,417,805,431,808,444,815,451,823,453,834,448,841,434,842,419,839,410,832,403" shape="poly" onclick="return handleToothClick(event, '24', 'Middle');">
+        <area alt="Tooth 25 Middle" title="Upper Left Second Premolar Middle" href="#" coords="875,401,860,406,856,414,858,425,861,435,870,447,882,447,892,438,897,423,897,411,884,401" shape="poly" onclick="return handleToothClick(event, '25', 'Middle');">
+        <area alt="Tooth 26 Middle" title="Upper Left First Molar Middle" href="#" coords="921,385,911,394,909,409,911,431,914,447,925,456,940,456,962,452,971,445,973,428,971,406,962,392" shape="poly" onclick="return handleToothClick(event, '26', 'Middle');">
+        <area alt="Tooth 27 Middle" title="Upper Left Second Molar Middle" href="#" coords="1007,392,997,399,992,411,997,437,1002,451,1018,454,1037,454,1049,442,1050,416,1045,401" shape="poly" onclick="return handleToothClick(event, '27', 'Middle');">
+        <area alt="Tooth 28 Middle" title="Upper Left Third Molar Middle" href="#" coords="1086,395,1074,399,1069,409,1071,425,1076,445,1088,456,1107,454,1121,438,1124,419,1119,404,1099,395" shape="poly" onclick="return handleToothClick(event, '28', 'Middle');">
+        
+        <!-- Lower Middle Surfaces -->
+        <area alt="Tooth 48 Middle" title="Lower Right Third Molar Middle" href="#" coords="138,761,110,768,103,780,103,799,110,812,122,819,141,821,156,817,165,802,162,786,153,769" shape="poly" onclick="return handleToothClick(event, '48', 'Middle');">
+        <area alt="Tooth 47 Middle" title="Lower Right Second Molar Middle" href="#" coords="206,764,191,766,181,771,175,785,177,804,182,819,201,823,230,823,239,811,237,789,236,772,222,765" shape="poly" onclick="return handleToothClick(event, '47', 'Middle');">
+        <area alt="Tooth 46 Middle" title="Lower Right First Molar Middle" href="#" coords="304,764,284,762,270,762,263,769,256,780,258,795,261,809,270,819,287,821,315,823,325,811,323,795,318,774,315,766" shape="poly" onclick="return handleToothClick(event, '46', 'Middle');">
+        <area alt="Tooth 45 Middle" title="Lower Right Second Premolar Middle" href="#" coords="364,771,347,773,339,792,340,805,349,811,364,814,376,805,378,795,371,774" shape="poly" onclick="return handleToothClick(event, '45', 'Middle');">
+        <area alt="Tooth 44 Middle" title="Lower Right First Premolar Middle" href="#" coords="406,776,394,792,392,805,401,814,418,816,425,807,428,792,414,776" shape="poly" onclick="return handleToothClick(event, '44', 'Middle');">
+        <area alt="Tooth 34 Middle" title="Lower Left First Premolar Middle" href="#" coords="811,776,801,785,798,802,805,812,813,819,827,812,830,802,830,790,823,780" shape="poly" onclick="return handleToothClick(event, '34', 'Middle');">
+        <area alt="Tooth 35 Middle" title="Lower Left Second Premolar Middle" href="#" coords="853,772,849,779,846,789,846,796,846,803,849,808,853,811,859,814,867,815,874,814,886,805,887,796,885,788,883,779,874,773" shape="poly" onclick="return handleToothClick(event, '35', 'Middle');">
+        <area alt="Tooth 36 Middle" title="Lower Left First Molar Middle" href="#" coords="909,767,905,776,903,785,900,800,899,807,901,814,905,818,909,823,918,823,925,823,932,823,941,823,949,821,959,815,964,811,966,803,969,793,968,786,966,776,960,767,952,763,944,762,936,764,925,763,916,765" shape="poly" onclick="return handleToothClick(event, '36', 'Middle');">
+        <area alt="Tooth 37 Middle" title="Lower Left Second Molar Middle" href="#" coords="997,764,987,778,986,793,985,806,986,815,993,820,999,823,1014,823,1031,823,1045,816,1049,800,1048,780,1043,770,1035,764" shape="poly" onclick="return handleToothClick(event, '37', 'Middle');">
+        <area alt="Tooth 38 Middle" title="Lower Left Third Molar Middle" href="#" coords="1089,762,1079,764,1069,770,1063,787,1061,801,1064,813,1070,818,1088,822,1110,816,1119,808,1122,792,1120,775,1112,765" shape="poly" onclick="return handleToothClick(event, '38', 'Middle');">
+        
+        <!-- Root/Bottom Surfaces -->
+        <area alt="Tooth 18 Root" title="Upper Right Third Molar Root" href="#" coords="131,463,120,467,113,469,104,476,97,482,97,490,102,498,106,505,105,515,106,526,109,536,112,551,113,563,113,572,120,577,122,580,130,570,134,568,146,551,150,522,150,505,155,490,156,480,144,469" shape="poly" onclick="return handleToothClick(event, '18', 'Root');">
+        <area alt="Tooth 17 Root" title="Upper Right Second Molar Root" href="#" coords="189,466,179,468,172,473,171,481,171,489,172,498,176,503,184,506,181,514,181,523,181,537,177,561,177,575,179,580,188,561,196,549,200,565,200,584,201,590,210,582,222,573,227,557,229,531,229,506,227,498,231,492,232,481,231,469,226,462,217,458,202,460" shape="poly" onclick="return handleToothClick(event, '17', 'Root');">
+        <area alt="Tooth 16 Root" title="Upper Right First Molar Root" href="#" coords="280,464,271,468,259,469,253,474,248,482,250,490,252,495,257,503,259,514,256,523,252,535,250,545,244,561,242,574,244,586,248,582,257,558,264,554,265,570,265,582,265,595,271,599,278,588,292,557,295,552,295,571,292,584,292,592,305,582,310,566,309,546,306,527,305,506,310,496,314,483,314,474,303,469" shape="poly" onclick="return handleToothClick(event, '16', 'Root');">
+        <area alt="Tooth 15 Root" title="Upper Right Second Premolar Root" href="#" coords="347,457,338,461,328,471,331,478,332,485,340,492,338,524,341,547,341,561,341,580,348,580,357,561,364,532,361,493,368,476,368,465" shape="poly" onclick="return handleToothClick(event, '15', 'Root');">
+        <area alt="Tooth 14 Root" title="Upper Right First Premolar Root" href="#" coords="401,459,385,469,383,478,390,497,390,506,390,528,390,549,390,573,393,584,403,576,418,522,415,503,416,494,422,485,422,467" shape="poly" onclick="return handleToothClick(event, '14', 'Root');">
+        <area alt="Tooth 13 Root" title="Upper Right Canine Root" href="#" coords="462,426,447,437,436,443,433,460,447,482,443,494,445,549,444,592,452,588,462,571,474,521,477,502,477,489,487,460,490,444,477,433" shape="poly" onclick="return handleToothClick(event, '13', 'Root');">
+        <area alt="Tooth 12 Root" title="Upper Right Lateral Incisor Root" href="#" coords="520,431,503,437,498,445,499,454,502,464,506,474,510,489,511,502,512,510,514,520,515,532,515,548,516,563,523,558,532,531,536,511,537,485,540,453,537,433" shape="poly" onclick="return handleToothClick(event, '12', 'Root');">
+        <area alt="Tooth 11 Root" title="Upper Right Central Incisor Root" href="#" coords="596,429,557,431,550,440,553,459,559,477,567,523,570,548,566,570,574,568,580,552,588,538,594,503,596,485,600,464,600,448,601,436" shape="poly" onclick="return handleToothClick(event, '11', 'Root');">
+        <area alt="Tooth 21 Root" title="Upper Left Central Incisor Root" href="#" coords="624,428,624,465,628,478,629,506,632,525,642,550,649,566,657,570,654,540,657,514,663,490,663,477,670,462,675,450,670,431" shape="poly" onclick="return handleToothClick(event, '21', 'Root');">
+        <area alt="Tooth 22 Root" title="Upper Left Lateral Incisor Root" href="#" coords="687,432,687,464,688,481,689,496,691,523,696,546,707,563,709,545,710,508,716,479,724,458,725,444,714,433,704,429" shape="poly" onclick="return handleToothClick(event, '22', 'Root');">
+        <area alt="Tooth 23 Root" title="Upper Left Canine Root" href="#" coords="763,426,748,433,734,442,736,459,741,473,746,485,748,492,748,512,751,528,755,545,760,567,770,586,774,588,779,591,777,576,777,554,780,529,782,505,779,483,786,466,791,456,789,445" shape="poly" onclick="return handleToothClick(event, '23', 'Root');">
+        <area alt="Tooth 24 Root" title="Upper Left First Premolar Root" href="#" coords="820,459,803,470,801,480,805,489,811,501,808,506,808,521,811,540,817,561,822,576,832,585,832,549,834,525,834,508,834,494,841,478,839,470" shape="poly" onclick="return handleToothClick(event, '24', 'Root');">
+        <area alt="Tooth 25 Root" title="Upper Left Second Premolar Root" href="#" coords="878,458,861,463,856,467,861,489,868,494,861,506,861,525,863,549,868,563,873,575,878,580,882,575,880,560,884,541,887,520,887,496,894,477,894,467" shape="poly" onclick="return handleToothClick(event, '25', 'Root');">
+        <area alt="Tooth 26 Root" title="Upper Left First Molar Root" href="#" coords="942,464,929,470,920,473,911,477,911,485,912,493,914,499,918,507,920,513,922,527,918,535,916,546,916,566,918,580,926,590,932,594,934,590,930,572,930,552,950,594,954,600,959,592,959,568,963,554,965,556,975,574,979,584,983,574,979,560,967,519,967,503,971,497,975,485,969,473,959,469" shape="poly" onclick="return handleToothClick(event, '26', 'Root');">
+        <area alt="Tooth 27 Root" title="Upper Left Second Molar Root" href="#" coords="995,501,995,529,995,546,997,556,999,566,1009,580,1013,582,1017,582,1021,588,1027,584,1023,568,1027,546,1036,560,1040,568,1046,580,1048,576,1048,564,1044,546,1042,527,1042,509,1050,501,1054,489,1054,481,1050,473,1044,466,1031,469,1025,462,1015,460,1005,460,997,464,991,473" shape="poly" onclick="return handleToothClick(event, '27', 'Root');">
+        <area alt="Tooth 28 Root" title="Upper Left Third Molar Root" href="#" coords="1088,464,1076,472,1068,482,1070,494,1072,499,1078,505,1074,511,1076,527,1076,535,1078,549,1084,559,1090,567,1096,571,1100,573,1104,580,1106,580,1111,567,1115,537,1121,509,1119,501,1125,490,1125,480,1121,476,1111,470,1102,466,1094,466" shape="poly" onclick="return handleToothClick(event, '28', 'Root');">
+        
+        <!-- Lower Root Surfaces -->
+        <area alt="Tooth 48 Root" title="Lower Right Third Molar Root" href="#" coords="132,836,116,832,107,840,105,850,107,862,113,868,113,882,120,901,122,917,122,929,122,941,126,941,128,937,136,937,140,931,146,919,156,901,158,882,160,868,164,850,162,836,152,828,140,830" shape="poly" onclick="return handleToothClick(event, '48', 'Root');">
+        <area alt="Tooth 47 Root" title="Lower Right Second Molar Root" href="#" coords="209,839,199,833,188,835,180,839,176,847,180,859,184,869,190,875,186,884,186,904,184,920,180,934,178,944,184,946,199,924,209,894,211,898,215,906,217,920,217,930,217,934,211,944,213,950,227,940,233,916,233,892,233,873,235,863,239,851,237,837,225,831" shape="poly" onclick="return handleToothClick(event, '47', 'Root');">
+        <area alt="Tooth 46 Root" title="Lower Right First Molar Root" href="#" coords="296,837,280,835,261,839,257,850,261,839,257,854,259,868,267,878,267,896,263,918,263,939,259,957,270,947,288,900,296,902,300,916,302,939,302,949,296,955,308,955,316,939,320,912,318,884,318,870,322,854,322,837,308,831" shape="poly" onclick="return handleToothClick(event, '46', 'Root');">
+        <area alt="Tooth 45 Root" title="Lower Right Second Premolar Root" href="#" coords="357,823,342,831,338,845,347,863,342,863,340,877,340,890,345,912,349,934,349,953,347,961,353,959,359,955,367,921,369,888,369,866,375,850,375,832,363,822" shape="poly" onclick="return handleToothClick(event, '45', 'Root');">
+        <area alt="Tooth 44 Root" title="Lower Right First Premolar Root" href="#" coords="409,825,391,839,393,853,399,863,397,873,397,896,399,910,405,922,405,944,407,957,415,946,419,906,422,867,426,853,428,837" shape="poly" onclick="return handleToothClick(event, '44', 'Root');">
+        <area alt="Tooth 43 Root" title="Lower Right Canine Root" href="#" coords="470,798,456,800,442,809,444,829,450,843,450,859,450,884,452,916,454,942,456,952,466,940,470,908,478,873,480,847,486,827,484,805" shape="poly" onclick="return handleToothClick(event, '43', 'Root');">
+        <area alt="Tooth 42 Root" title="Lower Right Lateral Incisor Root" href="#" coords="523,794,509,796,501,809,503,825,509,837,509,843,509,859,513,882,517,898,517,918,519,926,525,918,529,900,531,871,531,851,537,827,537,807,533,796" shape="poly" onclick="return handleToothClick(event, '42', 'Root');">
+        <area alt="Tooth 41 Root" title="Lower Right Central Incisor Root" href="#" coords="573,797,559,799,557,815,559,834,565,844,563,870,565,892,567,911,571,921,578,911,582,872,584,850,588,822,588,799" shape="poly" onclick="return handleToothClick(event, '41', 'Root');">
+        <area alt="Tooth 31 Root" title="Lower Left Central Incisor Root" href="#" coords="651,796,638,796,634,804,634,820,640,843,642,859,644,879,646,901,651,918,653,922,659,903,661,857,663,837,665,820,663,796" shape="poly" onclick="return handleToothClick(event, '31', 'Root');">
+        <area alt="Tooth 32 Root" title="Lower Left Lateral Incisor Root" href="#" coords="711,795,690,796,689,808,689,830,692,848,694,875,694,896,697,916,701,925,708,926,711,878,717,857,716,838,723,820,721,800" shape="poly" onclick="return handleToothClick(event, '32', 'Root');">
+        <area alt="Tooth 33 Root" title="Lower Left Canine Root" href="#" coords="750,796,740,808,740,833,746,850,747,863,746,876,753,902,757,932,765,954,770,955,772,933,774,907,775,876,774,849,783,824,782,808,766,800" shape="poly" onclick="return handleToothClick(event, '33', 'Root');">
+        <area alt="Tooth 34 Root" title="Lower Left First Premolar Root" href="#" coords="812,824,796,835,795,843,803,856,805,879,804,908,808,937,814,955,820,954,822,916,830,888,827,859,836,843,827,830" shape="poly" onclick="return handleToothClick(event, '34', 'Root');">
+        <area alt="Tooth 35 Root" title="Lower Left Second Premolar Root" href="#" coords="865,822,852,833,848,839,849,849,854,859,857,875,857,889,859,895,860,911,862,930,863,938,867,948,870,962,876,964,878,946,879,908,885,887,883,864,885,844,886,835,878,830" shape="poly" onclick="return handleToothClick(event, '35', 'Root');">
+        <area alt="Tooth 36 Root" title="Lower Left First Molar Root" href="#" coords="915,831,909,834,903,839,902,848,903,855,904,862,906,869,910,874,907,883,906,894,906,900,906,910,906,920,906,926,908,938,913,949,917,953,926,957,929,954,923,941,925,929,926,913,933,902,939,900,941,907,947,925,953,940,959,951,964,954,967,947,964,926,960,906,959,887,957,875,963,867,969,859,969,848,964,842,955,839,944,835,930,837" shape="poly" onclick="return handleToothClick(event, '36', 'Root');">
+        <area alt="Tooth 37 Root" title="Lower Left Second Molar Root" href="#" coords="1014,837,1003,834,994,835,986,838,985,854,991,868,990,890,993,919,996,933,1004,945,1011,951,1013,944,1006,924,1013,897,1021,902,1027,924,1036,940,1041,948,1048,941,1039,896,1039,874,1049,856,1046,840,1039,834" shape="poly" onclick="return handleToothClick(event, '37', 'Root');">
+        <area alt="Tooth 38 Root" title="Lower Left Third Molar Root" href="#" coords="1094,836,1079,826,1063,836,1062,854,1067,869,1065,886,1071,906,1076,919,1086,936,1096,941,1102,943,1107,898,1115,866,1122,851,1115,836" shape="poly" onclick="return handleToothClick(event, '38', 'Root');">
+    </map>
+
+    <script>
+        let currentHighlight = null;
+        let clickCount = 0;
+
+        // Drawing functionality variables
+        let canvas, ctx;
+        let isDrawing = false;
+        let isDrawingMode = false;
+        let isEraserMode = false;
+        let currentColor = '#ff0000';
+        let brushSize = 5;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Tooth information database
+        const toothInfo = {
+            '18': { name: 'Upper Right Third Molar', type: 'Wisdom Tooth', quadrant: 'Upper Right (Q1)' },
+            '17': { name: 'Upper Right Second Molar', type: 'Molar', quadrant: 'Upper Right (Q1)' },
+            '16': { name: 'Upper Right First Molar', type: 'Molar', quadrant: 'Upper Right (Q1)' },
+            '15': { name: 'Upper Right Second Premolar', type: 'Premolar', quadrant: 'Upper Right (Q1)' },
+            '14': { name: 'Upper Right First Premolar', type: 'Premolar', quadrant: 'Upper Right (Q1)' },
+            '13': { name: 'Upper Right Canine', type: 'Canine', quadrant: 'Upper Right (Q1)' },
+            '12': { name: 'Upper Right Lateral Incisor', type: 'Incisor', quadrant: 'Upper Right (Q1)' },
+            '11': { name: 'Upper Right Central Incisor', type: 'Incisor', quadrant: 'Upper Right (Q1)' },
+            '21': { name: 'Upper Left Central Incisor', type: 'Incisor', quadrant: 'Upper Left (Q2)' },
+            '22': { name: 'Upper Left Lateral Incisor', type: 'Incisor', quadrant: 'Upper Left (Q2)' },
+            '23': { name: 'Upper Left Canine', type: 'Canine', quadrant: 'Upper Left (Q2)' },
+            '24': { name: 'Upper Left First Premolar', type: 'Premolar', quadrant: 'Upper Left (Q2)' },
+            '25': { name: 'Upper Left Second Premolar', type: 'Premolar', quadrant: 'Upper Left (Q2)' },
+            '26': { name: 'Upper Left First Molar', type: 'Molar', quadrant: 'Upper Left (Q2)' },
+            '27': { name: 'Upper Left Second Molar', type: 'Molar', quadrant: 'Upper Left (Q2)' },
+            '28': { name: 'Upper Left Third Molar', type: 'Wisdom Tooth', quadrant: 'Upper Left (Q2)' },
+            '38': { name: 'Lower Left Third Molar', type: 'Wisdom Tooth', quadrant: 'Lower Left (Q3)' },
+            '37': { name: 'Lower Left Second Molar', type: 'Molar', quadrant: 'Lower Left (Q3)' },
+            '36': { name: 'Lower Left First Molar', type: 'Molar', quadrant: 'Lower Left (Q3)' },
+            '35': { name: 'Lower Left Second Premolar', type: 'Premolar', quadrant: 'Lower Left (Q3)' },
+            '34': { name: 'Lower Left First Premolar', type: 'Premolar', quadrant: 'Lower Left (Q3)' },
+            '33': { name: 'Lower Left Canine', type: 'Canine', quadrant: 'Lower Left (Q3)' },
+            '32': { name: 'Lower Left Lateral Incisor', type: 'Incisor', quadrant: 'Lower Left (Q3)' },
+            '31': { name: 'Lower Left Central Incisor', type: 'Incisor', quadrant: 'Lower Left (Q3)' },
+            '41': { name: 'Lower Right Central Incisor', type: 'Incisor', quadrant: 'Lower Right (Q4)' },
+            '42': { name: 'Lower Right Lateral Incisor', type: 'Incisor', quadrant: 'Lower Right (Q4)' },
+            '43': { name: 'Lower Right Canine', type: 'Canine', quadrant: 'Lower Right (Q4)' },
+            '44': { name: 'Lower Right First Premolar', type: 'Premolar', quadrant: 'Lower Right (Q4)' },
+            '45': { name: 'Lower Right Second Premolar', type: 'Premolar', quadrant: 'Lower Right (Q4)' },
+            '46': { name: 'Lower Right First Molar', type: 'Molar', quadrant: 'Lower Right (Q4)' },
+            '47': { name: 'Lower Right Second Molar', type: 'Molar', quadrant: 'Lower Right (Q4)' },
+            '48': { name: 'Lower Right Third Molar', type: 'Wisdom Tooth', quadrant: 'Lower Right (Q4)' }
+        };
+
+        function handleToothClick(event, toothNumber, surface) {
+            const coords = event.target.getAttribute('coords');
+            
+            // Update click counter
+            clickCount++;
+            document.getElementById('clickCount').textContent = clickCount;
+            
+            // Show tooth info
+            showToothInfo(toothNumber, surface);
+            
+            // Highlight the tooth
+            if (coords) {
+                highlightTooth(coords, toothNumber, surface);
+            }
+            
+            return false;
+        }
+
+        function showToothInfo(toothNumber, surface) {
+            const info = toothInfo[toothNumber];
+            if (!info) return;
+
+            const infoDiv = document.getElementById('toothInfo');
+            const title = document.getElementById('toothTitle');
+            const description = document.getElementById('toothDescription');
+            
+            title.textContent = `Tooth ${toothNumber} - ${surface}`;
+            description.textContent = info.name;
+            
+            document.getElementById('toothNumber').textContent = toothNumber;
+            document.getElementById('toothSurface').textContent = surface;
+            document.getElementById('toothQuadrant').textContent = info.quadrant;
+            document.getElementById('toothType').textContent = info.type;
+            
+            infoDiv.classList.add('show');
+            infoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            console.log(`Clicked: Tooth ${toothNumber} - ${surface} (${info.name})`);
+        }
+
+        function highlightTooth(coords, toothNumber, surface) {
+            // Remove existing highlight
+            if (currentHighlight) {
+                currentHighlight.remove();
+            }
+            
+            // Parse polygon coordinates
+            const coordArray = coords.split(',').map(num => parseInt(num.trim()));
+            if (coordArray.length < 6) return; // Need at least 3 points for a polygon
+            
+            const image = document.getElementById('dentalChart');
+            const container = document.getElementById('imageContainer');
+            
+            // Calculate scale factors
+            const scaleX = image.offsetWidth / image.naturalWidth;
+            const scaleY = image.offsetHeight / image.naturalHeight;
+            
+            // Calculate bounding box for positioning
+            let minX = Math.min(...coordArray.filter((_, i) => i % 2 === 0));
+            let maxX = Math.max(...coordArray.filter((_, i) => i % 2 === 0));
+            let minY = Math.min(...coordArray.filter((_, i) => i % 2 === 1));
+            let maxY = Math.max(...coordArray.filter((_, i) => i % 2 === 1));
+            
+            // Create SVG element for precise polygon highlighting
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.style.position = 'absolute';
+            svg.style.left = (image.offsetLeft + minX * scaleX) + 'px';
+            svg.style.top = (image.offsetTop + minY * scaleY) + 'px';
+            svg.style.width = ((maxX - minX) * scaleX) + 'px';
+            svg.style.height = ((maxY - minY) * scaleY) + 'px';
+            svg.style.pointerEvents = 'none';
+            svg.style.zIndex = '10';
+            svg.style.transition = 'all 0.3s ease';
+            
+            // Add SVG filter for smooth/rounded edges
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+            filter.setAttribute('id', 'smoothEdges');
+            filter.setAttribute('x', '-20%');
+            filter.setAttribute('y', '-20%');
+            filter.setAttribute('width', '140%');
+            filter.setAttribute('height', '140%');
+            
+            // Gaussian blur for soft edges
+            const blur = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
+            blur.setAttribute('in', 'SourceGraphic');
+            blur.setAttribute('stdDeviation', '1');
+            blur.setAttribute('result', 'blur');
+            
+            // Morphology to slightly round corners
+            const morphology = document.createElementNS('http://www.w3.org/2000/svg', 'feMorphology');
+            morphology.setAttribute('in', 'blur');
+            morphology.setAttribute('operator', 'dilate');
+            morphology.setAttribute('radius', '0.5');
+            morphology.setAttribute('result', 'dilated');
+            
+            filter.appendChild(blur);
+            filter.appendChild(morphology);
+            defs.appendChild(filter);
+            svg.appendChild(defs);
+            
+            // Create polygon element
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            
+            // Convert coordinates to scaled SVG coordinates relative to the SVG viewport
+            let svgPoints = '';
+            for (let i = 0; i < coordArray.length; i += 2) {
+                const x = (coordArray[i] - minX) * scaleX;
+                const y = (coordArray[i + 1] - minY) * scaleY;
+                svgPoints += `${x},${y} `;
+            }
+            
+            polygon.setAttribute('points', svgPoints.trim());
+            polygon.setAttribute('fill', 'rgba(255, 255, 0, 0.6)');
+            polygon.setAttribute('stroke', '#ffd700');
+            polygon.setAttribute('stroke-width', '2');
+            polygon.setAttribute('stroke-linejoin', 'round');
+            polygon.setAttribute('stroke-linecap', 'round');
+            polygon.setAttribute('filter', 'url(#smoothEdges)');
+            
+            // Add tooltip
+            svg.title = `Tooth ${toothNumber} - ${surface}`;
+            
+            svg.appendChild(polygon);
+            container.appendChild(svg);
+            currentHighlight = svg;
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (currentHighlight === svg) {
+                    svg.style.opacity = '0';
+                    setTimeout(() => {
+                        if (svg.parentNode) {
+                            svg.remove();
+                        }
+                        if (currentHighlight === svg) {
+                            currentHighlight = null;
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+
+        function showAllHighlights() {
+            alert('This would show all clickable areas. Feature coming soon!');
+        }
+
+        function clearHighlights() {
+            if (currentHighlight) {
+                currentHighlight.remove();
+                currentHighlight = null;
+            }
+            document.getElementById('toothInfo').classList.remove('show');
+        }
+
+        function exportCoordinates() {
+            const areas = document.querySelectorAll('map[name="dental-map"] area');
+            let output = '<!-- Exported Dental Chart Coordinates -->\n<map name="dental-map">\n';
+            
+            areas.forEach(area => {
+                const coords = area.getAttribute('coords');
+                const alt = area.getAttribute('alt');
+                const title = area.getAttribute('title');
+                output += `    <area alt="${alt}" title="${title}" href="#" coords="${coords}" shape="poly">\n`;
+            });
+            
+            output += '</map>';
+            
+            // Create downloadable file
+            const blob = new Blob([output], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dental-chart-coordinates.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ==================== DRAWING FUNCTIONALITY ====================
+        
+        // Initialize canvas when page loads
+        window.addEventListener('load', function() {
+            initializeCanvas();
+        });
+
+        function initializeCanvas() {
+            canvas = document.getElementById('drawingCanvas');
+            ctx = canvas.getContext('2d');
+            const image = document.getElementById('dentalChart');
+            
+            // Set canvas size to match image
+            function resizeCanvas() {
+                const rect = image.getBoundingClientRect();
+                canvas.width = image.offsetWidth;
+                canvas.height = image.offsetHeight;
+                
+                // Set canvas style to match image position
+                canvas.style.width = image.offsetWidth + 'px';
+                canvas.style.height = image.offsetHeight + 'px';
+            }
+            
+            resizeCanvas();
+            
+            // Resize canvas when window resizes
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Set up canvas event listeners
+            setupCanvasEvents();
+        }
+
+        function setupCanvasEvents() {
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch events for mobile
+            canvas.addEventListener('touchstart', handleTouch);
+            canvas.addEventListener('touchmove', handleTouch);
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function enableDrawing() {
+            isDrawingMode = true;
+            isEraserMode = false;
+            canvas.classList.add('active');
+            canvas.classList.remove('eraser');
+            
+            // Update button states
+            document.getElementById('drawBtn').style.background = '#0056b3';
+            document.getElementById('eraseBtn').style.background = '#6c757d';
+        }
+
+        function enableEraser() {
+            isDrawingMode = true;
+            isEraserMode = true;
+            canvas.classList.add('active', 'eraser');
+            
+            // Update button states
+            document.getElementById('drawBtn').style.background = '#007bff';
+            document.getElementById('eraseBtn').style.background = '#e74c3c';
+        }
+
+        function startDrawing(e) {
+            if (!isDrawingMode) return;
+            
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!isDrawing || !isDrawingMode) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            ctx.lineWidth = brushSize;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            if (isEraserMode) {
+                ctx.globalCompositeOperation = 'destination-out';
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = currentColor;
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+
+        function setDrawColor(color) {
+            currentColor = color;
+            document.getElementById('drawColor').value = color;
+            if (isDrawingMode && !isEraserMode) {
+                ctx.strokeStyle = color;
+            }
+        }
+
+        function setBrushSize(size) {
+            brushSize = size;
+            document.getElementById('brushSizeDisplay').textContent = size + 'px';
+        }
+
+        function clearDrawing() {
+            if (confirm('Are you sure you want to clear all drawings?')) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function saveDrawing() {
+            const link = document.createElement('a');
+            link.download = 'dental-chart-drawing.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function loadDrawing() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Color picker event listener
+        document.getElementById('drawColor').addEventListener('change', function(e) {
+            setDrawColor(e.target.value);
+        });
+
+        // Disable drawing mode when clicking on controls
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.drawing-controls') || e.target.closest('.controls')) {
+                return; // Don't disable drawing mode when clicking controls
+            }
+            
+            if (e.target.closest('area')) {
+                // Disable drawing mode when clicking on dental areas
+                isDrawingMode = false;
+                canvas.classList.remove('active', 'eraser');
+                document.getElementById('drawBtn').style.background = '#007bff';
+                document.getElementById('eraseBtn').style.background = '#6c757d';
+            }
+        });
+
+        // ==================== END DRAWING FUNCTIONALITY ====================
+
+        // Hide info when clicking elsewhere
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('area') && !e.target.closest('#toothInfo') && !e.target.closest('.control-btn')) {
+                document.getElementById('toothInfo').classList.remove('show');
+                clearHighlights();
+            }
+        });
+    </script>
+</body>
+</html>

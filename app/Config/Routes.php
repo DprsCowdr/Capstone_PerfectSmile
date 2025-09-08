@@ -111,6 +111,10 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
+    $routes->post('services/store', 'AdminController::storeService');
+    $routes->get('services/(:num)', 'AdminController::getService/$1');
+    $routes->post('services/update/(:num)', 'AdminController::updateService/$1');
+    $routes->delete('services/delete/(:num)', 'AdminController::deleteService/$1');
     $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
     $routes->get('branches', 'AdminController::branches'); // → management/branches.php
     $routes->post('branches/(:num)/save-hours', 'AdminController::saveBranchHours/$1');
@@ -134,6 +138,9 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('users/toggle-status/(:num)', 'AdminController::toggleUserStatus/$1');
     $routes->get('users/delete/(:num)', 'AdminController::deleteUser/$1');
     
+    // Invoices placeholder route
+    $routes->get('invoices', 'AdminController::invoices');
+    
     // Billing routes
 });
 
@@ -152,7 +159,16 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
     $routes->get('patient-history/(:num)', 'Checkup::getPatientHistory/$1');
     $routes->get('debug/(:num)', 'Checkup::debug/$1'); // Debug specific appointment
     $routes->get('debug', 'Checkup::debug'); // Debug today's appointments
+    
+    // Services management for checkups
+    $routes->get('(:num)/services', 'CheckupServices::getAppointmentServices/$1');
+    $routes->post('(:num)/services', 'CheckupServices::addService/$1');
+    $routes->delete('(:num)/services/(:num)', 'CheckupServices::removeService/$1/$2');
+    $routes->get('services/search', 'CheckupServices::searchServices');
+    $routes->get('services/all', 'CheckupServices::getAllServices');
 });
+
+// Invoice routes removed
 
 // Dentist routes (protected)
 // Dentist routes (protected)

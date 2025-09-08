@@ -85,8 +85,8 @@ class DentalChartModel extends Model
         // Delete existing chart data for this record
         $this->where('dental_record_id', $recordId)->delete();
         
-        // Insert new chart data
-        $insertData = [];
+        // Build a deduplicated set per tooth to avoid duplicates in the same record
+        $byTooth = [];
         foreach ($chartData as $toothNumber => $data) {
             // Check if there's any meaningful data for this tooth
             $hasCondition = !empty($data['condition']) && $data['condition'] !== '';
@@ -94,7 +94,7 @@ class DentalChartModel extends Model
             $hasNotes = !empty($data['notes']) && trim($data['notes']) !== '';
             
             if ($hasCondition || $hasTreatment || $hasNotes) {
-                $insertData[] = [
+                $byTooth[(int)$toothNumber] = [
                     'dental_record_id' => $recordId,
                     'tooth_number' => $toothNumber,
                     'tooth_type' => 'permanent',
@@ -107,6 +107,7 @@ class DentalChartModel extends Model
                 ];
             }
         }
+        $insertData = array_values($byTooth);
         
         if (!empty($insertData)) {
             log_message('info', "Saving dental chart data for record {$recordId}: " . json_encode($insertData));

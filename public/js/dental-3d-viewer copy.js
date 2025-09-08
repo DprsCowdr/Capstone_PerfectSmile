@@ -33,9 +33,8 @@ class Dental3DViewer {
         
         // Tooth mapping configuration
         this.toothMapping = null; // Will be set to manual mapping or auto-generated
-        // Use the explicit manual mapping provided for this model
         this.mappingMethod = 'manual'; // 'auto', 'position', or 'manual'
-        this.debugMappingEnabled = true; // Enable detailed mapping debug output
+        this.debugMapping = true; // Enable detailed mapping debug output
         
         // Manual mapping from user - integrated tooth mapping data
         this.manualToothMapping = {
@@ -188,8 +187,6 @@ class Dental3DViewer {
                 this.model = gltf.scene;
                 this.processModel();
                 this.scene.add(this.model);
-                // Mark viewer as loaded so external callers can safely update colors
-                this.isLoaded = true;
                 if (loadingDiv) loadingDiv.classList.add('hidden');
                 if (this.onModelLoaded) {
                     this.onModelLoaded();
@@ -258,29 +255,17 @@ class Dental3DViewer {
         
         console.log(`Found ${this.toothMeshes.length} tooth meshes for click detection`);
         
-        // Always generate a complete position-based mapping first
-        this.generateToothMapping(meshAnalysis);
-
-        // Then, if manual mapping is enabled and provided, overlay the manual entries
+        // Use manual mapping if available, otherwise generate auto-mapping
         if (this.mappingMethod === 'manual' && Object.keys(this.manualToothMapping).length > 0) {
-            if (this.debugMappingEnabled) {
-                console.group('🧩 Overlaying Manual Mapping on Auto Mapping');
-            }
-            Object.entries(this.manualToothMapping).forEach(([meshIndex, toothNumber]) => {
-                const index = parseInt(meshIndex);
-                if (index >= 0 && index < this.toothMapping.length) {
-                    this.toothMapping[index] = toothNumber;
-                }
-            });
-            if (this.debugMappingEnabled) {
-                console.log('✅ Manual mapping overlay complete');
-                console.groupEnd();
-            }
+            this.applyManualMapping();
+        } else {
+            // Generate tooth mapping based on analysis
+            this.generateToothMapping(meshAnalysis);
         }
     }
     
     applyManualMapping() {
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.group('🦷 Applying Manual Tooth Mapping');
         }
         
@@ -295,7 +280,7 @@ class Dental3DViewer {
             }
         });
         
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.log(`✅ Applied ${Object.keys(this.manualToothMapping).length} manual mappings`);
             this.logManualMappingResults();
             console.groupEnd();
@@ -331,7 +316,7 @@ class Dental3DViewer {
     }
     
     generateToothMapping(meshAnalysis) {
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.group('🦷 Dental Model Analysis & Mapping Generation');
         }
         
@@ -341,14 +326,14 @@ class Dental3DViewer {
         // Generate mapping based on dental anatomy
         this.toothMapping = this.createPositionBasedMapping(sortedMeshes);
         
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             this.logMappingResults(sortedMeshes);
             console.groupEnd();
         }
     }
     
     analyzeMeshPositions(meshAnalysis) {
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.log('📊 Analyzing mesh positions...');
         }
         
@@ -360,7 +345,7 @@ class Dental3DViewer {
         const sortUpper = upperTeeth.sort((a, b) => b.position.x - a.position.x); // Right to left
         const sortLower = lowerTeeth.sort((a, b) => a.position.x - b.position.x); // Left to right
         
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.log(`Upper teeth detected: ${upperTeeth.length}`);
             console.log(`Lower teeth detected: ${lowerTeeth.length}`);
         }
@@ -549,7 +534,7 @@ class Dental3DViewer {
     mapMeshIndexToToothNumber(meshIndex) {
         // Validate input
         if (meshIndex < 0 || !this.toothMapping || meshIndex >= this.toothMapping.length) {
-            if (this.debugMappingEnabled) {
+            if (this.debugMapping) {
                 console.warn(`⚠️ Invalid mesh index ${meshIndex}, using fallback mapping`);
             }
             return this.getFallbackToothNumber(meshIndex);
@@ -559,7 +544,7 @@ class Dental3DViewer {
         
         // Validate mapped tooth number
         if (toothNumber === null || toothNumber === undefined || toothNumber < 1 || toothNumber > 32) {
-            if (this.debugMappingEnabled) {
+            if (this.debugMapping) {
                 console.warn(`⚠️ Invalid tooth number ${toothNumber} for mesh ${meshIndex}, using fallback`);
             }
             return this.getFallbackToothNumber(meshIndex);
@@ -571,7 +556,7 @@ class Dental3DViewer {
     getFallbackToothNumber(meshIndex) {
         // Simple fallback: assume sequential mapping
         const fallbackNumber = (meshIndex % 32) + 1;
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.log(`🔄 Using fallback mapping: mesh ${meshIndex} -> tooth ${fallbackNumber}`);
         }
         return fallbackNumber;
@@ -651,7 +636,7 @@ class Dental3DViewer {
             this.toothMapping[meshIndex] = toothNumber;
             // Also update the manual mapping object
             this.manualToothMapping[meshIndex] = toothNumber;
-            if (this.debugMappingEnabled) {
+            if (this.debugMapping) {
                 console.log(`🔧 Manual mapping set: mesh ${meshIndex} -> tooth ${toothNumber}`);
             }
             return true;
@@ -669,7 +654,7 @@ class Dental3DViewer {
                 this.setManualToothMapping(meshIndex, toothNumber);
             });
             
-            if (this.debugMappingEnabled) {
+            if (this.debugMapping) {
                 this.debugLogToothMapping();
             }
         }
@@ -683,9 +668,9 @@ class Dental3DViewer {
         
         const mesh = this.toothMeshes[toothIndex];
         if (mesh && mesh.material) {
-            // Store current material so we can restore it when closing popup
-            if (!mesh.userData.prevMaterial) {
-                mesh.userData.prevMaterial = mesh.material.clone();
+            // Store current material as temporary
+            if (!mesh.userData.tempMaterial) {
+                mesh.userData.tempMaterial = mesh.material.clone();
             }
             
             // Check if this is a missing tooth (completely transparent)
@@ -744,7 +729,7 @@ class Dental3DViewer {
                 mesh.visible = false;
                 mesh.userData.conditionMaterial = missingMaterial.clone();
                 
-                if (this.debugMappingEnabled) {
+                if (this.debugMapping) {
                     console.log(`👻 Set tooth ${toothNumber} as missing (mesh ${meshIndex})`);
                 }
             } else if (color) {
@@ -763,7 +748,7 @@ class Dental3DViewer {
                 mesh.visible = true;
                 mesh.userData.conditionMaterial = conditionMaterial.clone();
                 
-                if (this.debugMappingEnabled) {
+                if (this.debugMapping) {
                     console.log(`🎨 Applied color to tooth ${toothNumber} (mesh ${meshIndex}): RGB(${color.r}, ${color.g}, ${color.b})`);
                 }
             } else {
@@ -773,7 +758,7 @@ class Dental3DViewer {
                     mesh.visible = true;
                     mesh.userData.conditionMaterial = null;
                     
-                    if (this.debugMappingEnabled) {
+                    if (this.debugMapping) {
                         console.log(`🔄 Reset tooth ${toothNumber} to original color (mesh ${meshIndex})`);
                     }
                 }
@@ -795,7 +780,7 @@ class Dental3DViewer {
             }
         });
         
-        if (this.debugMappingEnabled) {
+        if (this.debugMapping) {
             console.log('🔄 Reset all teeth to original colors');
         }
     }
@@ -834,18 +819,17 @@ class Dental3DViewer {
     resetHighlights() {
         // Reset only the highlight effects, keep condition colors
         this.toothMeshes.forEach((tooth) => {
-            if (tooth.userData.prevMaterial) {
-                tooth.material = tooth.userData.prevMaterial.clone();
-                tooth.userData.prevMaterial = null;
-                return;
-            }
             // If tooth has a condition color, restore it
             if (tooth.userData.conditionMaterial) {
                 tooth.material = tooth.userData.conditionMaterial.clone();
-            } else if (tooth.userData.originalMaterial) {
-                // Otherwise restore original material
+            } 
+            // Otherwise restore original material
+            else if (tooth.userData.originalMaterial) {
                 tooth.material = tooth.userData.originalMaterial.clone();
             }
+            
+            // Clear temporary highlight material
+            tooth.userData.tempMaterial = null;
         });
     }
     
@@ -863,15 +847,16 @@ class Dental3DViewer {
     resetHighlights() {
         // Reset only the highlight effects, keep condition colors
         this.toothMeshes.forEach((tooth) => {
-            if (tooth.userData.prevMaterial) {
-                tooth.material = tooth.userData.prevMaterial.clone();
-                tooth.userData.prevMaterial = null;
-                return;
-            }
+            // If tooth has a condition color, restore it
             if (tooth.userData.conditionMaterial) {
                 tooth.material = tooth.userData.conditionMaterial.clone();
             } else if (tooth.userData.originalMaterial) {
                 tooth.material = tooth.userData.originalMaterial.clone();
+            }
+            
+            // Clear temporary highlight material
+            if (tooth.userData.tempMaterial) {
+                tooth.userData.tempMaterial = null;
             }
         });
     }
@@ -1094,7 +1079,7 @@ class Dental3DViewer {
     
     // Method to enable/disable debug output
     setDebugMode(enabled) {
-        this.debugMappingEnabled = enabled;
+        this.debugMapping = enabled;
         console.log(`🔧 Debug mode ${enabled ? 'enabled' : 'disabled'} for tooth mapping`);
     }
     

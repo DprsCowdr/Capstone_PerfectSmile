@@ -73,6 +73,13 @@ class Checkup extends BaseController
         if (!$appointment) {
             return redirect()->to('/checkup')->with('error', 'Appointment not found.');
         }
+        
+        // Debug: Log appointment data structure
+        log_message('debug', 'Appointment data keys: ' . implode(', ', array_keys($appointment)));
+        log_message('debug', 'Patient name field exists: ' . (isset($appointment['patient_name']) ? 'YES' : 'NO'));
+        if (isset($appointment['patient_name'])) {
+            log_message('debug', 'Patient name value: ' . $appointment['patient_name']);
+        }
 
         // Check if appointment is valid for checkup and for today
         if (!in_array($appointment['status'], ['confirmed', 'checked_in']) || date('Y-m-d') !== $appointment['appointment_date']) {
@@ -100,6 +107,15 @@ class Checkup extends BaseController
         if (!$appointment) {
             return redirect()->to('/checkup')->with('error', 'Appointment not found.');
         }
+        
+        // Debug: Log appointment data structure for patient checkup
+        log_message('debug', 'Patient checkup - Appointment data keys: ' . implode(', ', array_keys($appointment)));
+        log_message('debug', 'Patient checkup - Patient name field exists: ' . (isset($appointment['patient_name']) ? 'YES' : 'NO'));
+        if (isset($appointment['patient_name'])) {
+            log_message('debug', 'Patient checkup - Patient name value: ' . $appointment['patient_name']);
+        } else {
+            log_message('debug', 'Patient checkup - Full appointment data: ' . json_encode($appointment));
+        }
 
         // Check if appointment is ongoing
         if ($appointment['status'] !== 'ongoing') {
@@ -116,38 +132,54 @@ class Checkup extends BaseController
         $previousRecords = $this->dentalRecordModel->getPatientRecords($appointment['user_id']);
         log_message('info', "Patient {$appointment['user_id']} has " . count($previousRecords) . " previous records");
 
-        // Try to get the dental record for the current appointment
+        // Build a merged chart map using the newest data per tooth across
+        // the current record (if any) and previous records for this user.
         $currentRecord = $this->dentalRecordModel->where('appointment_id', $appointmentId)->first();
         $previousChart = [];
+        $mergedByTooth = [];
+
+        // Helper to merge a chart list into the map preserving the first-seen (newest) value per tooth
+        $mergeChart = static function(array $chartList) use (&$mergedByTooth) {
+            foreach ($chartList as $toothRow) {
+                $toothNum = (int) ($toothRow['tooth_number'] ?? 0);
+                if ($toothNum <= 0) {
+                    continue;
+                }
+                if (!array_key_exists($toothNum, $mergedByTooth)) {
+                    $mergedByTooth[$toothNum] = $toothRow;
+                }
+            }
+        };
+
+        // 1) Merge current record first (newest for this appointment)
         if ($currentRecord) {
             log_message('info', "Found current record ID: {$currentRecord['id']} for appointment {$appointmentId}");
             $chart = $this->dentalChartModel->getRecordChart($currentRecord['id']);
             if (!empty($chart)) {
-                $previousChart = $chart;
-                log_message('info', "Loaded " . count($chart) . " chart entries from current record");
-            } elseif (!empty($previousRecords)) {
-                // Fallback: use the latest previous record with a non-empty chart
-                foreach ($previousRecords as $rec) {
-                    // Skip the current record if it's in the list
-                    if ($currentRecord['id'] == $rec['id']) continue;
-                    $chart = $this->dentalChartModel->getRecordChart($rec['id']);
-                    if (!empty($chart)) {
-                        $previousChart = $chart;
-                        log_message('info', "Loaded " . count($chart) . " chart entries from previous record ID: {$rec['id']}");
-                        break;
-                    }
-                }
+                $mergeChart($chart);
+                log_message('info', "Merged " . count($chart) . " chart entries from current record");
             }
-        } elseif (!empty($previousRecords)) {
-            // No current record, fallback to latest previous record with a non-empty chart
-            log_message('info', "No current record, checking previous records");
+        }
+
+        // 2) Merge previous records in descending date order, skipping current
+        if (!empty($previousRecords)) {
             foreach ($previousRecords as $rec) {
+                if ($currentRecord && $currentRecord['id'] == $rec['id']) {
+                    continue;
+                }
                 $chart = $this->dentalChartModel->getRecordChart($rec['id']);
                 if (!empty($chart)) {
-                    $previousChart = $chart;
-                    break;
+                    $mergeChart($chart);
                 }
             }
+        }
+
+        // Convert merged map back to a flat list for the view if needed
+        if (!empty($mergedByTooth)) {
+            // Maintain ascending tooth order for predictability
+            ksort($mergedByTooth);
+            $previousChart = array_values($mergedByTooth);
+            log_message('info', 'Built merged previousChart with ' . count($previousChart) . ' unique teeth');
         }
         // Debug: log previous records and chart
         log_message('debug', 'Previous records: ' . json_encode($previousRecords));
@@ -157,6 +189,22 @@ class Checkup extends BaseController
         $toothConditions = $this->dentalChartModel->getToothConditions();
         $treatmentOptions = $this->dentalChartModel->getTreatmentOptions();
 
+        // Get existing visual chart data
+        $existingVisualChartData = '';
+        if ($currentRecord && !empty($currentRecord['visual_chart_data'])) {
+            $existingVisualChartData = $currentRecord['visual_chart_data'];
+            log_message('info', "Loaded visual chart data for current record ID: {$currentRecord['id']}");
+        } elseif (!empty($previousRecords)) {
+            // For return patients, load visual chart data from most recent previous record
+            foreach ($previousRecords as $rec) {
+                if (!empty($rec['visual_chart_data'])) {
+                    $existingVisualChartData = $rec['visual_chart_data'];
+                    log_message('info', "Loaded visual chart data from previous record ID: {$rec['id']}");
+                    break;
+                }
+            }
+        }
+
         return view('checkup/patient_checkup', [
             'user' => $user,
             'appointment' => $appointment,
@@ -164,7 +212,8 @@ class Checkup extends BaseController
             'previousRecords' => $previousRecords,
             'previousChart' => $previousChart,
             'toothConditions' => $toothConditions,
-            'treatmentOptions' => $treatmentOptions
+            'treatmentOptions' => $treatmentOptions,
+            'existingVisualChartData' => $existingVisualChartData
         ]);
     }
 
@@ -187,7 +236,6 @@ class Checkup extends BaseController
         // Validate form data
         $validation = \Config\Services::validation();
         $validation->setRules([
-            'diagnosis' => 'required|min_length[10]',
             'treatment' => 'required|min_length[10]',
             'notes' => 'permit_empty|max_length[1000]',
             'next_appointment_date' => 'permit_empty|valid_date',
@@ -215,11 +263,11 @@ class Checkup extends BaseController
                 'user_id' => $appointment['user_id'],
                 'dentist_id' => $user['id'],
                 'record_date' => date('Y-m-d'),
-                'diagnosis' => $this->request->getPost('diagnosis'),
                 'treatment' => $this->request->getPost('treatment'),
                 'notes' => $this->request->getPost('notes'),
                 'next_appointment_date' => $this->request->getPost('next_appointment_date') ?: null,
-                'appointment_id' => $appointmentId
+                'appointment_id' => $appointmentId,
+                'visual_chart_data' => $this->request->getPost('visual_chart_data')
             ];
 
             if ($existingRecord) {
@@ -251,6 +299,15 @@ class Checkup extends BaseController
                 log_message('info', "Checkup save - No chart data received or invalid format");
             }
 
+            // Log visual chart data save
+            $visualChartData = $this->request->getPost('visual_chart_data');
+            if ($visualChartData && !empty($visualChartData)) {
+                log_message('info', "Checkup save - Visual chart data received (length: " . strlen($visualChartData) . " characters)");
+                log_message('info', "Checkup save - Visual chart data saved with record ID: {$recordId}");
+            } else {
+                log_message('info', "Checkup save - No visual chart data received");
+            }
+
             // Create next appointment if date and time are provided
             $nextAppointmentDate = $this->request->getPost('next_appointment_date');
             $nextAppointmentTime = $this->request->getPost('next_appointment_time');
@@ -264,7 +321,7 @@ class Checkup extends BaseController
                     'status' => 'pending',
                     'appointment_type' => 'scheduled',
                     'approval_status' => 'pending',
-                    'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('diagnosis')
+                    'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('treatment')
                 ];
                 
                 $newAppointmentId = $this->appointmentModel->insert($nextAppointmentData);
@@ -310,7 +367,8 @@ class Checkup extends BaseController
             }
 
             log_message('info', "Checkup completed successfully for appointment ID: {$appointmentId}");
-            return redirect()->to('/checkup')->with('success', $successMessage);
+            // Do not redirect to invoice automatically; return to checkup dashboard
+            return redirect()->to('/checkup')->with('success', 'Checkup completed successfully. You can create an invoice later from the Invoices page.');
 
         } catch (\Exception $e) {
             // Rollback transaction on error
@@ -358,7 +416,7 @@ class Checkup extends BaseController
     public function viewRecord($recordId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
             return redirect()->to('/login');
         }
 
@@ -382,7 +440,7 @@ class Checkup extends BaseController
     public function getPatientHistory($patientId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
 

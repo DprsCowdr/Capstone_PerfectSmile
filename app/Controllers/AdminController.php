@@ -159,6 +159,16 @@ class AdminController extends BaseAdminController
         return $this->response->setJSON($result);
     }
 
+    // ==================== INVOICES (placeholder) ====================
+    public function invoices()
+    {
+        $user = $this->getAuthenticatedUser();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+        return view('admin/invoices/index', ['user' => $user]);
+    }
+
     /**
      * Admin-only preview endpoint to fetch branch-scoped totals + next appointment.
      * Query: /admin/preview-branch-stats?branch_id=2
@@ -377,7 +387,128 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-        return view('admin/management/services', ['user' => $user]);
+
+        $serviceModel = new \App\Models\ServiceModel();
+        $services = $serviceModel->findAll();
+
+        return view('admin/management/services', [
+            'user' => $user,
+            'services' => $services
+        ]);
+    }
+
+    public function storeService()
+    {
+        $user = $this->checkAdminAuth();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $serviceModel = new \App\Models\ServiceModel();
+        
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'description' => $this->request->getPost('description'),
+            'price' => $this->request->getPost('price')
+        ];
+
+        if ($serviceModel->insert($data)) {
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Service created successfully'
+            ]);
+        } else {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to create service',
+                'errors' => $serviceModel->errors()
+            ]);
+        }
+    }
+
+    public function getService($id)
+    {
+        $user = $this->checkAdminAuth();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $serviceModel = new \App\Models\ServiceModel();
+        $service = $serviceModel->find($id);
+
+        if ($service) {
+            return $this->response->setJSON([
+                'success' => true,
+                'service' => $service
+            ]);
+        } else {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Service not found'
+            ]);
+        }
+    }
+
+    public function updateService($id)
+    {
+        $user = $this->checkAdminAuth();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $serviceModel = new \App\Models\ServiceModel();
+        
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'description' => $this->request->getPost('description'),
+            'price' => $this->request->getPost('price')
+        ];
+
+        if ($serviceModel->update($id, $data)) {
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Service updated successfully'
+            ]);
+        } else {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to update service',
+                'errors' => $serviceModel->errors()
+            ]);
+        }
+    }
+
+    public function deleteService($id)
+    {
+        $user = $this->checkAdminAuth();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        $serviceModel = new \App\Models\ServiceModel();
+        
+        // Check if service is being used in any appointments
+        $appointmentServiceModel = new \App\Models\AppointmentServiceModel();
+        $usageCount = $appointmentServiceModel->where('service_id', $id)->countAllResults();
+        
+        if ($usageCount > 0) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => "Cannot delete service. It is currently used in {$usageCount} appointment(s)."
+            ]);
+        }
+
+        if ($serviceModel->delete($id)) {
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Service deleted successfully'
+            ]);
+        } else {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to delete service'
+            ]);
+        }
     }
 
     public function procedures()
@@ -980,13 +1111,29 @@ class AdminController extends BaseAdminController
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         $db = \Config\Database::connect();
+        
+        // Get dental chart data
         $rows = $db->table('dental_chart dc')
             ->select('dc.*, dr.record_date')
             ->join('dental_record dr', 'dr.id = dc.dental_record_id')
             ->where('dr.user_id', $id)
             ->orderBy('dr.record_date', 'DESC')
             ->get()->getResultArray();
-        return $this->response->setJSON(['success' => true, 'chart' => $rows]);
+        
+        // Get visual chart data from dental records
+        $visualChartRecords = $db->table('dental_record')
+            ->select('id, record_date, visual_chart_data')
+            ->where('user_id', $id)
+            ->where('visual_chart_data IS NOT NULL')
+            ->where('visual_chart_data !=', '')
+            ->orderBy('record_date', 'DESC')
+            ->get()->getResultArray();
+        
+        return $this->response->setJSON([
+            'success' => true, 
+            'chart' => $rows,
+            'visual_charts' => $visualChartRecords
+        ]);
     }
 
     public function getPatientAppointmentsModal($id)

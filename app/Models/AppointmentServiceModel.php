@@ -13,7 +13,11 @@ class AppointmentServiceModel extends Model
     protected $useSoftDeletes = false;
     protected $protectFields = true;
     protected $allowedFields = [
-        'appointment_id', 'service_id'
+        'appointment_id',
+        'service_id',
+        'tooth_number',
+        'surface',
+        'notes'
     ];
 
     // Dates
@@ -56,5 +60,49 @@ class AppointmentServiceModel extends Model
     public function getAppointmentsForService($serviceId)
     {
         return $this->where('service_id', $serviceId)->findAll();
+    }
+
+    /**
+     * Get services for an appointment with detailed information
+     */
+    public function getAppointmentServices($appointmentId)
+    {
+        return $this->select('appointment_service.id as appointment_service_id, appointment_service.*, services.name as service_name, services.description, services.price')
+                    ->join('services', 'services.id = appointment_service.service_id')
+                    ->where('appointment_id', $appointmentId)
+                    ->findAll();
+    }
+
+    /**
+     * Get services for an appointment filtered by tooth number
+     */
+    public function getAppointmentServicesByTooth($appointmentId, $toothNumber)
+    {
+        return $this->select('appointment_service.id as appointment_service_id, appointment_service.*, services.name as service_name, services.description, services.price')
+                    ->join('services', 'services.id = appointment_service.service_id')
+                    ->where('appointment_id', $appointmentId)
+                    ->where('tooth_number', $toothNumber)
+                    ->findAll();
+    }
+
+    /**
+     * Get total cost for an appointment's services
+     */
+    public function getAppointmentTotal($appointmentId)
+    {
+        $result = $this->select('SUM(services.price) as total')
+                      ->join('services', 'services.id = appointment_service.service_id')
+                      ->where('appointment_id', $appointmentId)
+                      ->first();
+        
+        return $result ? (float)$result['total'] : 0.0;
+    }
+
+    /**
+     * Get count of services for an appointment
+     */
+    public function getAppointmentServiceCount($appointmentId)
+    {
+        return $this->where('appointment_id', $appointmentId)->countAllResults();
     }
 } 

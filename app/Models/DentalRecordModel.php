@@ -17,13 +17,13 @@ class DentalRecordModel extends Model
         'patient_id',
         'appointment_id',
         'record_date',
-        'diagnosis',
         'treatment',
         'notes',
         'xray_image_url',
         'next_appointment_date',
         'next_appointment_id',
-        'dentist_id'
+        'dentist_id',
+        'visual_chart_data'
     ];
 
     // Dates

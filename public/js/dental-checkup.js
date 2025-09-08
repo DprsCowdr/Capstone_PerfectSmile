@@ -42,8 +42,20 @@ class PatientCheckup {
                 // Debug the current tooth mapping
                 this.dental3DViewer.debugMapping();
                 
+                // Force-apply manual mapping to ensure specific mesh->tooth mapping
+                if (this.dental3DViewer.manualToothMapping) {
+                    Object.entries(this.dental3DViewer.manualToothMapping).forEach(([meshIndex, toothNumber]) => {
+                        this.dental3DViewer.setManualToothMapping(parseInt(meshIndex, 10), parseInt(toothNumber, 10));
+                    });
+                    this.dental3DViewer.debugMapping();
+                }
+
                 // Update 3D model colors when model is loaded
                 this.update3DModelColors();
+                // Safety re-apply after a tick in case materials settle
+                setTimeout(() => this.update3DModelColors(), 150);
+                // Additional safety re-apply after manual mapping is applied
+                setTimeout(() => this.update3DModelColors(), 500);
                 
                 // Log successful initialization
                 console.log('✅ 3D Dental viewer initialization complete');
@@ -254,7 +266,7 @@ class PatientCheckup {
             </div>
         `;
         
-        // Position the popup
+        // Position the popup after content is set
         this.positionPopup(popup, worldPosition, event);
         
         // Show highlight
@@ -272,67 +284,112 @@ class PatientCheckup {
             highlight.style.display = 'block';
         }
         
-        popup.style.display = 'block';
+        // Ensure popup is visible (positionPopup already handles display)
         this.popupVisible = true;
+        
+        console.log(`🎯 Treatment popup shown for tooth ${toothNumber}`);
     }
     
     positionPopup(popup, worldPosition, event) {
         const canvas = document.querySelector('#dentalModelViewer canvas');
+        const viewerContainer = document.getElementById('dentalModelViewer');
+        
+        if (!canvas || !viewerContainer) {
+            console.error('❌ Canvas or viewer container not found');
+            return;
+        }
+        
         const rect = canvas.getBoundingClientRect();
+        const containerRect = viewerContainer.getBoundingClientRect();
         
         // Convert 3D world position to screen position
         const vector = worldPosition.clone();
         vector.project(this.dental3DViewer.camera);
         
-        const x = (vector.x * 0.5 + 0.5) * rect.width;
-        const y = (vector.y * -0.5 + 0.5) * rect.height;
+        const screenX = (vector.x * 0.5 + 0.5) * rect.width;
+        const screenY = (vector.y * -0.5 + 0.5) * rect.height;
         
-        // Get popup dimensions - smaller sizes
-        const popupWidth = window.innerWidth <= 480 ? 240 : window.innerWidth <= 768 ? 280 : 300;
-        const popupHeight = 250; // Reduced from 320
+        // Ensure popup is visible for measurement
+        popup.style.display = 'block';
+        popup.style.visibility = 'hidden'; // Hidden for measurement only
+        popup.style.position = 'absolute';
         
-        // Calculate initial position
-        let popupX = x + 20;
-        let popupY = y - popupHeight / 2;
+        // Force a reflow to get accurate dimensions
+        popup.offsetHeight;
         
-        // Adjust if popup would go outside canvas bounds
-        if (popupX + popupWidth > rect.width) {
-            popupX = x - popupWidth - 20;
-        }
-        if (popupX < 0) {
-            popupX = 10;
-        }
+        const pRect = popup.getBoundingClientRect();
+        const popupWidth = Math.min(pRect.width || 300, containerRect.width - 30);
+        const popupHeight = Math.min(pRect.height || 350, containerRect.height - 30);
         
-        if (popupY < 0) {
-            popupY = 10;
-        }
-        if (popupY + popupHeight > rect.height) {
-            popupY = rect.height - popupHeight - 10;
-        }
+        // Define safe margins from canvas edges
+        const margin = 15;
+        const minX = margin;
+        const minY = margin;
+        const maxX = rect.width - popupWidth - margin;
+        const maxY = rect.height - popupHeight - margin;
         
-        // Ensure popup stays within viewport
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const canvasLeft = rect.left;
-        const canvasTop = rect.top;
+        // Start with preferred position (right of tooth)
+        let popupX = screenX + 25;
+        let popupY = screenY - popupHeight / 2;
         
-        const absoluteX = canvasLeft + popupX;
-        const absoluteY = canvasTop + popupY;
-        
-        // Adjust for viewport boundaries
-        if (absoluteX + popupWidth > viewportWidth) {
-            popupX = viewportWidth - canvasLeft - popupWidth - 10;
-        }
-        if (absoluteY + popupHeight > viewportHeight) {
-            popupY = viewportHeight - canvasTop - popupHeight - 10;
+        // If popup would go outside right edge, place it on the left
+        if (popupX > maxX) {
+            popupX = screenX - popupWidth - 25;
         }
         
-        // Final bounds check
-        popupX = Math.max(10, Math.min(popupX, rect.width - popupWidth - 10));
-        popupY = Math.max(10, Math.min(popupY, rect.height - popupHeight - 10));
+        // If still outside left edge, center it horizontally
+        if (popupX < minX) {
+            popupX = Math.max(minX, (rect.width - popupWidth) / 2);
+        }
         
-        popup.style.left = popupX + 'px';
-        popup.style.top = popupY + 'px';
+        // Ensure horizontal position is within bounds
+        popupX = Math.max(minX, Math.min(popupX, maxX));
+        
+        // Adjust vertical position to stay within bounds
+        if (popupY < minY) {
+            popupY = minY;
+        } else if (popupY > maxY) {
+            popupY = maxY;
+        }
+        
+        // Final safety check - if popup is still too big for canvas
+        if (popupWidth > rect.width - (margin * 2)) {
+            popupX = margin;
+            const maxWidth = rect.width - (margin * 2);
+            popup.style.maxWidth = `${maxWidth}px`;
+            popup.style.overflowX = 'hidden';
+        }
+        
+        if (popupHeight > rect.height - (margin * 2)) {
+            popupY = margin;
+            const maxHeight = rect.height - (margin * 2);
+            popup.style.maxHeight = `${maxHeight}px`;
+            popup.style.overflowY = 'auto';
+        }
+        
+        // Apply final position
+        popup.style.left = `${popupX}px`;
+        popup.style.top = `${popupY}px`;
+        popup.style.zIndex = '1000';
+        popup.style.visibility = 'visible';
+        
+        // Verify popup is within bounds after positioning
+        setTimeout(() => {
+            const finalRect = popup.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            if (finalRect.left < canvasRect.left || finalRect.right > canvasRect.right ||
+                finalRect.top < canvasRect.top || finalRect.bottom > canvasRect.bottom) {
+                
+                console.warn('⚠️ Popup positioned outside canvas bounds, repositioning...');
+                popup.style.left = `${margin}px`;
+                popup.style.top = `${margin}px`;
+                popup.style.maxWidth = `${rect.width - (margin * 2)}px`;
+                popup.style.maxHeight = `${rect.height - (margin * 2)}px`;
+            }
+        }, 0);
+        
+        console.log(`🎯 Popup positioned at (${popupX}, ${popupY}) within canvas (${rect.width}x${rect.height})`);
     }
     
     closeTreatmentPopup() {
@@ -398,10 +455,17 @@ class PatientCheckup {
     }
     
     update3DModelColors() {
+        if (!this.dental3DViewer || !this.dental3DViewer.isLoaded) {
+            console.warn('⚠️ 3D model not loaded yet, skipping color update');
+            return;
+        }
+        
+        console.log('🎨 Updating all 3D model colors...');
         // Update all teeth colors in the 3D model based on current conditions
         for (let i = 1; i <= 32; i++) {
             this.update3DToothColor(i);
         }
+        console.log('✅ 3D model colors update complete');
     }
     
     update3DToothColor(toothNumber) {
@@ -416,7 +480,7 @@ class PatientCheckup {
             return;
         }
         
-        const condition = conditionSelect.value;
+        let condition = conditionSelect.value;
         let color = null;
         let isMissing = false;
         
@@ -445,6 +509,37 @@ class PatientCheckup {
                 break;
             default:
                 color = null; // Default tooth color
+        }
+        
+        // Fallback: if no condition color decided, try using treatment to infer color
+        if (!color && !isMissing) {
+            const treatmentSelect = document.querySelector(`select[name="dental_chart[${toothNumber}][treatment]"]`);
+            const treatment = treatmentSelect ? treatmentSelect.value : '';
+            switch (treatment) {
+                case 'extraction':
+                    condition = 'extraction_needed';
+                    color = { r: 0.7, g: 0.1, b: 0.1 }; // Dark red
+                    break;
+                case 'root_canal':
+                    condition = 'root_canal';
+                    color = { r: 1.0, g: 0.5, b: 0.1 }; // Orange
+                    break;
+                case 'filling':
+                    condition = 'filled';
+                    color = { r: 0.2, g: 0.5, b: 0.9 }; // Blue
+                    break;
+                case 'crown':
+                    condition = 'crown';
+                    color = { r: 1.0, g: 0.8, b: 0.1 }; // Yellow
+                    break;
+                case 'cleaning':
+                    condition = 'healthy';
+                    color = { r: 0.2, g: 0.8, b: 0.2 }; // Green
+                    break;
+                default:
+                    // leave as default
+                    break;
+            }
         }
         
         // Apply color/missing status to the 3D model tooth
@@ -774,6 +869,16 @@ class PatientCheckup {
         this.clearAutoSavedData();
         if (this.dental3DViewer) {
             this.dental3DViewer.destroy();
+        }
+    }
+    
+    // Public method to force refresh 3D model colors (can be called from visual chart)
+    forceRefresh3DColors() {
+        console.log('🔄 Force refreshing 3D model colors...');
+        if (this.dental3DViewer && this.dental3DViewer.isLoaded) {
+            this.update3DModelColors();
+        } else {
+            console.warn('⚠️ 3D model not loaded, cannot refresh colors');
         }
     }
 }

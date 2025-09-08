@@ -589,9 +589,15 @@ function applyContentOffset() {
         } else if (shouldOffset) {
             const main = document.querySelector('main');
             if (main) {
-                if (sidebar) sidebar.classList.add('sidebar-fixed');
-                main.classList.add('with-sidebar-offset-active');
-                applied = true;
+                // Check if the page already uses proper flex layout
+                const isFlexLayout = main.closest('.flex') && main.closest('.flex-1');
+                
+                if (!isFlexLayout) {
+                    // Only apply offset for non-flex layouts
+                    if (sidebar) sidebar.classList.add('sidebar-fixed');
+                    main.classList.add('with-sidebar-offset-active');
+                    applied = true;
+                }
             }
         }
 

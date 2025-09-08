@@ -61,4 +61,34 @@ class ServiceModel extends Model
         }
         return $service;
     }
+
+    /**
+     * Search services by name or description
+     */
+    public function searchServices($searchTerm = '', $limit = 50)
+    {
+        $builder = $this->builder();
+        
+        if (!empty($searchTerm)) {
+            $builder->groupStart()
+                   ->like('name', $searchTerm)
+                   ->orLike('description', $searchTerm)
+                   ->groupEnd();
+        }
+        
+        return $builder->orderBy('name', 'ASC')
+                      ->limit($limit)
+                      ->get()
+                      ->getResultArray();
+    }
+
+    /**
+     * Get services for checkup selection
+     */
+    public function getServicesForSelection()
+    {
+        return $this->select('id, name, description, price')
+                   ->orderBy('name', 'ASC')
+                   ->findAll();
+    }
 } 
