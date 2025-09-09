@@ -25,7 +25,7 @@ class Staff extends BaseController
         $pendingAppointments = $appointmentModel->getPendingApprovalAppointments();
 
         // Restrict pending appointments to branches assigned to this staff user
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
         if (!empty($branchIds)) {
@@ -361,7 +361,7 @@ class Staff extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
         }
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to approve appointments for this branch']);
         }
@@ -403,7 +403,7 @@ class Staff extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
         }
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to decline appointments for this branch']);
         }
@@ -489,7 +489,7 @@ class Staff extends BaseController
         if (!$note) return $this->response->setJSON(['success' => false, 'message' => 'Notification not found']);
 
         // Verify staff is assigned to the branch
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $note['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
         }
@@ -517,7 +517,7 @@ class Staff extends BaseController
         if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
 
         // Check branch assignment
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
         }
@@ -589,7 +589,7 @@ class Staff extends BaseController
         if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
 
         // Check branch assignment
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
         }

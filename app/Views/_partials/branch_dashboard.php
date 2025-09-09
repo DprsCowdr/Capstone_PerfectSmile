@@ -1,4 +1,4 @@
-<!-- Branch dashboard partial: cards + chart (shared between staff and admin branch view) -->
+﻿<!-- Branch dashboard partial: cards + chart (shared between staff and admin branch view) -->
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
     <div class="bg-white border-l-4 border-indigo-400 shadow rounded-lg p-5 flex items-center justify-between">
         <div>
@@ -40,6 +40,7 @@
                     <option value="patients">Patients</option>
                     <option value="appointments">Appointments</option>
                     <option value="treatments">Treatments</option>
+                    <option value="revenue">Revenue</option>
                 </select>
                 <input type="hidden" id="statsScope" value="<?= isset($statsScopeValue) ? $statsScopeValue : (isset($selectedBranchId) ? 'branch:'.(int)$selectedBranchId : 'all') ?>">
                 <button id="showTotalsHistoryBtn" class="ml-2 px-3 py-1 bg-gray-100 text-sm rounded hover:bg-gray-200">View totals history</button>

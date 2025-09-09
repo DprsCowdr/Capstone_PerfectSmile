@@ -14,19 +14,29 @@ class AppointmentService
     public function getDashboardData()
     {
         // Get pending appointments for approval
-        $pendingAppointments = $this->appointmentModel->getPendingApprovalAppointments();
-        
-    // Get upcoming approved appointments starting from today (exclude past appointments)
-    // Use datetime comparison to include today and future dates
-    $todayStart = date('Y-m-d') . ' 00:00:00';
-    $todayAppointments = $this->appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+        // Respect selected branch if set
+        $selectedBranch = session('selected_branch_id') ?: null;
+        if ($selectedBranch) {
+            $pendingAppointments = $this->appointmentModel->getPendingApprovalAppointments(null);
+            // Filter pending appointments by branch using model query
+            $pendingAppointments = array_filter($pendingAppointments, function($a) use ($selectedBranch) { return (isset($a['branch_id']) && $a['branch_id'] == $selectedBranch); });
+        } else {
+            $pendingAppointments = $this->appointmentModel->getPendingApprovalAppointments();
+        }
+
+        // Get upcoming approved appointments starting from today (exclude past appointments)
+        $todayStart = date('Y-m-d') . ' 00:00:00';
+        $query = $this->appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
                          ->join('user', 'user.id = appointments.user_id')
                          ->join('branches', 'branches.id = appointments.branch_id', 'left')
                          ->where('appointments.appointment_datetime >=', $todayStart)
                          ->where('appointments.approval_status', 'approved') // Only approved appointments
                          ->whereIn('appointments.status', ['confirmed', 'scheduled', 'ongoing'])
-                         ->orderBy('appointments.appointment_datetime', 'ASC')
-                         ->findAll();
+                         ->orderBy('appointments.appointment_datetime', 'ASC');
+        if ($selectedBranch) {
+            $query->where('appointments.branch_id', (int)$selectedBranch);
+        }
+        $todayAppointments = $query->findAll();
         
         // The splitDateTime is already handled by the AppointmentModel's findAll method
         
@@ -38,13 +48,17 @@ class AppointmentService
     
     public function getAllAppointments($branchId = null)
     {
+        // If branchId provided, query model for branch results for better performance
         if ($branchId) {
-            // Only fetch appointments for the given branch
-            return array_filter($this->appointmentModel->getAllAppointmentsForAdmin(), function($apt) use ($branchId) {
-                return ($apt['branch_id'] ?? null) == $branchId;
-            });
+            return $this->appointmentModel->select('appointments.*, user.name as patient_name, branches.name as branch_name')
+                        ->join('user', 'user.id = appointments.user_id', 'left')
+                        ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                        ->where('appointments.branch_id', (int)$branchId)
+                        ->orderBy('appointments.appointment_datetime', 'DESC')
+                        ->findAll();
         }
-        return $this->appointmentModel->getAllAppointmentsForAdmin();
+
+        return $this->appointmentModel->getAppointmentsWithDetails();
     }
     
     public function createAppointment($data)
@@ -258,7 +272,19 @@ class AppointmentService
         try {
             log_message('debug', "AppointmentService: Loading appointments for patient ID: {$patientId}");
             
-            $appointments = $this->appointmentModel->getPatientAppointments($patientId);
+            // Respect branch context if set
+            $selectedBranch = session('selected_branch_id') ?: null;
+            if ($selectedBranch) {
+                $appointments = $this->appointmentModel->select('appointments.*, branches.name as branch_name, dentists.name as dentist_name')
+                                    ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                    ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
+                                    ->where('appointments.user_id', $patientId)
+                                    ->where('appointments.branch_id', (int)$selectedBranch)
+                                    ->orderBy('appointments.appointment_datetime', 'DESC')
+                                    ->findAll();
+            } else {
+                $appointments = $this->appointmentModel->getPatientAppointments($patientId);
+            }
             log_message('debug', "AppointmentService: Found " . count($appointments) . " appointments");
             log_message('debug', "AppointmentService: Raw appointments data: " . json_encode($appointments));
             

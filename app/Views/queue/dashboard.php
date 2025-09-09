@@ -78,8 +78,8 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Waiting Patients -->
+                <!-- Patients Waiting -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div class="bg-white rounded-xl shadow-lg">
                         <div class="p-6 border-b border-gray-200">
                             <h2 class="text-xl font-semibold text-gray-800 flex items-center">
@@ -116,7 +116,7 @@
                                                     </p>
                                                 </div>
                                                 <div class="ml-4">
-                                                    <form method="POST" action="<?= base_url('queue/call/' . $patient['id']) ?>" class="inline">
+                                                    <form method="POST" action="<?= base_url('queue/call/' . $patient['id']) ?>" class="inline treatment-call-form">
                                                         <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                                             <i class="fas fa-hand-paper mr-2"></i>
                                                             Call Patient
@@ -226,22 +226,39 @@
 
 <script>
 // Auto-refresh every 15 seconds for real-time updates
-setTimeout(function() {
+let autoRefreshTimer = setTimeout(function() {
     window.location.reload();
 }, 15000);
 
-// Confirmation for calling patients
-document.querySelectorAll('form').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-        if (!confirm('Call this patient for treatment?')) {
-            e.preventDefault();
-        }
+// Clear timer if user interacts with the page
+document.addEventListener('click', function() {
+    clearTimeout(autoRefreshTimer);
+    // Restart the timer
+    autoRefreshTimer = setTimeout(function() {
+        window.location.reload();
+    }, 15000);
+});
+
+// Confirmation for calling patients (only for call forms)
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.treatment-call-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Call this patient for treatment?')) {
+                e.preventDefault();
+            }
+        });
     });
+    
+    // Sidebar toggle functionality
+    const sidebarToggle = document.getElementById('sidebarToggleTop');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('sidebar-collapsed');
+        });
+    }
 });
 </script>
-
-        </main>
-    </div>
-</div>
 
 <?= view('templates/footer') ?>

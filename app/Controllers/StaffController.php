@@ -46,7 +46,7 @@ class StaffController extends BaseAdminController
         $recentPatients = $this->userService->getRecentPatients(5);
         
         // Restrict pending approvals to staff-assigned branches
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
         $pendingAppointments = $appointmentData['pendingAppointments'] ?? [];
@@ -125,7 +125,7 @@ class StaffController extends BaseAdminController
         }
 
         // Get branches assigned to this staff user
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $branchIds = array_map(function($b) { return (int)$b['branch_id']; }, $userBranches ?: []);
 
@@ -159,7 +159,7 @@ class StaffController extends BaseAdminController
         $scope = $this->request->getGet('scope') ?? 'mine';
 
         // branches assigned to this staff user
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $branchIds = array_map(function($b){ return (int) $b['branch_id']; }, $userBranches ?: []);
 
@@ -325,7 +325,7 @@ class StaffController extends BaseAdminController
 
         // Resolve branch scope: explicit ?branch_id=, or admin-selected session, or staff-assigned branches
         $requestedBranch = $this->request->getGet('branch_id');
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $userBranchIds = array_map(function($b){ return (int) $b['branch_id']; }, $userBranches ?: []);
         $branchIds = [];
@@ -426,7 +426,7 @@ class StaffController extends BaseAdminController
             return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
         }
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to approve appointments for this branch']);
         }
@@ -467,7 +467,7 @@ class StaffController extends BaseAdminController
             return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
         }
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to decline appointments for this branch']);
         }
@@ -538,7 +538,7 @@ class StaffController extends BaseAdminController
         $appointmentModel = new \App\Models\AppointmentModel();
         $pendingAppointments = $appointmentModel->getPendingApprovalAppointments();
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
         if (!empty($branchIds)) {

@@ -55,4 +55,38 @@ abstract class BaseController extends Controller
 
         // E.g.: $this->session = service('session');
     }
+
+    /**
+     * Resolve branch id from request or session.
+     * Preference order:
+     *  - POST/GET param 'branch_id'
+     *  - JSON body 'branch_id'
+     *  - session('selected_branch_id')
+     * Returns null when no branch selected (meaning all branches).
+     *
+     * @return int|null
+     */
+    protected function resolveBranchId()
+    {
+        // Check POST/GET
+        $bid = $this->request->getPost('branch_id');
+        if (empty($bid)) $bid = $this->request->getGet('branch_id');
+
+        // Check JSON payload
+        if (empty($bid)) {
+            try {
+                $json = $this->request->getJSON(true);
+                if (is_array($json) && isset($json['branch_id'])) $bid = $json['branch_id'];
+            } catch (\Exception $e) {
+                // ignore
+            }
+        }
+
+        if (!empty($bid)) return is_numeric($bid) ? (int)$bid : $bid;
+
+        // Fallback to session
+        $session = session();
+        $s = $session->get('selected_branch_id');
+        return !empty($s) ? (is_numeric($s) ? (int)$s : $s) : null;
+    }
 }

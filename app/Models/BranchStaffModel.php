@@ -1,22 +1,25 @@
 <?php
-
 namespace App\Models;
 
 use CodeIgniter\Model;
 
-class BranchUserModel extends Model
+class BranchStaffModel extends Model
 {
-    protected $table = 'branch_user';
+    // After migration we standardize on `branch_staff` table name.
+    protected $table = 'branch_staff';
     protected $primaryKey = 'id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
     protected $useSoftDeletes = false;
     protected $protectFields = true;
+
+    // match DB columns: user_id, branch_id, position
     protected $allowedFields = [
         'user_id', 'branch_id', 'position'
     ];
 
     // Dates
+    // table does not include created_at/updated_at in the current schema
     protected $useTimestamps = false;
 
     // Validation
@@ -49,9 +52,9 @@ class BranchUserModel extends Model
      */
     public function getUserBranches($userId)
     {
-        return $this->select('branch_user.*, branches.name as branch_name')
-                    ->join('branches', 'branches.id = branch_user.branch_id')
-                    ->where('branch_user.user_id', $userId)
+        return $this->select('branch_staff.*, branches.name as branch_name')
+                    ->join('branches', 'branches.id = branch_staff.branch_id')
+                    ->where('branch_staff.user_id', $userId)
                     ->findAll();
     }
 
@@ -60,9 +63,9 @@ class BranchUserModel extends Model
      */
     public function getBranchUsers($branchId)
     {
-        return $this->select('branch_user.*, user.name as user_name, user.email, user.user_type')
-                    ->join('user', 'user.id = branch_user.user_id')
-                    ->where('branch_user.branch_id', $branchId)
+        return $this->select('branch_staff.*, user.name as user_name, user.email, user.user_type')
+                    ->join('user', 'user.id = branch_staff.user_id')
+                    ->where('branch_staff.branch_id', $branchId)
                     ->findAll();
     }
 
@@ -81,9 +84,9 @@ class BranchUserModel extends Model
      */
     public function getUserPrimaryBranch($userId)
     {
-        return $this->select('branch_user.*, branches.name as branch_name')
-                    ->join('branches', 'branches.id = branch_user.branch_id')
-                    ->where('branch_user.user_id', $userId)
+        return $this->select('branch_staff.*, branches.name as branch_name')
+                    ->join('branches', 'branches.id = branch_staff.branch_id')
+                    ->where('branch_staff.user_id', $userId)
                     ->first();
     }
-} 
+}
