@@ -27,6 +27,9 @@ $routes->get('dashboard', 'Dashboard::index');
 // Debug route (remove in production)
 $routes->get('debug/appointments', 'Debug::checkAppointments');
 $routes->get('debug/add-test', 'Debug::addTestAppointment');
+$routes->get('test-3d-viewer', function() {
+    return view('test-3d-viewer');
+});
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard
@@ -225,6 +228,7 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->post('book-appointment', 'Patient::submitAppointment');
     $routes->get('appointments', 'Patient::appointments');
     $routes->get('records', 'Patient::records');
+    $routes->get('dental-chart', 'Patient::getDentalChart'); // API endpoint for dental chart data
     $routes->get('profile', 'Patient::profile');
     // Patient appointment management (cancel only - edit/delete removed to avoid accidental changes)
     // $routes->get('appointments/edit/(:num)', 'Patient::editAppointment/$1');

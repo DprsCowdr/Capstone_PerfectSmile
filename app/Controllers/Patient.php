@@ -472,7 +472,7 @@ class Patient extends BaseController
         }
     }
 
-    // Patient records page (simple placeholder)
+    // Patient records page with dental chart data
     public function records()
     {
         $user = Auth::getCurrentUser();
@@ -480,10 +480,75 @@ class Patient extends BaseController
             return redirect()->to('/login');
         }
 
+        $db = \Config\Database::connect();
+        
+        // Get dental records
         $dentalRecordModel = new \App\Models\DentalRecordModel();
-        $records = $dentalRecordModel->where('user_id', $user['id'])->orderBy('record_date', 'DESC')->findAll();
+        $records = $dentalRecordModel->select('dental_record.*, dentist.name as dentist_name')
+            ->join('user as dentist', 'dentist.id = dental_record.dentist_id', 'left')
+            ->where('dental_record.user_id', $user['id'])
+            ->orderBy('dental_record.record_date', 'DESC')
+            ->findAll();
 
-        return view('patient/records', ['user' => $user, 'records' => $records]);
+        // Get dental chart data for tooth conditions
+        $dentalChart = $db->table('dental_chart dc')
+            ->select('dc.*, dr.record_date')
+            ->join('dental_record dr', 'dr.id = dc.dental_record_id')
+            ->where('dr.user_id', $user['id'])
+            ->orderBy('dr.record_date', 'DESC')
+            ->get()->getResultArray();
+
+        // Get visual charts
+        $visualCharts = $db->table('dental_record')
+            ->select('id, record_date, visual_chart_data')
+            ->where('user_id', $user['id'])
+            ->where('visual_chart_data IS NOT NULL')
+            ->where('visual_chart_data !=', '')
+            ->orderBy('record_date', 'DESC')
+            ->get()->getResultArray();
+
+        // Process tooth conditions for latest record
+        $toothConditions = [];
+        $latestDate = '';
+        if (!empty($dentalChart)) {
+            $latestDate = $dentalChart[0]['record_date'];
+            $latestChart = array_filter($dentalChart, function($row) use ($latestDate) {
+                return $row['record_date'] === $latestDate;
+            });
+            
+            foreach ($latestChart as $tooth) {
+                $toothConditions[$tooth['tooth_number']] = $tooth['condition'] ?? 'healthy';
+            }
+        }
+
+        // Calculate statistics
+        $totalTeeth = 32;
+        $teethWithData = count($toothConditions);
+        $healthyTeeth = $totalTeeth - $teethWithData; // Assume unmarked teeth are healthy
+        $treatmentCounts = [
+            'filled' => 0,
+            'crown' => 0,
+            'root-canal' => 0,
+            'cavity' => 0,
+            'extracted' => 0
+        ];
+        
+        foreach ($toothConditions as $condition) {
+            if (isset($treatmentCounts[strtolower($condition)])) {
+                $treatmentCounts[strtolower($condition)]++;
+            }
+        }
+
+        return view('patient/records', [
+            'user' => $user, 
+            'records' => $records,
+            'dentalChart' => $dentalChart,
+            'visualCharts' => $visualCharts,
+            'toothConditions' => $toothConditions,
+            'latestDate' => $latestDate,
+            'healthyTeeth' => $healthyTeeth,
+            'treatmentCounts' => $treatmentCounts
+        ]);
     }
 
     // Profile page (placeholder)
@@ -1026,5 +1091,41 @@ class Patient extends BaseController
         }
 
         return view('patient/treatment_plan', ['user' => $user, 'plan' => $plan]);
+    }
+
+    /**
+     * Get patient's own dental chart data (API endpoint)
+     */
+    public function getDentalChart()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        
+        $db = \Config\Database::connect();
+        
+        // Get dental chart data
+        $rows = $db->table('dental_chart dc')
+            ->select('dc.*, dr.record_date')
+            ->join('dental_record dr', 'dr.id = dc.dental_record_id')
+            ->where('dr.user_id', $user['id'])
+            ->orderBy('dr.record_date', 'DESC')
+            ->get()->getResultArray();
+        
+        // Get visual chart data from dental records
+        $visualChartRecords = $db->table('dental_record')
+            ->select('id, record_date, visual_chart_data')
+            ->where('user_id', $user['id'])
+            ->where('visual_chart_data IS NOT NULL')
+            ->where('visual_chart_data !=', '')
+            ->orderBy('record_date', 'DESC')
+            ->get()->getResultArray();
+        
+        return $this->response->setJSON([
+            'success' => true, 
+            'chart' => $rows,
+            'visual_charts' => $visualChartRecords
+        ]);
     }
 } 

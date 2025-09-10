@@ -116,7 +116,7 @@
         </div>
 
         <!-- Checkup Form -->
-        <form action="/checkup/save/<?= $appointment['id'] ?>" method="POST" class="space-y-8">
+        <form id="checkupForm" action="/checkup/save/<?= $appointment['id'] ?>" method="POST" class="space-y-8">
             <!-- Hidden input for appointment ID -->
             <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
             
@@ -245,6 +245,9 @@
                                                         <label class="block text-xs font-medium text-gray-700 mb-1">Notes:</label>
                                                         <textarea name="dental_chart[<?= $i ?>][notes]" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1" placeholder="Additional notes..."><?= isset($prev['notes']) ? esc($prev['notes']) : '' ?></textarea>
                                                     </div>
+                                                    <!-- Hidden fields populated from popup -->
+                                                    <input type="hidden" name="dental_chart[<?= $i ?>][service_id]" value="<?= isset($prev['service_id']) ? esc($prev['service_id']) : '' ?>">
+                                                    <input type="hidden" name="dental_chart[<?= $i ?>][surface]" value="<?= isset($prev['surface']) ? esc($prev['surface']) : '' ?>">
                                                     <button type="button" onclick="closeToothMenu(<?= $i ?>)" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded">
                                                         Done
                                                     </button>
@@ -306,6 +309,9 @@
                                                         <label class="block text-xs font-medium text-gray-700 mb-1">Notes:</label>
                                                         <textarea name="dental_chart[<?= $i ?>][notes]" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1" placeholder="Additional notes..."><?= isset($prev['notes']) ? esc($prev['notes']) : '' ?></textarea>
                                                     </div>
+                                                    <!-- Hidden fields populated from popup -->
+                                                    <input type="hidden" name="dental_chart[<?= $i ?>][service_id]" value="<?= isset($prev['service_id']) ? esc($prev['service_id']) : '' ?>">
+                                                    <input type="hidden" name="dental_chart[<?= $i ?>][surface]" value="<?= isset($prev['surface']) ? esc($prev['surface']) : '' ?>">
                                                     <button type="button" onclick="closeToothMenu(<?= $i ?>)" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded">
                                                         Done
                                                     </button>
@@ -649,6 +655,46 @@
                 </button>
             </div>
         </form>
+
+        <script>
+        (function() {
+            const form = document.getElementById('checkupForm');
+            if (!form) return;
+            const prev = (window.prevChartByTooth || {});
+            const normalize = (v) => {
+                if (v === undefined || v === null) return '';
+                return ('' + v).trim();
+            };
+            form.addEventListener('submit', function() {
+                const changedTeeth = new Set();
+                for (let i = 1; i <= 32; i++) {
+                    const condEl = form.querySelector(`select[name="dental_chart[${i}][condition]"]`);
+                    const treatEl = form.querySelector(`select[name="dental_chart[${i}][treatment]"]`);
+                    const notesEl = form.querySelector(`textarea[name="dental_chart[${i}][notes]"]`);
+                    if (!condEl && !treatEl && !notesEl) continue;
+                    const curCond = normalize(condEl ? condEl.value : '');
+                    const curTreat = normalize(treatEl ? treatEl.value : '');
+                    const curNotes = normalize(notesEl ? notesEl.value : '');
+                    const p = prev[i] || {};
+                    const prevCond = normalize(p.condition);
+                    const prevTreat = normalize(p.status);
+                    const prevNotes = normalize(p.notes);
+                    const hasAny = (curCond !== '') || (curTreat !== '') || (curNotes !== '');
+                    const changed = (curCond !== prevCond) || (curTreat !== prevTreat) || (curNotes !== prevNotes);
+                    if (hasAny && changed) {
+                        changedTeeth.add(i);
+                    }
+                }
+                for (let i = 1; i <= 32; i++) {
+                    if (changedTeeth.has(i)) continue;
+                    ['condition', 'treatment', 'notes'].forEach((field) => {
+                        const el = form.querySelector(`[name="dental_chart[${i}][${field}]"]`);
+                        if (el) el.disabled = true;
+                    });
+                }
+            });
+        })();
+        </script>
     </div>
 </div>
 
@@ -1450,19 +1496,14 @@ function showToothInfoPopup(toothNumber) {
                     </div>
 
                     
-                    <!-- Service/Procedure Section -->
+                    <!-- Service/Procedure Section (no 'Add' button; saved with Save) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Add Procedure/Service:</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Procedure/Service:</label>
                         <div class="space-y-2">
                             <select id="popupService" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <option value="">Select procedure/service</option>
                                 <!-- Options will be loaded dynamically -->
                             </select>
-                            <div class="flex space-x-2">
-                                <button onclick="addServiceToAppointment()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium transition-colors w-full">
-                                    Add Service
-                                </button>
-                            </div>
                         </div>
                     </div>
                     
@@ -1557,15 +1598,21 @@ function saveToothData() {
     
     const condition = document.getElementById('popupCondition').value;
     const notes = document.getElementById('popupNotes').value;
+    const serviceId = document.getElementById('popupService') ? document.getElementById('popupService').value : '';
+    const surface = (window.currentVisualHighlightMeta && window.currentVisualHighlightMeta.surface) || '';
     
     // Update the corresponding form fields
     const menu = document.getElementById(`tooth-menu-${toothNumber}`);
     if (menu) {
         const conditionSelect = menu.querySelector('select[name*="[condition]"]');
         const notesTextarea = menu.querySelector('textarea[name*="[notes]"]');
+        const serviceInput = menu.querySelector('input[name*="[service_id]"]');
+        const surfaceInput = menu.querySelector('input[name*="[surface]"]');
         
         if (conditionSelect) conditionSelect.value = condition;
         if (notesTextarea) notesTextarea.value = notes;
+        if (serviceInput) serviceInput.value = serviceId || '';
+        if (surfaceInput) surfaceInput.value = surface || '';
     }
     
     // Update tooth appearance
@@ -1721,8 +1768,8 @@ async function loadToothServices(toothNumber) {
     }
 }
 
-// Add service to appointment for specific tooth
-async function addServiceToAppointment() {
+// [removed] addServiceToAppointment: replaced by saving with form submit
+/* async function addServiceToAppointment() {
     const popup = document.getElementById('toothInfoPopup');
     const toothNumber = popup.getAttribute('data-tooth-number');
     const serviceId = document.getElementById('popupService').value;
@@ -1774,7 +1821,7 @@ async function addServiceToAppointment() {
         console.error('Error adding service:', error);
         alert('Error adding service');
     }
-}
+} */
 
 // Remove service from appointment
 async function removeToothService(serviceId) {
@@ -1974,17 +2021,12 @@ function showVisualToothInfo(toothNumber, surface, clickEvent) {
                     
                     <!-- Service/Procedure Section -->
                     <div class="border-t pt-3 mt-3">
-                        <label class="block text-xs font-medium text-gray-700 mb-2">Add Procedure/Service:</label>
+                        <label class="block text-xs font-medium text-gray-700 mb-2">Procedure/Service:</label>
                         <div class="space-y-2">
                             <select id="visualPopupService" class="w-full px-2 py-1.5 border-2 border-gray-200 rounded-md text-xs">
                                 <option value="">Select procedure/service</option>
                                 <!-- Options will be loaded dynamically -->
                             </select>
-                            <div class="flex gap-2">
-                                <button onclick="addVisualServiceToAppointment()" class="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs font-medium transition-colors w-full">
-                                    Add
-                                </button>
-                            </div>
                         </div>
                     </div>
                     
@@ -2172,7 +2214,7 @@ async function loadVisualToothServices(toothNumber) {
 }
 
 // Add service to appointment for specific tooth (visual chart)
-async function addVisualServiceToAppointment() {
+/* async function addVisualServiceToAppointment() {
     const toothNumberElement = document.getElementById('visualToothNumber');
     const serviceElement = document.getElementById('visualPopupService');
     
@@ -2231,7 +2273,7 @@ async function addVisualServiceToAppointment() {
         console.error('Error adding service:', error);
         alert('Error adding service');
     }
-}
+} */
 
 // Remove service from appointment (visual chart)
 async function removeVisualToothService(serviceId) {

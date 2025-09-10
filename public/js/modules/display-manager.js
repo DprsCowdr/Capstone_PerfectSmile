@@ -21,10 +21,6 @@ class DisplayManager {
                 ${this.generatePatientHeader(patient)}
                 <div class="space-y-8">
                     ${this.generatePersonalInfoSection(patient)}
-                    ${this.generateMedicalHistorySection(patient)}
-                    ${this.generateDentalHistorySection(patient)}
-                    ${this.generateRecentRecordsSummary(patient)}
-                    ${this.generateNotesSection(patient)}
                 </div>
             </div>`;
     }
@@ -77,76 +73,13 @@ class DisplayManager {
             </section>`;
     }
 
-    generateMedicalHistorySection(patient) {
-        return `
-            <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-heartbeat text-blue-500"></i>Medical</h3>
-                <div class="border border-gray-200 rounded-md p-4 bg-white">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        ${this.generateInfoField('Physician', patient.physician_name || 'N/A')}
-                        ${this.generateInfoField('Specialty', patient.physician_specialty || 'N/A')}
-                        ${this.generateInfoField('Physician Phone', patient.physician_phone || 'N/A')}
-                        ${this.generateInfoField('Blood Pressure', patient.blood_pressure || 'N/A')}
-                        ${this.generateInfoField('Allergies', patient.allergies || 'None')}
-                        ${this.generateInfoField('Medications', patient.medications || 'None')}
-                        ${this.generateInfoField('Tobacco', patient.tobacco_use === 'yes' ? 'Yes' : patient.tobacco_use === 'no' ? 'No' : 'N/A')}
-                        ${this.generateInfoField('General Health', patient.good_health === 'yes' ? 'Good' : patient.good_health === 'no' ? 'Issues' : 'N/A')}
-                    </div>
-                    ${patient.medical_conditions ? `<div class='mt-4 pt-4 border-t border-gray-100'>${this.generateInfoField('Medical Conditions', patient.medical_conditions, 'block')}</div>` : ''}
-                </div>
-            </section>`;
-    }
-
-    generateDentalHistorySection(patient) {
-        return `
-            <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-tooth text-blue-500"></i>Dental</h3>
-                <div class="border border-gray-200 rounded-md p-4 bg-white">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        ${this.generateInfoField('Previous Dentist', patient.previous_dentist || 'N/A')}
-                        ${this.generateInfoField('Last Visit', patient.last_dental_visit ? new Date(patient.last_dental_visit).toLocaleDateString() : 'N/A')}
-                        ${this.generateInfoField('Concerns', patient.dental_concerns || 'None')}
-                        ${this.generateInfoField('Brushing', patient.brushing_frequency || 'N/A')}
-                        ${this.generateInfoField('Flossing', patient.flossing_frequency || 'N/A')}
-                        ${this.generateInfoField('Pain/Sensitivity', patient.dental_pain === 'yes' ? 'Yes' : patient.dental_pain === 'no' ? 'No' : 'N/A')}
-                    </div>
-                </div>
-            </section>`;
-    }
-
-    generateRecentRecordsSummary(patient) {
-        return `
-            <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-clipboard-list text-blue-500"></i>Visits</h3>
-                <div class="border border-gray-200 rounded-md p-4 bg-white">
-                    <div class="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <div class="text-base font-semibold text-gray-800">${patient.total_visits || '0'}</div>
-                            <div class="text-[11px] text-gray-500 mt-0.5">Total</div>
-                        </div>
-                        <div>
-                            <div class="text-base font-semibold text-gray-800">${patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString() : 'N/A'}</div>
-                            <div class="text-[11px] text-gray-500 mt-0.5">Last</div>
-                        </div>
-                        <div>
-                            <div class="text-base font-semibold text-gray-800">${patient.next_appointment_date ? new Date(patient.next_appointment_date).toLocaleDateString() : 'N/A'}</div>
-                            <div class="text-[11px] text-gray-500 mt-0.5">Next</div>
-                        </div>
-                    </div>
-                    ${patient.last_diagnosis ? `<div class='mt-4 pt-4 border-t border-gray-100'>${this.generateInfoField('Last Diagnosis', patient.last_diagnosis, 'block')}</div>` : ''}
-                </div>
-            </section>`;
-    }
-
-    generateNotesSection(patient) {
-        return `
-            <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2"><i class="fas fa-note-sticky text-blue-500"></i>Notes</h3>
-                <div class="border border-gray-200 rounded-md p-4 bg-white" data-patient-notes>
-                    <p class="text-gray-700">${patient.special_notes || 'No special notes recorded.'}</p>
-                </div>
-            </section>`;
-    }
+    // REMOVED: generateMedicalHistorySection() - Medical history section removed from basic info view
+    
+    // REMOVED: generateDentalHistorySection() - Dental history section removed from basic info view
+    
+    // REMOVED: generateRecentRecordsSummary() - Visits summary removed from basic info view
+    
+    // REMOVED: generateNotesSection() - Notes section removed from basic info view
 
     generateInfoField(label, value, type = 'inline') {
         const val = value || 'N/A';
@@ -221,16 +154,6 @@ class DisplayManager {
                     Interactive 3D Dental Model
                 </h4>
                 
-                <!-- Instructions -->
-                <div class="bg-blue-50 rounded-lg p-3 mb-4 text-sm text-blue-800">
-                    <div class="flex items-start">
-                        <i class="fas fa-info-circle mt-0.5 mr-2"></i>
-                        <div>
-                            <strong>Instructions:</strong> Click and drag to rotate • Scroll to zoom • Hover over teeth to see checkup details • Click teeth for complete history
-                        </div>
-                    </div>
-                </div>
-                
                 <div class="dental-3d-viewer relative" id="dentalModalViewer" style="height: 500px;">
                     <div class="model-loading text-center py-8" id="modalModelLoading">
                         <i class="fas fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i>
@@ -259,111 +182,17 @@ class DisplayManager {
                     </div>
                 </div>
                 
-                ${this.generateColorLegend()}
-                ${this.generateConditionsSummaryPanel()}
             </div>
             
-            ${this.generateChartSummary(chartResponse)}
         </div>
         `;
     }
 
-    generateColorLegend() {
-        return `
-            <!-- Enhanced 3D Model Color Legend -->
-            <div class="mt-6 p-4 bg-white rounded-lg border">
-                <h5 class="text-sm font-semibold text-gray-700 mb-3 text-center">
-                    <i class="fas fa-palette text-blue-500 mr-2"></i>
-                    Tooth Condition Color Legend
-                </h5>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-green-400 rounded mr-2 border"></div>
-                        <span><i class="fas fa-check-circle text-green-500 mr-1"></i>Healthy</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-red-500 rounded mr-2 border"></div>
-                        <span><i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>Cavity</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-yellow-500 rounded mr-2 border"></div>
-                        <span><i class="fas fa-circle text-yellow-500 mr-1"></i>Filled</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-purple-500 rounded mr-2 border"></div>
-                        <span><i class="fas fa-crown text-purple-500 mr-1"></i>Crown</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-gray-800 rounded mr-2 border"></div>
-                        <span><i class="fas fa-times-circle text-gray-600 mr-1"></i>Missing</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-blue-500 rounded mr-2 border"></div>
-                        <span><i class="fas fa-stethoscope text-blue-500 mr-1"></i>Root Canal</span>
-                    </div>
-                </div>
-                
-                <!-- Enhanced interaction hints -->
-                <div class="mt-4 pt-3 border-t border-gray-200">
-                    <div class="text-xs text-gray-600 space-y-1">
-                        <div><i class="fas fa-mouse-pointer text-blue-500 mr-2"></i><strong>Hover:</strong> View detailed condition information</div>
-                        <div><i class="fas fa-hand-pointer text-green-500 mr-2"></i><strong>Click:</strong> See complete tooth history</div>
-                        <div><i class="fas fa-eye-slash text-gray-500 mr-2"></i><strong>Missing teeth:</strong> Hidden from view (not colored)</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    generateConditionsSummaryPanel() {
-        return `
-            <!-- Detailed Conditions Summary Panel -->
-            <div class="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200" id="conditionsSummaryPanel">
-                <h5 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                    <i class="fas fa-chart-bar text-blue-500 mr-2"></i>
-                    Dental Conditions Summary
-                    <button onclick="recordsManager.toggleConditionsDetail()" class="ml-auto text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600" id="conditionsToggleBtn">
-                        Show Details
-                    </button>
-                </h5>
-                
-                <div id="conditionsSummaryContent" class="text-sm">
-                    <div class="text-center text-gray-500 py-2">
-                        <i class="fas fa-spinner fa-spin mr-2"></i>
-                        Loading conditions summary...
-                    </div>
-                </div>
-                
-                <div id="conditionsDetailContent" class="hidden mt-4 pt-4 border-t border-blue-200">
-                    <!-- Detailed conditions will be populated here -->
-                </div>
-            </div>
-        `;
-    }
-
-    generateChartSummary(chartResponse) {
-        if (!chartResponse.chart || chartResponse.chart.length === 0) return '';
-        
-        return `
-            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h5 class="text-sm font-semibold text-gray-700 mb-2">Chart Summary</h5>
-                <div class="grid grid-cols-3 gap-4 text-center text-sm">
-                    <div>
-                        <div class="text-lg font-bold text-blue-600">${chartResponse.chart.length}</div>
-                        <div class="text-gray-600">Total Records</div>
-                    </div>
-                    <div>
-                        <div class="text-lg font-bold text-green-600">${Object.keys(chartResponse.teeth_data || {}).length}</div>
-                        <div class="text-gray-600">Teeth Recorded</div>
-                    </div>
-                    <div>
-                        <div class="text-lg font-bold text-orange-600">${chartResponse.chart.filter(r => r.created_at && new Date(r.created_at) > new Date(Date.now() - 30*24*60*60*1000)).length}</div>
-                        <div class="text-gray-600">Recent (30 days)</div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+    // REMOVED: generateColorLegend() - Color legend section removed from dental chart display
+    
+    // REMOVED: generateConditionsSummaryPanel() - Conditions summary panel removed from dental chart display
+    
+    // REMOVED: generateChartSummary() - Chart summary removed from dental chart display
 
     generateVisualChartsSection(chartResponse) {
         if (!chartResponse.visual_charts || chartResponse.visual_charts.length === 0) {
@@ -793,105 +622,261 @@ class DisplayManager {
     generateMedicalRecordsHTML(medicalData) {
         console.log('🏥 Generating medical records HTML with data:', medicalData);
         
-        if (!medicalData || !medicalData.medical_records) {
-            return `
-                <div class="bg-white p-6">
-                    <h3 class="text-lg font-bold mb-4">
-                        <i class="fas fa-file-medical text-red-600 mr-2"></i>Medical Records
-                    </h3>
-                    <p class="text-gray-500">No medical records found for this patient.</p>
-                </div>
-            `;
-        }
-
-        const medicalRecords = medicalData.medical_records || [];
-        const patientInfo = medicalData.patient_info || {};
-        const diagnoses = medicalData.diagnoses || [];
-        const xrays = medicalData.xrays || [];
-
         return `
             <div class="bg-white p-6">
-                <h3 class="text-lg font-bold mb-4">
-                    <i class="fas fa-file-medical text-red-600 mr-2"></i>Medical Records
-                </h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold">
+                        <i class="fas fa-file-medical text-red-600 mr-2"></i>Medical History
+                    </h3>
+                    <button onclick="window.recordsManager?.closePatientRecordsModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
                 
-                ${patientInfo && Object.keys(patientInfo).length > 0 ? `
-                    <div class="mb-6 bg-blue-50 rounded-lg p-4">
-                        <h4 class="text-md font-semibold text-blue-700 mb-3">
-                            <i class="fas fa-user text-blue-600 mr-2"></i>Patient Information
-                        </h4>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            ${patientInfo.allergies ? `<div><strong>Allergies:</strong> ${patientInfo.allergies}</div>` : ''}
-                            ${patientInfo.medical_conditions ? `<div><strong>Medical Conditions:</strong> ${patientInfo.medical_conditions}</div>` : ''}
-                            ${patientInfo.medications ? `<div><strong>Medications:</strong> ${patientInfo.medications}</div>` : ''}
-                            ${patientInfo.emergency_contact ? `<div><strong>Emergency Contact:</strong> ${patientInfo.emergency_contact}</div>` : ''}
+                <form class="space-y-6">
+                    <!-- Dental History Section -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h4 class="text-md font-semibold text-blue-700 mb-4">Dental History</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Previous Dentist (Optional):</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                       placeholder="nabuakkk">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Last Dental Visit Date (Optional):</label>
+                                <input type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                       value="2025-08-12">
+                            </div>
                         </div>
                     </div>
-                ` : ''}
 
-                ${diagnoses.length > 0 ? `
-                    <div class="mb-6">
-                        <h4 class="text-md font-semibold text-orange-700 mb-3">
-                            <i class="fas fa-stethoscope text-orange-600 mr-2"></i>Diagnoses
-                        </h4>
-                        <div class="space-y-2">
-                            ${diagnoses.map(diagnosis => `
-                                <div class="border border-orange-200 rounded-lg p-3 bg-orange-50">
-                                    <div class="font-medium text-gray-900">${diagnosis.diagnosis_name || 'Diagnosis'}</div>
-                                    <div class="text-sm text-gray-600">
-                                        <i class="fas fa-calendar mr-1"></i>Date: ${this.utilities.formatDate(diagnosis.diagnosis_date)}
+                    <!-- Medical History Section -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h4 class="text-md font-semibold text-green-700 mb-4">Medical History (All fields optional)</h4>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                            <p class="text-sm text-yellow-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <strong>For Staff Convenience:</strong> All medical history fields are optional. You can leave any field blank if the patient doesn't have the information, doesn't know the answer, or prefers not to answer.
+                            </p>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Name of Physician (Optional):</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                       placeholder="BRandon">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Specialty (Optional):</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                       placeholder="BRandon">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Office Telephone Number (Optional):</label>
+                                <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                       placeholder="908098089809809">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Office Address (Optional):</label>
+                                <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" rows="2" 
+                                          placeholder="BRandon"></textarea>
+                            </div>
+
+                            <!-- Health Questions in Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Are you in good health? (Optional)</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="good_health" value="yes" class="mr-2">
+                                            <span class="text-sm">Yes</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="good_health" value="no" class="mr-2">
+                                            <span class="text-sm">No</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="good_health" value="skip" class="mr-2" checked>
+                                            <span class="text-sm">Skip</span>
+                                        </label>
                                     </div>
-                                    ${diagnosis.description ? `
-                                        <div class="text-sm text-gray-700 mt-1">${diagnosis.description}</div>
-                                    ` : ''}
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Are you under medical treatment now? (Optional)</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="medical_treatment" value="yes" class="mr-2">
+                                            <span class="text-sm">Yes</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="medical_treatment" value="no" class="mr-2">
+                                            <span class="text-sm">No</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="medical_treatment" value="skip" class="mr-2" checked>
+                                            <span class="text-sm">Skip</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Have you ever had a serious illness or surgical operation?</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="serious_illness" value="yes" class="mr-2">
+                                            <span class="text-sm">Yes</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="serious_illness" value="no" class="mr-2">
+                                            <span class="text-sm">No</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Have you ever been hospitalized?</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="hospitalized" value="yes" class="mr-2">
+                                            <span class="text-sm">Yes</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="hospitalized" value="no" class="mr-2">
+                                            <span class="text-sm">No</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Do you use tobacco products? (Optional)</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="tobacco" value="yes" class="mr-2">
+                                            <span class="text-sm">Yes</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="tobacco" value="no" class="mr-2">
+                                            <span class="text-sm">No</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="tobacco" value="skip" class="mr-2" checked>
+                                            <span class="text-sm">Skip</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Blood Pressure (mmHg) (Optional):</label>
+                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                                       placeholder="e.g., 120/80 (leave blank if unknown)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Allergies (Optional):</label>
+                                <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" rows="2" 
+                                          placeholder="Specify any allergies (leave blank if none)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- For Women Only Section -->
+                    <div class="border border-pink-200 rounded-lg p-4 bg-pink-50">
+                        <h4 class="text-md font-semibold text-pink-700 mb-4">For Women Only (All fields optional)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Are you pregnant? (Optional)</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="pregnant" value="yes" class="mr-2">
+                                        <span class="text-sm">Yes</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="pregnant" value="no" class="mr-2">
+                                        <span class="text-sm">No</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="pregnant" value="na" class="mr-2" checked>
+                                        <span class="text-sm">N/A</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Are you nursing? (Optional)</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="nursing" value="yes" class="mr-2">
+                                        <span class="text-sm">Yes</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="nursing" value="no" class="mr-2">
+                                        <span class="text-sm">No</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="nursing" value="na" class="mr-2" checked>
+                                        <span class="text-sm">N/A</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Are you taking birth control pills? (Optional)</label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="birth_control" value="yes" class="mr-2">
+                                        <span class="text-sm">Yes</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="birth_control" value="no" class="mr-2">
+                                        <span class="text-sm">No</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="birth_control" value="na" class="mr-2" checked>
+                                        <span class="text-sm">N/A</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Conditions Section -->
+                    <div class="border border-red-200 rounded-lg p-4">
+                        <h4 class="text-md font-semibold text-red-700 mb-4">Medical Conditions (All optional)</h4>
+                        <p class="text-sm text-gray-600 mb-4">Do you have or have you ever had any of the following? (Check all that apply - leave blank if none or unknown)</p>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            ${[
+                                'High blood pressure', 'Low blood pressure', 'Epilepsy/Convulsion', 'AIDS or HIV infection',
+                                'Sexually transmitted disease', 'Stomach trouble/Ulcers', 'Fainting Seizure', 'Rapid weight loss',
+                                'Radiation Therapy', 'Joint replacement/implant', 'Heart surgery', 'Heart attack',
+                                'Thyroid problem', 'Heart disease', 'Heart murmur', 'Hepatitis/Liver disease',
+                                'Rheumatic fever', 'Hay fever/Allergies', 'Respiratory problem', 'Hepatitis/Jaundice',
+                                'Tuberculosis', 'Swollen ankles', 'Kidney disease', 'Diabetes',
+                                'Chest pain', 'Stroke', 'Cancer/Tumors', 'Anemia',
+                                'Angina', 'Asthma', 'Emphysema', 'Bleeding problem',
+                                'Blood disease', 'Head injuries', 'Arthritis/Rheumatism'
+                            ].map(condition => `
+                                <label class="flex items-center text-sm">
+                                    <input type="checkbox" name="medical_conditions[]" value="${condition}" class="mr-2">
+                                    <span>${condition}</span>
+                                </label>
                             `).join('')}
                         </div>
-                    </div>
-                ` : ''}
-
-                ${xrays.length > 0 ? `
-                    <div class="mb-6">
-                        <h4 class="text-md font-semibold text-purple-700 mb-3">
-                            <i class="fas fa-x-ray text-purple-600 mr-2"></i>X-rays
-                        </h4>
-                        <div class="grid grid-cols-2 gap-4">
-                            ${xrays.map(xray => `
-                                <div class="border border-purple-200 rounded-lg p-3 bg-purple-50">
-                                    <div class="font-medium text-gray-900">${xray.xray_type || 'X-ray'}</div>
-                                    <div class="text-sm text-gray-600">
-                                        <i class="fas fa-calendar mr-1"></i>${this.utilities.formatDate(xray.xray_date)}
-                                    </div>
-                                    ${xray.notes ? `
-                                        <div class="text-sm text-gray-700 mt-1">${xray.notes}</div>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
+                        
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Others (specify) (Optional):</label>
+                            <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" rows="2" 
+                                      placeholder="BRandonBRandonBRandonBRandonBRandon"></textarea>
                         </div>
                     </div>
-                ` : ''}
 
-                ${medicalRecords.length > 0 ? `
-                    <div class="mb-4">
-                        <h4 class="text-md font-semibold text-green-700 mb-3">
-                            <i class="fas fa-notes-medical text-green-600 mr-2"></i>Medical Records
-                        </h4>
-                        <div class="space-y-3">
-                            ${medicalRecords.map(record => `
-                                <div class="border border-green-200 rounded-lg p-4 bg-green-50">
-                                    <div class="font-medium text-gray-900">${record.record_type || 'Medical Record'}</div>
-                                    <div class="text-sm text-gray-600 mb-2">
-                                        <i class="fas fa-calendar mr-1"></i>Date: ${this.utilities.formatDate(record.record_date)}
-                                        <i class="fas fa-user-md ml-3 mr-1"></i>Dr. ${record.doctor_name || 'Not specified'}
-                                    </div>
-                                    ${record.notes ? `
-                                        <div class="text-sm text-gray-700">${record.notes}</div>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
+                    <!-- Save Button -->
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                        <button type="button" onclick="window.recordsManager?.closePatientRecordsModal()" 
+                                class="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-save mr-2"></i>Save Medical History
+                        </button>
                     </div>
-                ` : ''}
+                </form>
             </div>
         `;
     }

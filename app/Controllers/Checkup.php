@@ -283,17 +283,100 @@ class Checkup extends BaseController
                 throw new \Exception('Failed to save dental record.');
             }
 
-            // Save dental chart data
+            // Save dental chart data (filter unchanged teeth)
             $chartData = $this->request->getPost('dental_chart');
             if ($chartData && is_array($chartData)) {
                 log_message('info', "Checkup save - Chart data received: " . json_encode($chartData));
-                $chartSaveResult = $this->dentalChartModel->saveChart($recordId, $chartData);
-                log_message('info', "Checkup save - Chart save result: " . ($chartSaveResult ? 'success' : 'failed'));
-                
-                if (!$chartSaveResult) {
-                    $dbError = $db->error();
-                    log_message('error', "Failed to save dental chart for record ID: {$recordId}");
-                    log_message('error', "DB Error (chart insertBatch): " . json_encode($dbError));
+
+                // Build baseline (previous values) per tooth for comparison
+                $normalize = static function ($v) {
+                    if ($v === null) { return ''; }
+                    return trim((string) $v);
+                };
+
+                $baselineByTooth = [];
+                if ($existingRecord) {
+                    // Baseline is the current record's chart (so edits preserve unchanged entries)
+                    $existingRows = $this->dentalChartModel->getRecordChart($recordId);
+                    foreach ($existingRows as $row) {
+                        $tooth = (int) ($row['tooth_number'] ?? 0);
+                        if ($tooth > 0 && !isset($baselineByTooth[$tooth])) {
+                            $baselineByTooth[$tooth] = $row;
+                        }
+                    }
+                } else {
+                    // Baseline is the latest known state per tooth from patient's previous records
+                    $prevRecords = $this->dentalRecordModel->where('user_id', $patientId)
+                        ->orderBy('record_date', 'DESC')->findAll();
+                    foreach ($prevRecords as $rec) {
+                        $rows = $this->dentalChartModel->getRecordChart($rec['id']);
+                        foreach ($rows as $row) {
+                            $tooth = (int) ($row['tooth_number'] ?? 0);
+                            if ($tooth > 0 && !isset($baselineByTooth[$tooth])) {
+                                $baselineByTooth[$tooth] = $row;
+                            }
+                        }
+                    }
+                }
+
+                // Filter to only changed teeth from submitted chart
+                $filtered = [];
+                foreach ($chartData as $toothNumber => $data) {
+                    $tooth = (int) $toothNumber;
+                    $curCond = $normalize($data['condition'] ?? '');
+                    $curTreat = $normalize($data['treatment'] ?? '');
+                    $curNotes = $normalize($data['notes'] ?? '');
+
+                    $hasAny = ($curCond !== '') || ($curTreat !== '') || ($curNotes !== '');
+                    if (!$hasAny) { continue; }
+
+                    $base = $baselineByTooth[$tooth] ?? null;
+                    $baseCond = $normalize($base['condition'] ?? '');
+                    $baseTreat = $normalize($base['status'] ?? '');
+                    $baseNotes = $normalize($base['notes'] ?? '');
+
+                    $changed = ($curCond !== $baseCond) || ($curTreat !== $baseTreat) || ($curNotes !== $baseNotes);
+                    if ($changed) {
+                        $filtered[$tooth] = [
+                            'condition' => $curCond,
+                            'treatment' => $curTreat,
+                            'notes' => $curNotes,
+                        ];
+                    }
+                }
+
+                if ($existingRecord) {
+                    // For updates: merge filtered changes with existing baseline so the record keeps unchanged teeth
+                    $mergedForSave = [];
+                    // Start with baseline -> convert to expected input shape
+                    foreach ($baselineByTooth as $tooth => $row) {
+                        $mergedForSave[$tooth] = [
+                            'condition' => $normalize($row['condition'] ?? ''),
+                            'treatment' => $normalize($row['status'] ?? ''),
+                            'notes' => $normalize($row['notes'] ?? ''),
+                        ];
+                    }
+                    // Apply changes
+                    foreach ($filtered as $tooth => $payload) {
+                        $mergedForSave[$tooth] = $payload;
+                    }
+                    $toSave = $mergedForSave;
+                } else {
+                    // New record: only save changed teeth (do not copy old teeth)
+                    $toSave = $filtered;
+                }
+
+                if (!empty($toSave)) {
+                    $chartSaveResult = $this->dentalChartModel->saveChart($recordId, $toSave);
+                    log_message('info', "Checkup save - Filtered chart saved (" . count($toSave) . " teeth). Result: " . ($chartSaveResult ? 'success' : 'failed'));
+                    if (!$chartSaveResult) {
+                        $dbError = $db->error();
+                        log_message('error', "Failed to save dental chart for record ID: {$recordId}");
+                        log_message('error', "DB Error (chart insertBatch): " . json_encode($dbError));
+                    }
+                } else {
+                    log_message('info', 'Checkup save - No changed teeth to save after filtering');
+                    // If this is a new record and nothing changed, keep record but no chart rows
                 }
             } else {
                 log_message('info', "Checkup save - No chart data received or invalid format");
