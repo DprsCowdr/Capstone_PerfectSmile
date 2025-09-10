@@ -22,37 +22,37 @@ class Patient extends BaseController
             return redirect()->to('/dashboard');
         }
         
-        // Get patient's appointments
-        $appointmentModel = new \App\Models\AppointmentModel();
-        $myAppointments = $appointmentModel->select('appointments.*, branches.name as branch_name')
-                                          ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                          ->where('appointments.user_id', $user['id'])
-                                          ->orderBy('appointments.appointment_datetime', 'DESC')
-                                          ->limit(5)
-                                          ->findAll();
+    // Get patient's appointments (respect selected branch if set)
+    $appointmentModel = new \App\Models\AppointmentModel();
+    $selectedBranch = $this->resolveBranchId();
+    $baseQuery = $appointmentModel->select('appointments.*, branches.name as branch_name')
+                      ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                      ->where('appointments.user_id', $user['id']);
+    if ($selectedBranch) $baseQuery->where('appointments.branch_id', (int)$selectedBranch);
+    $myAppointments = $baseQuery->orderBy('appointments.appointment_datetime', 'DESC')->limit(5)->findAll();
         
         // Get upcoming appointments
-        $upcomingAppointments = $appointmentModel->select('appointments.*, branches.name as branch_name')
-                                                ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                                ->where('appointments.user_id', $user['id'])
-                                                ->where('appointments.appointment_datetime >=', date('Y-m-d H:i:s'))
-                                                ->whereIn('appointments.status', ['confirmed', 'scheduled'])
-                                                ->orderBy('appointments.appointment_datetime', 'ASC')
-                                                ->limit(3)
-                                                ->findAll();
+    $upcomingQuery = $appointmentModel->select('appointments.*, branches.name as branch_name')
+                     ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                     ->where('appointments.user_id', $user['id'])
+                     ->where('appointments.appointment_datetime >=', date('Y-m-d H:i:s'))
+                     ->whereIn('appointments.status', ['confirmed', 'scheduled'])
+                     ->orderBy('appointments.appointment_datetime', 'ASC');
+    if ($selectedBranch) $upcomingQuery->where('appointments.branch_id', (int)$selectedBranch);
+    $upcomingAppointments = $upcomingQuery->limit(3)->findAll();
         
-        // Get total appointment count
-        $totalAppointments = $appointmentModel->where('user_id', $user['id'])->countAllResults();
-        
-        // Get completed treatments count
-        $completedTreatments = $appointmentModel->where('user_id', $user['id'])
-                                               ->where('status', 'completed')
-                                               ->countAllResults();
-        
-        // Get pending appointments count
-        $pendingAppointments = $appointmentModel->where('user_id', $user['id'])
-                                               ->whereIn('status', ['pending', 'scheduled'])
-                                               ->countAllResults();
+    // Get total appointment counts (respect branch)
+    $countBase = $appointmentModel->where('user_id', $user['id']);
+    if ($selectedBranch) $countBase->where('branch_id', (int)$selectedBranch);
+    $totalAppointments = $countBase->countAllResults();
+
+    $completedBase = $appointmentModel->where('user_id', $user['id'])->where('status', 'completed');
+    if ($selectedBranch) $completedBase->where('branch_id', (int)$selectedBranch);
+    $completedTreatments = $completedBase->countAllResults();
+
+    $pendingBase = $appointmentModel->where('user_id', $user['id'])->whereIn('status', ['pending', 'scheduled']);
+    if ($selectedBranch) $pendingBase->where('branch_id', (int)$selectedBranch);
+    $pendingAppointments = $pendingBase->countAllResults();
 
         // Load branches for the dashboard booking panel
         $branches = [];
@@ -119,9 +119,9 @@ class Patient extends BaseController
         if (!empty($appConfig->enableCalendarRefactor)) {
             // Load patient's appointments and branch list for the patient calendar JS
             $appointmentModel = new \App\Models\AppointmentModel();
-            $appointments = $appointmentModel->where('user_id', $user['id'])
-                                             ->orderBy('appointment_datetime', 'DESC')
-                                             ->findAll();
+            $appointments = $appointmentModel->where('user_id', $user['id'])->orderBy('appointment_datetime', 'DESC');
+            if ($selectedBranch) $appointments->where('branch_id', (int)$selectedBranch);
+            $appointments = $appointments->findAll();
 
             // Load branches (if Branch model exists)
             $branches = [];

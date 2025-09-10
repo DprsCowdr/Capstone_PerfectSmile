@@ -17,4 +17,10 @@ class BranchNotificationModel extends Model
     protected $dateFormat = 'datetime';
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
+
+    // cast payload to/from json and sent to boolean for convenience
+    protected array $casts = [
+        'payload' => 'json',
+        'sent' => 'boolean',
+    ];
 }

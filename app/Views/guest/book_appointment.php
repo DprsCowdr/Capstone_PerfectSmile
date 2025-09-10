@@ -216,10 +216,12 @@
                 </div>
                 <div class="form-group">
                     <label for="branch_id">Branch Location *</label>
-                    <select id="branch_id" name="branch_id" required>
+                    <?php $selBranch = session('selected_branch_id') ?? old('branch_id') ?? ''; ?>
+                    <select id="branch_id" name="branch_id" required class="mobile-friendly-select">
                         <option value="">Select a branch</option>
                         <?php foreach ($branches as $branch): ?>
-                            <option value="<?= $branch['id'] ?>" <?= old('branch_id') == $branch['id'] ? 'selected' : '' ?>>
+                            <?php $sel = ($selBranch == $branch['id']) ? 'selected' : ''; ?>
+                            <option value="<?= $branch['id'] ?>" <?= $sel ?>>
                                 <?= $branch['name'] ?>
                             </option>
                         <?php endforeach; ?>
@@ -303,6 +305,20 @@ function updateAvailableTimes() {
 
 dateInput.addEventListener('change', updateAvailableTimes);
 branchInput.addEventListener('change', updateAvailableTimes);
+</script>
+
+<script>
+// Improve mobile touch targets for branch select and auto-select single branch
+document.addEventListener('DOMContentLoaded', function(){
+    try{
+        var sel = document.getElementById('branch_id');
+        if(!sel) return;
+        sel.classList.add('w-full');
+        // If only one branch option (besides placeholder), auto-select it
+        var opts = Array.from(sel.options).filter(o => o.value !== '');
+        if(opts.length === 1 && !sel.value){ sel.value = opts[0].value; sel.dispatchEvent(new Event('change')); }
+    }catch(e){ console.error('branch select init error', e); }
+});
 </script>
 
 <?= view('templates/footer') ?> 

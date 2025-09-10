@@ -238,6 +238,28 @@ class AdminController extends BaseAdminController
                      ->where('a.branch_id', (int)$branchId);
             $trow = $tb->get()->getRowArray();
             $treatmentCounts[] = (int) ($trow['cnt'] ?? 0);
+
+            // revenue per day (invoices created) and payments received per day
+            try {
+                $ib = $db->table('invoices')
+                         ->select('COALESCE(SUM(total_amount),0) as total')
+                         ->where('DATE(created_at)', $d)
+                         ->where('branch_id', (int)$branchId);
+                $irow = $ib->get()->getRowArray();
+                $revenues[] = (float) ($irow['total'] ?? 0);
+            } catch (\Exception $e) {
+                $revenues[] = 0.0;
+            }
+            try {
+                $pb = $db->table('payments')
+                         ->select('COALESCE(SUM(amount),0) as total')
+                         ->where('DATE(created_at)', $d)
+                         ->where('branch_id', (int)$branchId);
+                $prow = $pb->get()->getRowArray();
+                $paymentTotals[] = (float) ($prow['total'] ?? 0);
+            } catch (\Exception $e) {
+                $paymentTotals[] = 0.0;
+            }
         }
 
         // status counts for last 7 days
@@ -256,14 +278,25 @@ class AdminController extends BaseAdminController
         $avgPerDay = (count($counts) ? (array_sum($counts) / count($counts)) : 0);
         $peakDay = count($counts) ? $labels[array_search(max($counts), $counts)] : null;
 
+        // compute revenue totals for the period
+        $totalRevenue = array_sum($revenues ?? []);
+        $totalPayments = array_sum($paymentTotals ?? []);
+
+        $mergedTotals = array_merge((array)$totals, [
+            'total_revenue' => $totalRevenue,
+            'total_payments' => $totalPayments
+        ]);
+
         return $this->response->setJSON([
             'success' => true,
-            'totals' => $totals,
+            'totals' => $mergedTotals,
             'nextAppointment' => $nextAppointment,
             'labels' => $labels,
             'counts' => $counts,
             'patientCounts' => $patientCounts,
             'treatmentCounts' => $treatmentCounts,
+            'revenueTotals' => $revenues ?? [],
+            'paymentTotals' => $paymentTotals ?? [],
             'statusCounts' => $statusCounts,
             'avgPerDay' => round($avgPerDay, 1),
             'peakDay' => $peakDay
@@ -657,12 +690,12 @@ class AdminController extends BaseAdminController
         $branches = $branchModel->findAll();
         
         // Get branch assignments for each user with branch names
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $branchAssignments = [];
         foreach ($users as $userData) {
-            $assignments = $branchUserModel->select('branch_user.*, branches.name as branch_name')
-                                          ->join('branches', 'branches.id = branch_user.branch_id')
-                                          ->where('branch_user.user_id', $userData['id'])
+            $assignments = $branchUserModel->select('branch_staff.*, branches.name as branch_name')
+                                          ->join('branches', 'branches.id = branch_staff.branch_id')
+                                          ->where('branch_staff.user_id', $userData['id'])
                                           ->findAll();
             $branchAssignments[$userData['id']] = $assignments;
         }
@@ -721,7 +754,7 @@ class AdminController extends BaseAdminController
         }
 
         $userModel = new \App\Models\UserModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         // Create user
         $userData = [
@@ -804,7 +837,7 @@ class AdminController extends BaseAdminController
 
         $userModel = new \App\Models\UserModel();
         $branchModel = new \App\Models\BranchModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         $userData = $userModel->find($id);
         if (!$userData) {
@@ -833,7 +866,7 @@ class AdminController extends BaseAdminController
         $formData = $this->request->getPost();
         
         $userModel = new \App\Models\UserModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         $userData = $userModel->find($id);
         if (!$userData) {
@@ -920,7 +953,7 @@ class AdminController extends BaseAdminController
         }
 
         $userModel = new \App\Models\UserModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         // Delete branch assignments first
         $branchUserModel->where('user_id', $id)->delete();
@@ -987,11 +1020,14 @@ class AdminController extends BaseAdminController
      */
     public function switchBranch()
     {
-        if (!$this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
+        // Accept AJAX JSON or traditional POST form submissions
+        $branchId = null;
+        if ($this->request->isAJAX()) {
+            $json = $this->request->getJSON(true);
+            $branchId = $json['branch_id'] ?? null;
+        } else {
+            $branchId = $this->request->getPost('branch_id') ?: $this->request->getGet('branch_id');
         }
-
-        $branchId = $this->request->getJSON()->branch_id ?? '';
         
         // Validate branch exists
         if ($branchId) {

@@ -18,8 +18,9 @@ class Appointments extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(401);
         }
 
-        $branchId = $this->request->getPost('branch_id');
-        $date = $this->request->getPost('date') ?? date('Y-m-d');
+    // Resolve branch id via BaseController helper (POST/GET/JSON/session)
+    $branchId = $this->resolveBranchId();
+    $date = $this->request->getPost('date') ?? $this->request->getGet('date') ?? date('Y-m-d');
 
         try {
             $appointmentModel = new \App\Models\AppointmentModel();
@@ -68,8 +69,8 @@ class Appointments extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(401);
         }
 
-        $branchId = $this->request->getPost('branch_id');
-        $date = $this->request->getPost('date') ?? date('Y-m-d');
+    $branchId = $this->resolveBranchId();
+    $date = $this->request->getPost('date') ?? $this->request->getGet('date') ?? date('Y-m-d');
         $duration = (int) ($this->request->getPost('duration') ?? 30);
         $dentistId = $this->request->getPost('dentist_id') ?: null;
 
@@ -135,10 +136,10 @@ class Appointments extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(401);
         }
 
-        $date = $this->request->getPost('date');
-        $time = $this->request->getPost('time');
-        $duration = (int) ($this->request->getPost('duration') ?? 30);
-        $branchId = $this->request->getPost('branch_id') ?: null;
+    $date = $this->request->getPost('date');
+    $time = $this->request->getPost('time');
+    $duration = (int) ($this->request->getPost('duration') ?? 30);
+    $branchId = $this->resolveBranchId();
         $dentistId = $this->request->getPost('dentist_id') ?: null;
 
         if (!$date || !$time) {

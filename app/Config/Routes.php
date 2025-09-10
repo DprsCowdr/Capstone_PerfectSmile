@@ -116,7 +116,15 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('services/update/(:num)', 'AdminController::updateService/$1');
     $routes->delete('services/delete/(:num)', 'AdminController::deleteService/$1');
     $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
-    $routes->get('branches', 'AdminController::branches'); // → management/branches.php
+    // Branch management handled by BranchController
+    $routes->get('branches', 'BranchController::index');
+    $routes->get('branches/create', 'BranchController::create');
+    $routes->post('branches', 'BranchController::store');
+    $routes->get('branches/(:num)', 'BranchController::show/$1');
+    $routes->get('branches/(:num)/edit', 'BranchController::edit/$1');
+    $routes->post('branches/update/(:num)', 'BranchController::update/$1');
+    $routes->post('branches/delete/(:num)', 'BranchController::delete/$1');
+    // Keep legacy save-hours endpoint (if used elsewhere)
     $routes->post('branches/(:num)/save-hours', 'AdminController::saveBranchHours/$1');
     $routes->get('settings', 'AdminController::settings'); // → management/settings.php
     
@@ -271,9 +279,6 @@ $routes->group('checkin', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'PatientCheckin::index');
     $routes->post('process/(:num)', 'PatientCheckin::checkinPatient/$1');
 });
-
-// Temporary workaround: Remove auth filter from process route
-$routes->post('checkin/process/(:num)', 'PatientCheckin::checkinPatient/$1');
 
 // Treatment Queue routes (for dentists)
 $routes->group('queue', ['filter' => 'auth'], function($routes) {

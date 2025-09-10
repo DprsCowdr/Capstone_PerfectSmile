@@ -273,7 +273,8 @@ class Guest extends BaseController
     {
     $request = $this->request ?? \Config\Services::request();
     $date = $request->getGet('date');
-    $branchId = $request->getGet('branch_id');
+    // prefer explicit param, then session selected branch
+    $branchId = $request->getGet('branch_id') ?: session('selected_branch_id');
         if (!$date || !$branchId) {
             return $this->response->setJSON([]);
         }
