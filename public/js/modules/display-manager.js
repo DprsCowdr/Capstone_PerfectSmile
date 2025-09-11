@@ -92,7 +92,17 @@ class DisplayManager {
     // ==================== DENTAL RECORDS DISPLAY ====================
 
     displayDentalRecords(records) {
-        let content = '<div class="bg-white p-6"><h3 class="text-lg font-bold mb-4">Dental Records</h3>';
+        let content = '<div class="bg-white p-6">';
+        content += '<div class="flex justify-between items-center mb-4">';
+        content += '<h3 class="text-lg font-bold">Dental Records</h3>';
+        if (records.length > 0) {
+            content += `<button onclick="recordsManager.displayManager.printDentalRecords(${JSON.stringify(records).replace(/"/g, '&quot;')})" 
+                            class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors flex items-center gap-1">
+                        <i class="fas fa-print"></i>
+                        Print Records
+                    </button>`;
+        }
+        content += '</div>';
         
         if (records.length === 0) {
             content += '<p class="text-gray-500 text-center py-8">No dental records found</p>';
@@ -125,14 +135,20 @@ class DisplayManager {
     // ==================== DENTAL CHART DISPLAY ====================
 
     displayDentalChart(chartResponse) {
+        console.log('🎨 Displaying dental chart with response:', chartResponse);
+        console.log('📊 Visual charts data:', chartResponse.visual_charts);
+        
         const content = this.generateDentalChartHTML(chartResponse);
         this.setModalContent(content);
         
         // Initialize visual charts after content is loaded
         if (chartResponse.visual_charts && chartResponse.visual_charts.length > 0) {
+            console.log('✅ Initializing visual charts:', chartResponse.visual_charts.length, 'charts found');
             setTimeout(() => {
                 this.initializeVisualCharts(chartResponse.visual_charts);
             }, 100);
+        } else {
+            console.log('❌ No visual charts found in response');
         }
     }
 
@@ -218,10 +234,16 @@ class DisplayManager {
                             <i class="fas fa-calendar text-blue-500 mr-1"></i>
                             ${this.formatDate(chart.record_date)}
                         </h5>
-                        <button onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')" 
-                                class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
-                            <i class="fas fa-eye mr-1"></i>Toggle View
-                        </button>
+                        <div class="flex gap-1">
+                            <button onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')" 
+                                    class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                                <i class="fas fa-eye mr-1"></i>Toggle View
+                            </button>
+                            <button onclick="recordsManager.displayManager.printSingleChart(${JSON.stringify(chart).replace(/"/g, '&quot;')})" 
+                                    class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">
+                                <i class="fas fa-print mr-1"></i>Print
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="hidden p-4 bg-white">
@@ -245,11 +267,18 @@ class DisplayManager {
 
         return `
             <div class="bg-green-50 rounded-lg p-4 mb-6 border border-green-200">
-                <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                    <i class="fas fa-image text-green-500 mr-2"></i>
-                    Visual Dental Charts 
-                    <span class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded">${chartResponse.visual_charts.length}</span>
-                </h4>
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-image text-green-500 mr-2"></i>
+                        Visual Dental Charts 
+                        <span class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded">${chartResponse.visual_charts.length}</span>
+                    </h4>
+                    <button onclick="recordsManager.displayManager.printVisualCharts(${JSON.stringify(chartResponse.visual_charts).replace(/"/g, '&quot;')})" 
+                            class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors flex items-center gap-1">
+                        <i class="fas fa-print"></i>
+                        Print Charts
+                    </button>
+                </div>
                 <p class="text-sm text-gray-600 mb-4">
                     <i class="fas fa-info-circle text-green-500 mr-1"></i>
                     Visual annotations and markings made by dentists during examinations.
@@ -260,31 +289,117 @@ class DisplayManager {
     }
 
     initializeVisualCharts(visualCharts) {
+        console.log('🎨 Initializing visual charts:', visualCharts);
+        
+        const drawStrokes = (ctx, strokes) => {
+            for (const s of (strokes || [])) {
+                if (!s?.points?.length) continue;
+                ctx.save();
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = Number(s.size) || 2;
+                if (s.tool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.strokeStyle = 'rgba(0,0,0,1)';
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.strokeStyle = s.color || '#ff0000';
+                }
+                ctx.beginPath();
+                ctx.moveTo(s.points[0].x, s.points[0].y);
+                for (let i = 1; i < s.points.length; i++) {
+                    ctx.lineTo(s.points[i].x, s.points[i].y);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+        };
+
         visualCharts.forEach((chart, index) => {
+            console.log(`🎨 Processing chart ${index}:`, chart);
             const container = document.querySelector(`[data-chart-index="${index}"]`);
-            if (!container) return;
-            
+            if (!container) {
+                console.log(`❌ Container not found for chart ${index}`);
+                return;
+            }
             const canvas = container.querySelector('.visual-chart-canvas');
-            if (!canvas) return;
-            
+            if (!canvas) {
+                console.log(`❌ Canvas not found for chart ${index}`);
+                return;
+            }
             const ctx = canvas.getContext('2d');
-            const chartData = chart.visual_chart_data;
-            
-            // Load the visual chart data
-            const chartImg = new Image();
-            chartImg.onload = () => {
-                // Set canvas size
-                canvas.width = chartImg.width;
-                canvas.height = chartImg.height;
-                
-                // Check if this is a composite image (has background) or drawings-only
-                this.renderVisualChart(ctx, chartImg, canvas);
-            };
-            chartImg.onerror = () => {
-                console.warn('Failed to load visual chart data for chart', index);
-                canvas.style.display = 'none';
-            };
-            chartImg.src = chartData;
+            const raw = chart.visual_chart_data;
+            console.log(`📊 Chart ${index} raw data:`, raw ? raw.substring(0, 100) + '...' : 'null');
+            if (!raw || !raw.trim()) { 
+                console.log(`❌ No data for chart ${index}`);
+                canvas.style.display = 'none'; 
+                return; 
+            }
+
+            // JSON state?
+            if (raw.trim().startsWith('{')) {
+                console.log(`📊 Chart ${index} is JSON format`);
+                try {
+                    const state = JSON.parse(raw);
+                    console.log(`📊 Chart ${index} parsed state:`, state);
+                    canvas.width = state.width || 1000;
+                    canvas.height = state.height || 600;
+                    if (state.background) {
+                        console.log(`📊 Chart ${index} loading background:`, state.background);
+                        const bg = new Image();
+                        bg.onload = () => {
+                            console.log(`📊 Chart ${index} background loaded, drawing strokes`);
+                            ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+                            drawStrokes(ctx, state.strokes);
+                        };
+                        bg.onerror = () => {
+                            console.log(`❌ Chart ${index} background failed to load, trying to draw strokes without background`);
+                            drawStrokes(ctx, state.strokes);
+                        };
+                        // Handle relative paths by prepending base URL if needed
+                        let bgSrc = state.background;
+                        if (bgSrc.startsWith('/img/')) {
+                            bgSrc = window.location.origin + bgSrc;
+                        }
+                        // Handle absolute localhost URLs (convert to relative)
+                        else if (bgSrc.startsWith('http://localhost:8080/')) {
+                            bgSrc = bgSrc.replace('http://localhost:8080', '');
+                            bgSrc = window.location.origin + bgSrc;
+                        }
+                        console.log(`📊 Chart ${index} final background URL:`, bgSrc);
+                        bg.src = bgSrc;
+                    } else {
+                        console.log(`📊 Chart ${index} no background, drawing strokes only`);
+                        drawStrokes(ctx, state.strokes);
+                    }
+                } catch (e) {
+                    console.warn(`❌ Chart ${index} Invalid visual_chart_data JSON:`, e);
+                    canvas.style.display = 'none';
+                }
+                return;
+            }
+
+            // Backward compatibility: data URL images
+            if (raw.startsWith('data:image/')) {
+                console.log(`📊 Chart ${index} is data URL format`);
+                const chartImg = new Image();
+                chartImg.onload = () => {
+                    console.log(`📊 Chart ${index} data URL image loaded`);
+                    canvas.width = chartImg.width;
+                    canvas.height = chartImg.height;
+                    this.renderVisualChart(ctx, chartImg, canvas);
+                };
+                chartImg.onerror = () => { 
+                    console.log(`❌ Chart ${index} data URL image failed to load`);
+                    canvas.style.display = 'none'; 
+                };
+                chartImg.src = raw;
+                return;
+            }
+
+            // Unknown format
+            console.log(`❌ Chart ${index} unknown format:`, raw.substring(0, 50));
+            canvas.style.display = 'none';
         });
     }
 
@@ -334,6 +449,658 @@ class DisplayManager {
             };
             bgImg.src = `${window.BASE_URL}/img/d.jpg`;
         }
+    }
+
+    // ==================== PRINT FUNCTIONALITY ====================
+
+    printVisualCharts(visualCharts) {
+        console.log('🖨️ Printing visual charts:', visualCharts);
+        
+        // Create print window
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        
+        // Get patient info from current modal
+        const patientName = document.querySelector('.modal-panel h3')?.textContent || 'Patient';
+        
+        // Generate print content
+        const printContent = this.generatePrintContent(visualCharts, patientName);
+        
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Wait for images to load then print
+        printWindow.onload = function() {
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 1000);
+        };
+    }
+
+    printSingleChart(chart) {
+        console.log('🖨️ Printing single chart:', chart);
+        
+        // Create print window
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        
+        // Get patient info from current modal
+        const patientName = document.querySelector('.modal-panel h3')?.textContent || 'Patient';
+        
+        // Generate print content for single chart
+        const printContent = this.generateSingleChartPrintContent(chart, patientName);
+        
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Wait for images to load then print
+        printWindow.onload = function() {
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 1000);
+        };
+    }
+
+    generatePrintContent(visualCharts, patientName) {
+        const latestChart = visualCharts[0]; // Get the most recent chart
+        
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Visual Dental Chart - ${patientName}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        
+        * {
+            font-size: 8pt !important;
+            line-height: 1.1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+        
+        .a4-page {
+            width: 190mm;
+            height: 277mm;
+            padding: 5mm;
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            font-size: 7pt;
+            line-height: 1.0;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        .chart-header {
+            text-align: center;
+            margin-bottom: 3mm;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1mm;
+        }
+        
+        .chart-header h1 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 0 0 1mm 0;
+            color: #333;
+        }
+        
+        .patient-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 7pt;
+            margin-bottom: 1mm;
+        }
+        
+        .patient-info p {
+            margin: 0;
+        }
+        
+        .chart-image-container {
+            margin: 2mm 0;
+            text-align: center;
+            height: 120mm;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .print-chart-canvas {
+            max-width: 160mm;
+            max-height: 115mm;
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .treatments-section {
+            margin-top: 2mm;
+            height: 130mm;
+            overflow: hidden;
+        }
+        
+        .treatments-section h3 {
+            font-size: 9pt;
+            font-weight: bold;
+            color: #333;
+            margin: 0 0 1mm 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 0.5mm;
+        }
+        
+        .treatment-list {
+            margin-left: 1mm;
+            max-height: 125mm;
+            overflow: hidden;
+            column-count: 3;
+            column-gap: 2mm;
+            column-fill: auto;
+        }
+        
+        .treatment-item {
+            margin-bottom: 1mm;
+            font-size: 6pt;
+            break-inside: avoid;
+            display: block;
+            line-height: 1.1;
+        }
+        
+        .treatment-date {
+            font-weight: bold;
+            color: #007bff;
+            display: inline;
+        }
+        
+        .treatment-description {
+            color: #333;
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <div class="a4-page">
+        <div class="chart-header">
+            <h1>Visual Dental Chart</h1>
+            <div class="patient-info">
+                <p><strong>Patient:</strong> ${patientName}</p>
+                <p><strong>Date Printed:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+        </div>
+
+        <div class="chart-image-container">
+            <div class="visual-chart-wrapper" 
+                 data-chart-data='${JSON.stringify(latestChart.visual_chart_data)}'>
+                <canvas id="print-chart-canvas" width="800" height="600" class="print-chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="treatments-section">
+            <h3>Treatment History</h3>
+            <div class="treatment-list">
+                ${visualCharts.map(chart => `
+                    <div class="treatment-item">
+                        <span class="treatment-date">${new Date(chart.record_date).toLocaleDateString()}:</span>
+                        <span class="treatment-description">Visual dental examination with annotations</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function renderPrintChart() {
+            const canvas = document.getElementById('print-chart-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const wrapper = document.querySelector('.visual-chart-wrapper');
+            const chartData = wrapper.getAttribute('data-chart-data');
+            
+            if (!chartData) return;
+            
+            try {
+                const data = JSON.parse(chartData);
+                
+                // Load and draw background image
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Draw strokes if they exist
+                    if (data.strokes && Array.isArray(data.strokes)) {
+                        drawStrokes(ctx, data.strokes);
+                    }
+                };
+                img.onerror = function() {
+                    // Try alternative URL if the first one failed
+                    const altUrl = data.background.replace('localhost:8080', 'localhost:8081');
+                    if (altUrl !== data.background) {
+                        img.src = altUrl;
+                    } else {
+                        // Draw placeholder
+                        ctx.fillStyle = '#f0f0f0';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = '#666';
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
+                    }
+                };
+                img.src = data.background;
+            } catch (error) {
+                console.error('Error rendering visual chart:', error);
+            }
+        }
+        
+        function drawStrokes(ctx, strokes) {
+            for (const stroke of strokes) {
+                if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
+                
+                ctx.save();
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = Number(stroke.size) || 2;
+                
+                if (stroke.tool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.strokeStyle = 'rgba(0,0,0,1)';
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.strokeStyle = stroke.color || '#ff0000';
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let i = 1; i < stroke.points.length; i++) {
+                    ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPrintChart();
+        });
+    </script>
+</body>
+</html>
+        `;
+    }
+
+    generateSingleChartPrintContent(chart, patientName) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Visual Dental Chart - ${patientName}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        
+        * {
+            font-size: 8pt !important;
+            line-height: 1.1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+        
+        .a4-page {
+            width: 190mm;
+            height: 277mm;
+            padding: 5mm;
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            font-size: 7pt;
+            line-height: 1.0;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        .chart-header {
+            text-align: center;
+            margin-bottom: 3mm;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1mm;
+        }
+        
+        .chart-header h1 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 0 0 1mm 0;
+            color: #333;
+        }
+        
+        .patient-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 7pt;
+            margin-bottom: 1mm;
+        }
+        
+        .patient-info p {
+            margin: 0;
+        }
+        
+        .chart-image-container {
+            margin: 2mm 0;
+            text-align: center;
+            height: 200mm;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .print-chart-canvas {
+            max-width: 180mm;
+            max-height: 195mm;
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .chart-info {
+            margin-top: 2mm;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="a4-page">
+        <div class="chart-header">
+            <h1>Visual Dental Chart</h1>
+            <div class="patient-info">
+                <p><strong>Patient:</strong> ${patientName}</p>
+                <p><strong>Examination Date:</strong> ${new Date(chart.record_date).toLocaleDateString()}</p>
+                <p><strong>Date Printed:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+        </div>
+
+        <div class="chart-image-container">
+            <div class="visual-chart-wrapper" 
+                 data-chart-data='${JSON.stringify(chart.visual_chart_data)}'>
+                <canvas id="print-chart-canvas" width="800" height="600" class="print-chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-info">
+            <p>Visual dental examination chart with dentist annotations and markings</p>
+        </div>
+    </div>
+
+    <script>
+        function renderPrintChart() {
+            const canvas = document.getElementById('print-chart-canvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const wrapper = document.querySelector('.visual-chart-wrapper');
+            const chartData = wrapper.getAttribute('data-chart-data');
+            
+            if (!chartData) return;
+            
+            try {
+                const data = JSON.parse(chartData);
+                
+                // Load and draw background image
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Draw strokes if they exist
+                    if (data.strokes && Array.isArray(data.strokes)) {
+                        drawStrokes(ctx, data.strokes);
+                    }
+                };
+                img.onerror = function() {
+                    // Try alternative URL if the first one failed
+                    const altUrl = data.background.replace('localhost:8080', 'localhost:8081');
+                    if (altUrl !== data.background) {
+                        img.src = altUrl;
+                    } else {
+                        // Draw placeholder
+                        ctx.fillStyle = '#f0f0f0';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = '#666';
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
+                    }
+                };
+                img.src = data.background;
+            } catch (error) {
+                console.error('Error rendering visual chart:', error);
+            }
+        }
+        
+        function drawStrokes(ctx, strokes) {
+            for (const stroke of strokes) {
+                if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
+                
+                ctx.save();
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = Number(stroke.size) || 2;
+                
+                if (stroke.tool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.strokeStyle = 'rgba(0,0,0,1)';
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.strokeStyle = stroke.color || '#ff0000';
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let i = 1; i < stroke.points.length; i++) {
+                    ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPrintChart();
+        });
+    </script>
+</body>
+</html>
+        `;
+    }
+
+    printDentalRecords(records) {
+        console.log('🖨️ Printing dental records:', records);
+        
+        // Create print window
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        
+        // Get patient info from current modal
+        const patientName = document.querySelector('.modal-panel h3')?.textContent || 'Patient';
+        
+        // Generate print content for dental records
+        const printContent = this.generateDentalRecordsPrintContent(records, patientName);
+        
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Wait for content to load then print
+        printWindow.onload = function() {
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 1000);
+        };
+    }
+
+    generateDentalRecordsPrintContent(records, patientName) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dental Records - ${patientName}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        
+        * {
+            font-size: 8pt !important;
+            line-height: 1.1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+        
+        .a4-page {
+            width: 190mm;
+            height: 277mm;
+            padding: 5mm;
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+            font-size: 7pt;
+            line-height: 1.0;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3mm;
+            border-bottom: 1px solid #333;
+            padding-bottom: 1mm;
+        }
+        
+        .header h1 {
+            font-size: 12pt;
+            font-weight: bold;
+            margin: 0 0 1mm 0;
+            color: #333;
+        }
+        
+        .patient-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 7pt;
+            margin-bottom: 1mm;
+        }
+        
+        .patient-info p {
+            margin: 0;
+        }
+        
+        .records-section {
+            margin-top: 2mm;
+            height: 250mm;
+            overflow: hidden;
+        }
+        
+        .records-section h3 {
+            font-size: 9pt;
+            font-weight: bold;
+            color: #333;
+            margin: 0 0 1mm 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 0.5mm;
+        }
+        
+        .record-item {
+            margin-bottom: 2mm;
+            padding: 1mm;
+            border: 1px solid #ddd;
+            border-radius: 1px;
+            break-inside: avoid;
+        }
+        
+        .record-date {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 8pt;
+        }
+        
+        .record-dentist {
+            font-size: 6pt;
+            color: #666;
+            margin-bottom: 1mm;
+        }
+        
+        .record-content {
+            font-size: 6pt;
+            line-height: 1.1;
+        }
+        
+        .record-content p {
+            margin: 0.5mm 0;
+        }
+        
+        .record-content strong {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="a4-page">
+        <div class="header">
+            <h1>Dental Records</h1>
+            <div class="patient-info">
+                <p><strong>Patient:</strong> ${patientName}</p>
+                <p><strong>Date Printed:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+        </div>
+
+        <div class="records-section">
+            <h3>Treatment History</h3>
+            ${records.map(record => `
+                <div class="record-item">
+                    <div class="record-date">${new Date(record.record_date).toLocaleDateString()}</div>
+                    <div class="record-dentist">Dr. ${record.dentist_name || 'Unknown'}</div>
+                    <div class="record-content">
+                        ${record.chief_complaint ? `<p><strong>Chief Complaint:</strong> ${record.chief_complaint}</p>` : ''}
+                        ${record.treatment ? `<p><strong>Treatment:</strong> ${record.treatment}</p>` : ''}
+                        ${record.notes ? `<p><strong>Notes:</strong> ${record.notes}</p>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+</body>
+</html>
+        `;
     }
 
     // ==================== OTHER DISPLAY METHODS ====================

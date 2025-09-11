@@ -23,6 +23,79 @@
 <script src="<?= base_url('js/modules/records-manager.js') ?>"></script>
 
 <script>
+// Render inline visual charts (JSON or base64) inside All Records list
+document.addEventListener('DOMContentLoaded', function() {
+    const containers = document.querySelectorAll('.visual-chart-container');
+    containers.forEach((container) => {
+        const raw = container.getAttribute('data-chart-data') || '';
+        const canvas = container.querySelector('.visual-chart-canvas');
+        if (!canvas || !raw.trim()) return;
+        const ctx = canvas.getContext('2d');
+
+        function drawStrokes(ctx, strokes) {
+            (strokes || []).forEach((s) => {
+                if (!s || !Array.isArray(s.points) || s.points.length === 0) return;
+                ctx.save();
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = Number(s.size) || 2;
+                if (s.tool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.strokeStyle = 'rgba(0,0,0,1)';
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.strokeStyle = s.color || '#ff0000';
+                }
+                ctx.beginPath();
+                ctx.moveTo(s.points[0].x, s.points[0].y);
+                for (let i = 1; i < s.points.length; i++) {
+                    ctx.lineTo(s.points[i].x, s.points[i].y);
+                }
+                ctx.stroke();
+                ctx.restore();
+            });
+        }
+
+        // JSON state
+        if (raw.trim().startsWith('{')) {
+            try {
+                const state = JSON.parse(raw);
+                canvas.width = state.width || 1000;
+                canvas.height = state.height || 600;
+                if (state.background) {
+                    const bg = new Image();
+                    bg.onload = () => {
+                        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+                        drawStrokes(ctx, state.strokes || []);
+                    };
+                    bg.onerror = () => drawStrokes(ctx, state.strokes || []);
+                    bg.src = state.background;
+                } else {
+                    drawStrokes(ctx, state.strokes || []);
+                }
+            } catch (e) {
+                console.warn('Invalid visual_chart_data JSON:', e);
+                canvas.style.display = 'none';
+            }
+            return;
+        }
+
+        // Legacy data URL
+        if (raw.startsWith('data:image/')) {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+            };
+            img.onerror = () => { canvas.style.display = 'none'; };
+            img.src = raw;
+            return;
+        }
+
+        canvas.style.display = 'none';
+    });
+});
 // Set base URL for JavaScript modules
 window.BASE_URL = '<?= base_url() ?>';
 </script>
@@ -183,6 +256,14 @@ window.BASE_URL = '<?= base_url() ?>';
                                                 </button>
                                             </div>
                                         </div>
+                                        <?php if (!empty($record['visual_chart_data'])): ?>
+                                        <div class="mt-2 p-2 bg-gray-50 rounded border border-gray-100">
+                                            <div class="text-[11px] text-gray-600 mb-1">Visual Dental Chart - <?= date('M j, Y', strtotime($record['record_date'])) ?></div>
+                                            <div class="visual-chart-container" data-chart-data='<?= htmlspecialchars($record['visual_chart_data'], ENT_QUOTES) ?>'>
+                                                <canvas class="visual-chart-canvas" style="max-height: 300px; max-width: 100%; display: block;"></canvas>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
                                     <?php endforeach; ?>
                                 </div>
                             </div>

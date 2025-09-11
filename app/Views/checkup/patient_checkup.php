@@ -120,6 +120,15 @@
             <!-- Hidden input for appointment ID -->
             <input type="hidden" name="appointment_id" value="<?= $appointment['id'] ?>">
             
+            <!-- Hidden fields for all teeth surface and service data -->
+            <?php for ($i = 1; $i <= 32; $i++): ?>
+                <?php 
+                $prev = isset($prevChartByTooth[$i]) ? $prevChartByTooth[$i] : [];
+                ?>
+                <input type="hidden" name="dental_chart[<?= $i ?>][surface]" value="<?= isset($prev['surface']) ? esc($prev['surface']) : '' ?>" id="tooth-<?= $i ?>-surface">
+                <input type="hidden" name="dental_chart[<?= $i ?>][service_id]" value="<?= isset($prev['service_id']) ? esc($prev['service_id']) : '' ?>" id="tooth-<?= $i ?>-service">
+            <?php endfor; ?>
+            
             <!-- Dental Chart Section -->
             <div class="bg-white rounded-xl shadow-lg">
                 <div class="p-4 sm:p-6 border-b border-gray-200">
@@ -245,9 +254,6 @@
                                                         <label class="block text-xs font-medium text-gray-700 mb-1">Notes:</label>
                                                         <textarea name="dental_chart[<?= $i ?>][notes]" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1" placeholder="Additional notes..."><?= isset($prev['notes']) ? esc($prev['notes']) : '' ?></textarea>
                                                     </div>
-                                                    <!-- Hidden fields populated from popup -->
-                                                    <input type="hidden" name="dental_chart[<?= $i ?>][service_id]" value="<?= isset($prev['service_id']) ? esc($prev['service_id']) : '' ?>">
-                                                    <input type="hidden" name="dental_chart[<?= $i ?>][surface]" value="<?= isset($prev['surface']) ? esc($prev['surface']) : '' ?>">
                                                     <button type="button" onclick="closeToothMenu(<?= $i ?>)" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded">
                                                         Done
                                                     </button>
@@ -309,9 +315,6 @@
                                                         <label class="block text-xs font-medium text-gray-700 mb-1">Notes:</label>
                                                         <textarea name="dental_chart[<?= $i ?>][notes]" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1" placeholder="Additional notes..."><?= isset($prev['notes']) ? esc($prev['notes']) : '' ?></textarea>
                                                     </div>
-                                                    <!-- Hidden fields populated from popup -->
-                                                    <input type="hidden" name="dental_chart[<?= $i ?>][service_id]" value="<?= isset($prev['service_id']) ? esc($prev['service_id']) : '' ?>">
-                                                    <input type="hidden" name="dental_chart[<?= $i ?>][surface]" value="<?= isset($prev['surface']) ? esc($prev['surface']) : '' ?>">
                                                     <button type="button" onclick="closeToothMenu(<?= $i ?>)" class="w-full bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded">
                                                         Done
                                                     </button>
@@ -666,31 +669,75 @@
                 return ('' + v).trim();
             };
             form.addEventListener('submit', function() {
+                console.log('=== FORM SUBMISSION DEBUG ===');
                 const changedTeeth = new Set();
                 for (let i = 1; i <= 32; i++) {
                     const condEl = form.querySelector(`select[name="dental_chart[${i}][condition]"]`);
                     const treatEl = form.querySelector(`select[name="dental_chart[${i}][treatment]"]`);
                     const notesEl = form.querySelector(`textarea[name="dental_chart[${i}][notes]"]`);
+                    const serviceEl = document.getElementById(`tooth-${i}-service`);
+                    const surfaceEl = document.getElementById(`tooth-${i}-surface`);
                     if (!condEl && !treatEl && !notesEl) continue;
                     const curCond = normalize(condEl ? condEl.value : '');
                     const curTreat = normalize(treatEl ? treatEl.value : '');
                     const curNotes = normalize(notesEl ? notesEl.value : '');
+                    const curService = normalize(serviceEl ? serviceEl.value : '');
+                    const curSurface = normalize(surfaceEl ? surfaceEl.value : '');
+                    
+                    // Debug logging for teeth with any data
+                    if (curCond || curTreat || curNotes || curService || curSurface) {
+                        console.log(`Tooth ${i}:`, {
+                            condition: curCond,
+                            treatment: curTreat, 
+                            notes: curNotes,
+                            service_id: curService,
+                            surface: curSurface
+                        });
+                    }
+                    
+                    // Special debugging for tooth 29 (FDI 45)
+                    if (i === 29) {
+                        console.log('*** TOOTH 29 (FDI 45) SUBMISSION CHECK ***');
+                        console.log('Form elements:');
+                        console.log('- Service element:', serviceEl ? 'FOUND' : 'NOT FOUND');
+                        console.log('- Surface element:', surfaceEl ? 'FOUND' : 'NOT FOUND');
+                        console.log('Current values:');
+                        console.log('- Service:', curService);
+                        console.log('- Surface:', curSurface);
+                        console.log('Previous values from window.prevChartByTooth:');
+                        console.log('- Service:', prevService);
+                        console.log('- Surface:', prevSurface);
+                        console.log('Has any data:', hasAny);
+                        console.log('Changed detection:', changed);
+                    }
+                    
                     const p = prev[i] || {};
                     const prevCond = normalize(p.condition);
                     const prevTreat = normalize(p.status);
                     const prevNotes = normalize(p.notes);
-                    const hasAny = (curCond !== '') || (curTreat !== '') || (curNotes !== '');
-                    const changed = (curCond !== prevCond) || (curTreat !== prevTreat) || (curNotes !== prevNotes);
+                    const prevService = normalize(p.service_id);
+                    const prevSurface = normalize(p.surface);
+                    const hasAny = (curCond !== '') || (curTreat !== '') || (curNotes !== '') || (curService !== '') || (curSurface !== '');
+                    const changed = (curCond !== prevCond) || (curTreat !== prevTreat) || (curNotes !== prevNotes) || (curService !== prevService) || (curSurface !== prevSurface);
                     if (hasAny && changed) {
                         changedTeeth.add(i);
+                        console.log(`Tooth ${i} CHANGED - will be saved`);
                     }
                 }
+                console.log('Total changed teeth:', Array.from(changedTeeth));
+                console.log('=== END FORM DEBUG ===');
+                
                 for (let i = 1; i <= 32; i++) {
                     if (changedTeeth.has(i)) continue;
                     ['condition', 'treatment', 'notes'].forEach((field) => {
                         const el = form.querySelector(`[name="dental_chart[${i}][${field}]"]`);
                         if (el) el.disabled = true;
                     });
+                    // Handle service and surface fields by ID
+                    const serviceEl = document.getElementById(`tooth-${i}-service`);
+                    const surfaceEl = document.getElementById(`tooth-${i}-surface`);
+                    if (serviceEl) serviceEl.disabled = true;
+                    if (surfaceEl) surfaceEl.disabled = true;
                 }
             });
         })();
@@ -947,6 +994,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Sync visual chart data before form submission
             saveVisualChartData();
             
+            // Debug: Check what's actually in the hidden input
+            const visualChartInput = document.getElementById('visualChartData');
+            if (visualChartInput) {
+                console.log('📤 Form submission: Visual chart data being sent:', visualChartInput.value.substring(0, 200) + '...');
+                console.log('📤 Visual chart data length:', visualChartInput.value.length);
+                console.log('📤 Is JSON format?', visualChartInput.value.trim().startsWith('{'));
+            } else {
+                console.error('❌ Visual chart input not found during form submission!');
+            }
+            
             console.log('Form submission: Visual chart data synced');
         });
     }
@@ -979,6 +1036,8 @@ function clearTreatment() {
 
 // Visual dental chart variables
 let visualCanvas, visualCtx;
+let visualAnnotations = [];
+let visualCurrentStroke = null;
 let isVisualDrawing = false;
 let isVisualDrawingMode = false;
 let isVisualEraserMode = false;
@@ -1162,6 +1221,15 @@ function startVisualDrawing(e) {
 
     visualLastX = (e.clientX - rect.left) * scaleX;
     visualLastY = (e.clientY - rect.top) * scaleY;
+
+    // Start a new stroke
+    visualCurrentStroke = {
+        tool: isVisualEraserMode ? 'eraser' : 'pen',
+        color: visualCurrentColor,
+        size: Number(visualBrushSize),
+        points: [{ x: visualLastX, y: visualLastY }]
+    };
+    visualAnnotations.push(visualCurrentStroke);
 }
 
 function visualDraw(e) {
@@ -1192,6 +1260,11 @@ function visualDraw(e) {
     visualLastX = currentX;
     visualLastY = currentY;
     
+    // Record point into current stroke
+    if (visualCurrentStroke) {
+        visualCurrentStroke.points.push({ x: currentX, y: currentY });
+    }
+    
     // Save drawing data (with throttling to improve performance)
     clearTimeout(window.visualSaveTimeout);
     window.visualSaveTimeout = setTimeout(saveVisualChartData, 100);
@@ -1199,6 +1272,7 @@ function visualDraw(e) {
 
 function stopVisualDrawing() {
     isVisualDrawing = false;
+    visualCurrentStroke = null;
 }
 
 function handleVisualTouch(e) {
@@ -1228,6 +1302,7 @@ function setVisualBrushSize(size) {
 function clearVisualDrawing() {
     if (confirm('Are you sure you want to clear all annotations on the visual chart?')) {
         visualCtx.clearRect(0, 0, visualCanvas.width, visualCanvas.height);
+        visualAnnotations = [];
         saveVisualChartData();
     }
 }
@@ -1235,26 +1310,65 @@ function clearVisualDrawing() {
 function saveVisualChartData() {
     if (!visualCanvas || !visualCtx) return;
     
-    // Create a temporary canvas to composite the background image and drawings
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = visualCanvas.width;
-    tempCanvas.height = visualCanvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // First, draw the background dental chart image
-    const backgroundImage = document.getElementById('visualDentalChart');
-    if (backgroundImage && backgroundImage.complete) {
-        tempCtx.drawImage(backgroundImage, 0, 0, tempCanvas.width, tempCanvas.height);
+    // Helper: compress strokes (round coords, dedupe, downsample)
+    function simplifyStrokes(strokes) {
+        const simplified = [];
+        for (const s of (strokes || [])) {
+            if (!s || !Array.isArray(s.points) || s.points.length === 0) continue;
+            const points = s.points;
+            const deduped = [];
+            let lastX = null, lastY = null;
+            for (let i = 0; i < points.length; i++) {
+                // Downsample: keep every 2nd point, but always keep first/last
+                if (i !== 0 && i !== points.length - 1 && (i % 2 === 1)) continue;
+                const rx = Math.round(points[i].x);
+                const ry = Math.round(points[i].y);
+                if (lastX === rx && lastY === ry) continue; // drop duplicates
+                deduped.push({ x: rx, y: ry });
+                lastX = rx; lastY = ry;
+            }
+            if (deduped.length === 0) continue;
+            simplified.push({
+                tool: s.tool === 'eraser' ? 'eraser' : 'pen',
+                color: s.color || '#ff0000',
+                size: Number(s.size) || 2,
+                points: deduped
+            });
+        }
+        return simplified;
     }
-    
-    // Then, draw the annotations/drawings on top
-    tempCtx.drawImage(visualCanvas, 0, 0);
-    
-    // Save the composite image as base64
-    const dataURL = tempCanvas.toDataURL();
+
+    // Save annotations state as JSON instead of image data URL (with compression)
+    const backgroundImage = document.getElementById('visualDentalChart');
+    let bg = backgroundImage ? backgroundImage.getAttribute('src') : null;
+    try {
+        if (bg && bg.startsWith(window.location.origin)) {
+            bg = bg.substring(window.location.origin.length); // make relative
+        }
+        // Also handle cases where it might be stored as absolute URL
+        if (bg && bg.startsWith('http://localhost:8080/')) {
+            bg = bg.replace('http://localhost:8080', ''); // make relative
+        }
+        console.log('🖼️ Background image path:', bg);
+    } catch (e) {
+        console.log('❌ Error processing background path:', e);
+    }
+
+    const visualChartState = {
+        version: 1,
+        background: bg,
+        width: visualCanvas.width,
+        height: visualCanvas.height,
+        strokes: simplifyStrokes(visualAnnotations)
+    };
+    const json = JSON.stringify(visualChartState);
+    console.log('💾 Saving visual chart as JSON:', json.substring(0, 200) + '...');
     const hiddenInput = document.getElementById('visualChartData');
     if (hiddenInput) {
-        hiddenInput.value = dataURL;
+        hiddenInput.value = json;
+        console.log('✅ Visual chart JSON saved to hidden input, length:', json.length);
+    } else {
+        console.error('❌ Hidden input for visualChartData not found!');
     }
 }
 
@@ -1271,7 +1385,44 @@ function loadExistingVisualChartData() {
     const existingData = hiddenInput.value;
     console.log('Attempting to load visual chart data, length:', existingData.length);
     
-    if (existingData && existingData.startsWith('data:image/')) {
+    if (existingData && existingData.trim().startsWith('{')) {
+        // JSON format: restore strokes
+        try {
+            const state = JSON.parse(existingData);
+            visualAnnotations = Array.isArray(state.strokes) ? state.strokes : [];
+
+            // Redraw strokes onto overlay canvas
+            function drawStrokes(ctx, strokes) {
+                for (const s of strokes) {
+                    if (!s || !Array.isArray(s.points) || s.points.length === 0) continue;
+                    ctx.save();
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    ctx.lineWidth = Number(s.size) || 2;
+                    if (s.tool === 'eraser') {
+                        ctx.globalCompositeOperation = 'destination-out';
+                        ctx.strokeStyle = 'rgba(0,0,0,1)';
+                    } else {
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.strokeStyle = s.color || '#ff0000';
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(s.points[0].x, s.points[0].y);
+                    for (let i = 1; i < s.points.length; i++) {
+                        ctx.lineTo(s.points[i].x, s.points[i].y);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // Clear and redraw
+            visualCtx.clearRect(0, 0, visualCanvas.width, visualCanvas.height);
+            drawStrokes(visualCtx, visualAnnotations);
+        } catch (err) {
+            console.warn('Failed to parse visual chart JSON state:', err);
+        }
+    } else if (existingData && existingData.startsWith('data:image/')) {
         const img = new Image();
         img.onload = function() {
             // Clear canvas first
@@ -1348,7 +1499,7 @@ function loadExistingVisualChartData() {
         };
         img.src = existingData;
     } else {
-        console.log('Visual chart data does not start with data:image/');
+        console.log('Visual chart data not found or unrecognized format');
     }
 }
 
@@ -2087,18 +2238,97 @@ function saveVisualToothData() {
     const toothNumberFDI = document.getElementById('visualToothNumber').value;
     const surface = document.getElementById('visualToothSurface').value;
     const condition = document.getElementById('visualToothCondition').value;
-    const treatment = '';
     const notes = document.getElementById('visualToothNotes').value;
+    const serviceIdEl = document.getElementById('visualPopupService');
+    const serviceId = serviceIdEl ? serviceIdEl.value : '';
+
+    console.log('=== DEBUGGING SAVE VISUAL TOOTH DATA ===');
+    console.log('FDI Tooth Number:', toothNumberFDI);
+    console.log('Surface:', surface);
+    console.log('Condition:', condition);
+    console.log('Notes:', notes);
+    console.log('Service ID:', serviceId);
 
     // Map to Universal for the main form fields that drive 3D
     const uni = fdiToUniversal(toothNumberFDI);
+    console.log('Universal Number:', uni);
+    
+    // Special debugging for tooth 45
+    if (toothNumberFDI == '45') {
+        console.log('*** SPECIAL DEBUG FOR TOOTH 45 ***');
+        console.log('FDI 45 should map to Universal 29');
+        console.log('Actual mapping result:', uni);
+    }
+    
     if (uni) {
         const formCondition = document.querySelector(`select[name="dental_chart[${uni}][condition]"]`);
-        const formTreatment = null;
         const formNotes = document.querySelector(`textarea[name="dental_chart[${uni}][notes]"]`);
-        if (formCondition) formCondition.value = condition;
+        const formService = document.getElementById(`tooth-${uni}-service`);
+        const formSurface = document.getElementById(`tooth-${uni}-surface`);
         
-        if (formNotes) formNotes.value = notes;
+        console.log('Form elements found:');
+        console.log('- Condition select:', formCondition ? 'YES' : 'NO');
+        console.log('- Notes textarea:', formNotes ? 'YES' : 'NO'); 
+        console.log('- Service input:', formService ? 'YES' : 'NO');
+        console.log('- Surface input:', formSurface ? 'YES' : 'NO');
+        
+        if (formCondition) {
+            formCondition.value = condition;
+            console.log('Set condition to:', condition);
+        }
+        
+        if (formNotes) {
+            formNotes.value = notes;
+            console.log('Set notes to:', notes);
+        }
+        
+        if (formService) {
+            const oldServiceValue = formService.value;
+            formService.value = serviceId || '';
+            console.log('Service input old value:', oldServiceValue);
+            console.log('Set service_id to:', serviceId || '');
+            console.log('Service input new value:', formService.value);
+            console.log('Service input name attribute:', formService.name);
+            console.log('Service input type:', formService.type);
+            
+            // Force a change event and mark as manually changed
+            formService.dispatchEvent(new Event('change'));
+            formService.setAttribute('data-manually-changed', 'true');
+        } else {
+            console.log('ERROR: Service input not found for tooth', uni);
+            console.log('Looking for ID:', `tooth-${uni}-service`);
+            // Check if any similar elements exist
+            const allServiceInputs = document.querySelectorAll('input[name*="service_id"]');
+            console.log('All service inputs found:', allServiceInputs.length);
+            allServiceInputs.forEach((input, index) => {
+                console.log(`Service input ${index}:`, input.name);
+            });
+        }
+        
+        if (formSurface) {
+            const oldValue = formSurface.value;
+            formSurface.value = surface || '';
+            console.log('Surface input old value:', oldValue);
+            console.log('Set surface to:', surface || '');
+            console.log('Surface input new value:', formSurface.value);
+            console.log('Surface input name attribute:', formSurface.name);
+            console.log('Surface input type:', formSurface.type);
+            
+            // Force a change event to ensure the form knows it changed
+            formSurface.dispatchEvent(new Event('change'));
+            
+            // Mark the field as manually changed to help with debugging
+            formSurface.setAttribute('data-manually-changed', 'true');
+        } else {
+            console.log('ERROR: Surface input not found for tooth', uni);
+            console.log('Looking for ID:', `tooth-${uni}-surface`);
+            // Check if any similar elements exist
+            const allSurfaceInputs = document.querySelectorAll('input[name*="surface"]');
+            console.log('All surface inputs found:', allSurfaceInputs.length);
+            allSurfaceInputs.forEach((input, index) => {
+                console.log(`Surface input ${index}:`, input.name);
+            });
+        }
 
         // Update 2D appearance and 3D immediately
         if (window.patientCheckup) {
@@ -2119,6 +2349,8 @@ function saveVisualToothData() {
     }
 
     closeVisualToothInfoPopup();
+    
+    console.log('=== END DEBUGGING ===');
 }
 
 function closeVisualToothInfoPopup() {

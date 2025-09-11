@@ -326,21 +326,33 @@ class Checkup extends BaseController
                     $curCond = $normalize($data['condition'] ?? '');
                     $curTreat = $normalize($data['treatment'] ?? '');
                     $curNotes = $normalize($data['notes'] ?? '');
+                    $curService = $normalize($data['service_id'] ?? '');
+                    $curSurface = $normalize($data['surface'] ?? '');
 
-                    $hasAny = ($curCond !== '') || ($curTreat !== '') || ($curNotes !== '');
+                    $hasAny = ($curCond !== '') || ($curTreat !== '') || ($curNotes !== '') || ($curService !== '') || ($curSurface !== '');
                     if (!$hasAny) { continue; }
 
                     $base = $baselineByTooth[$tooth] ?? null;
                     $baseCond = $normalize($base['condition'] ?? '');
                     $baseTreat = $normalize($base['status'] ?? '');
                     $baseNotes = $normalize($base['notes'] ?? '');
+                    $baseService = $normalize($base['service_id'] ?? '');
+                    $baseSurface = $normalize($base['surface'] ?? '');
 
-                    $changed = ($curCond !== $baseCond) || ($curTreat !== $baseTreat) || ($curNotes !== $baseNotes);
+                    $changed = (
+                        $curCond !== $baseCond ||
+                        $curTreat !== $baseTreat ||
+                        $curNotes !== $baseNotes ||
+                        $curService !== $baseService ||
+                        $curSurface !== $baseSurface
+                    );
                     if ($changed) {
                         $filtered[$tooth] = [
                             'condition' => $curCond,
                             'treatment' => $curTreat,
                             'notes' => $curNotes,
+                            'service_id' => $curService,
+                            'surface' => $curSurface,
                         ];
                     }
                 }
@@ -354,6 +366,8 @@ class Checkup extends BaseController
                             'condition' => $normalize($row['condition'] ?? ''),
                             'treatment' => $normalize($row['status'] ?? ''),
                             'notes' => $normalize($row['notes'] ?? ''),
+                            'service_id' => $normalize($row['service_id'] ?? ''),
+                            'surface' => $normalize($row['surface'] ?? ''),
                         ];
                     }
                     // Apply changes
@@ -386,6 +400,8 @@ class Checkup extends BaseController
             $visualChartData = $this->request->getPost('visual_chart_data');
             if ($visualChartData && !empty($visualChartData)) {
                 log_message('info', "Checkup save - Visual chart data received (length: " . strlen($visualChartData) . " characters)");
+                log_message('info', "Checkup save - Visual chart data preview: " . substr($visualChartData, 0, 200) . "...");
+                log_message('info', "Checkup save - Is JSON format? " . (strpos(trim($visualChartData), '{') === 0 ? 'YES' : 'NO'));
                 log_message('info', "Checkup save - Visual chart data saved with record ID: {$recordId}");
             } else {
                 log_message('info', "Checkup save - No visual chart data received");

@@ -75,6 +75,34 @@
     .visual-chart-content.show {
         display: block;
     }
+    
+    .visual-chart-screen-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    
+    #screen-chart-canvas {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        max-height: 600px;
+    }
+    
+    @media (max-width: 768px) {
+        #screen-chart-canvas {
+            max-width: 100%;
+            max-height: 400px;
+        }
+    }
+    
+    .no-chart-available {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
 </style>
 
 <div class="min-h-screen bg-white flex">
@@ -158,11 +186,50 @@
 
                             <!-- Chart Image -->
                             <?php if (!empty($latestChart['visual_chart_data'])): ?>
+                                <?php 
+                                // Parse JSON visual chart data
+                                $chartData = json_decode($latestChart['visual_chart_data'], true);
+                                $backgroundImage = '';
+                                $hasStrokes = false;
+                                
+                                if ($chartData && isset($chartData['background'])) {
+                                    $bgPath = $chartData['background'];
+                                    
+                                    // Check if it's already a full URL
+                                    if (str_starts_with($bgPath, 'http://') || str_starts_with($bgPath, 'https://')) {
+                                        $backgroundImage = $bgPath;
+                                    } else {
+                                        // Ensure the path starts with / for proper URL construction
+                                        if (!str_starts_with($bgPath, '/')) {
+                                            $bgPath = '/' . $bgPath;
+                                        }
+                                        $backgroundImage = base_url($bgPath);
+                                    }
+                                    
+                                    $hasStrokes = !empty($chartData['strokes']);
+                                    
+                                    // Debug: Log the constructed URL
+                                    error_log("Background image URL: " . $backgroundImage);
+                                }
+                                ?>
                                 <div class="chart-image-container">
-                                    <img src="<?= $latestChart['visual_chart_data'] ?>" 
-                                         alt="Visual Dental Chart" 
-                                         class="main-dental-chart"
-                                         onerror="this.style.display='none';">
+                                    <?php if ($backgroundImage): ?>
+                                        <div class="visual-chart-wrapper" 
+                                             data-chart-data="<?= htmlspecialchars($latestChart['visual_chart_data']) ?>"
+                                             data-background="<?= $backgroundImage ?>">
+                                            <canvas id="print-chart-canvas" width="800" height="600"></canvas>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="no-chart-available">
+                                            <p>Visual chart data is not in the expected format.</p>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="chart-image-container">
+                                    <div class="no-chart-available">
+                                        <p>No visual chart available for this record.</p>
+                                    </div>
                                 </div>
                             <?php endif; ?>
 
@@ -201,10 +268,63 @@
                             </div>
                             
                             <?php if (!empty($latestChart['visual_chart_data'])): ?>
+                                <?php 
+                                // Parse JSON visual chart data for screen view
+                                $chartData = json_decode($latestChart['visual_chart_data'], true);
+                                $backgroundImage = '';
+                                $hasStrokes = false;
+                                
+                                if ($chartData && isset($chartData['background'])) {
+                                    $bgPath = $chartData['background'];
+                                    
+                                    // Check if it's already a full URL
+                                    if (str_starts_with($bgPath, 'http://') || str_starts_with($bgPath, 'https://')) {
+                                        $backgroundImage = $bgPath;
+                                    } else {
+                                        // Ensure the path starts with / for proper URL construction
+                                        if (!str_starts_with($bgPath, '/')) {
+                                            $bgPath = '/' . $bgPath;
+                                        }
+                                        $backgroundImage = base_url($bgPath);
+                                    }
+                                    
+                                    $hasStrokes = !empty($chartData['strokes']);
+                                    
+                                    // Debug: Log the constructed URL
+                                    error_log("Background image URL (screen): " . $backgroundImage);
+                                }
+                                
+                                // Debug output (remove in production)
+                                if (ENVIRONMENT === 'development') {
+                                    echo '<div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc; font-size: 12px;">';
+                                    echo '<strong>Debug Info:</strong><br>';
+                                    echo 'Raw chart data: ' . htmlspecialchars(substr($latestChart['visual_chart_data'], 0, 100)) . '...<br>';
+                                    echo 'Parsed background: ' . ($chartData['background'] ?? 'Not found') . '<br>';
+                                    echo 'Constructed URL: ' . $backgroundImage . '<br>';
+                                    echo 'Has strokes: ' . ($hasStrokes ? 'Yes' : 'No') . '<br>';
+                                    echo '</div>';
+                                }
+                                ?>
+                                <div class="chart-display mb-6 text-center">
+                                    <?php if ($backgroundImage): ?>
+                                        <div class="visual-chart-screen-wrapper" 
+                                             data-chart-data="<?= htmlspecialchars($latestChart['visual_chart_data']) ?>"
+                                             data-background="<?= $backgroundImage ?>">
+                                            <canvas id="screen-chart-canvas" width="800" height="600" class="max-w-3xl mx-auto rounded border shadow-sm"></canvas>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="no-chart-available text-center py-8 text-gray-500">
+                                            <i class="fas fa-image text-3xl mb-2"></i>
+                                            <p>Visual chart data is not in the expected format.</p>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
                                 <div class="chart-display mb-6">
-                                    <img src="<?= $latestChart['visual_chart_data'] ?>" 
-                                         alt="Visual Dental Chart - <?= date('M j, Y', strtotime($latestChart['record_date'])) ?>" 
-                                         class="w-full max-w-3xl mx-auto rounded border shadow-sm">
+                                    <div class="no-chart-available text-center py-8 text-gray-500">
+                                        <i class="fas fa-image text-3xl mb-2"></i>
+                                        <p>No visual chart available for this record.</p>
+                                    </div>
                                 </div>
                             <?php endif; ?>
 
@@ -437,6 +557,24 @@
     justify-content: center;
 }
 
+.visual-chart-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#print-chart-canvas {
+    max-width: 160mm;
+    max-height: 115mm;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
 .main-dental-chart {
     max-width: 160mm;
     max-height: 115mm;
@@ -447,7 +585,7 @@
 
 .treatments-section {
     margin-top: 2mm;
-    height: 140mm;
+    height: 130mm;
     overflow: hidden;
 }
 
@@ -462,7 +600,7 @@
 
 .treatment-list {
     margin-left: 1mm;
-    max-height: 135mm;
+    max-height: 125mm;
     overflow: hidden;
     column-count: 3;
     column-gap: 2mm;
@@ -534,8 +672,174 @@ function toggleChart(index) {
 }
 
 function printChart() {
+    // Render the visual chart before printing
+    renderVisualCharts();
     window.print();
 }
+
+// Function to render visual chart data onto canvas
+function renderVisualCharts() {
+    console.log('renderVisualCharts called');
+    
+    // Render screen chart
+    const screenWrapper = document.querySelector('.visual-chart-screen-wrapper');
+    console.log('Screen wrapper found:', !!screenWrapper);
+    if (screenWrapper) {
+        renderChartToCanvas('screen-chart-canvas', screenWrapper);
+    }
+    
+    // Render print chart
+    const printWrapper = document.querySelector('.visual-chart-wrapper');
+    console.log('Print wrapper found:', !!printWrapper);
+    if (printWrapper) {
+        renderChartToCanvas('print-chart-canvas', printWrapper);
+    }
+    
+    // If no wrappers found, log all available elements
+    if (!screenWrapper && !printWrapper) {
+        console.log('No visual chart wrappers found. Available elements:');
+        const allElements = document.querySelectorAll('*');
+        allElements.forEach(el => {
+            if (el.className && el.className.includes('visual')) {
+                console.log('Found visual element:', el.className, el);
+            }
+        });
+    }
+}
+
+function renderChartToCanvas(canvasId, wrapper) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error('Canvas not found:', canvasId);
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const chartData = wrapper.getAttribute('data-chart-data');
+    const backgroundImage = wrapper.getAttribute('data-background');
+    
+    console.log('Rendering chart to canvas:', canvasId);
+    console.log('Chart data:', chartData ? 'Present' : 'Missing');
+    console.log('Background image:', backgroundImage);
+    
+    if (!chartData || !backgroundImage) {
+        console.error('Missing chart data or background image');
+        return;
+    }
+    
+    try {
+        const data = JSON.parse(chartData);
+        console.log('Parsed chart data:', data);
+        
+        // Load and draw background image
+        const img = new Image();
+        img.onload = function() {
+            console.log('Background image loaded successfully');
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background image
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            console.log('Background image drawn to canvas');
+            
+            // Draw strokes if they exist
+            if (data.strokes && Array.isArray(data.strokes)) {
+                console.log('Drawing', data.strokes.length, 'strokes');
+                drawStrokes(ctx, data.strokes);
+            } else {
+                console.log('No strokes to draw');
+            }
+        };
+        img.onerror = function() {
+            console.error('Failed to load background image:', backgroundImage);
+            
+            // Try alternative URL if the first one failed (port 8080 -> 8081)
+            const altUrl = backgroundImage.replace('localhost:8080', 'localhost:8081');
+            if (altUrl !== backgroundImage) {
+                console.log('Trying alternative URL:', altUrl);
+                // Create a new image to avoid infinite loop
+                const altImg = new Image();
+                altImg.onload = function() {
+                    console.log('Alternative image loaded successfully');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(altImg, 0, 0, canvas.width, canvas.height);
+                    if (data.strokes && Array.isArray(data.strokes)) {
+                        drawStrokes(ctx, data.strokes);
+                    }
+                };
+                altImg.onerror = function() {
+                    console.error('Alternative URL also failed');
+                    // Draw a placeholder
+                    ctx.fillStyle = '#f0f0f0';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#666';
+                    ctx.font = '16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
+                };
+                altImg.src = altUrl;
+                return;
+            }
+            
+            // Draw a placeholder
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#666';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
+        };
+        img.src = backgroundImage;
+    } catch (error) {
+        console.error('Error rendering visual chart:', error);
+        // Draw error placeholder
+        ctx.fillStyle = '#ffebee';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#d32f2f';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Error loading chart data', canvas.width/2, canvas.height/2);
+    }
+}
+
+function drawStrokes(ctx, strokes) {
+    for (const stroke of strokes) {
+        if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
+        
+        ctx.save();
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Number(stroke.size) || 2;
+        
+        if (stroke.tool === 'eraser') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.strokeStyle = stroke.color || '#ff0000';
+        }
+        
+        ctx.beginPath();
+        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        for (let i = 1; i < stroke.points.length; i++) {
+            ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing visual charts...');
+    renderVisualCharts();
+});
+
+// Also try to render after a short delay in case elements aren't ready
+setTimeout(function() {
+    console.log('Delayed initialization of visual charts...');
+    renderVisualCharts();
+}, 1000);
 </script>
 
 <?= view('templates/footer') ?>
