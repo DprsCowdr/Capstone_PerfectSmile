@@ -9,7 +9,7 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
 window.showWeekAppointmentDetails = function(appointmentId) {
   const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
   if (!appointment) {
-    alert('Appointment not found');
+    if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Appointment not found', 'warning', 4000); else alert('Appointment not found');
     return;
   }
   let modal = document.getElementById('dayAppointmentsModal');
@@ -130,7 +130,7 @@ function showAllAppointments(limitToPatient = false) {
 document.addEventListener('DOMContentLoaded', function () {
   const allBtn = document.getElementById('allAppointmentsBtn');
   if (allBtn) {
-    allBtn.addEventListener('click', showAllAppointments);
+    allBtn.addEventListener('click', function(){ try { showAllAppointments(); } catch(e) { console.error(e); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('All Appointments function not loaded.', 'error', 4000); else alert('All Appointments function not loaded.'); } });
   }
 });
 </script>

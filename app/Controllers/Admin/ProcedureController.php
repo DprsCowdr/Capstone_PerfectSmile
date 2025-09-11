@@ -3,21 +3,24 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseAdminController;
-use App\Services\ProcedureService;
+use App\Models\ProcedureModel;
+use App\Models\UserModel;
 use App\Traits\AdminAuthTrait;
 
 class ProcedureController extends BaseAdminController
 {
     use AdminAuthTrait;
-    
-    protected $procedureService;
-    
+
+    protected $procedureModel;
+    protected $userModel;
+
     public function __construct()
     {
         parent::__construct();
-        $this->procedureService = new ProcedureService();
+        $this->procedureModel = new ProcedureModel();
+        $this->userModel = new UserModel();
     }
-    
+
     /**
      * Get authenticated user for web requests
      */
@@ -25,7 +28,7 @@ class ProcedureController extends BaseAdminController
     {
         return $this->checkAdminAuth();
     }
-    
+
     /**
      * Get authenticated user for API requests
      */
@@ -34,46 +37,53 @@ class ProcedureController extends BaseAdminController
         return $this->checkAdminAuthApi();
     }
 
-    /**
-     * Display procedures list
-     */
     public function index()
     {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
+    $user = $this->checkAdminAuth();
+        if (!$user) return redirect()->to('/login');
 
-        $page = $this->request->getGet('page') ?? 1;
-        $search = $this->request->getGet('search') ?? null;
-        $limit = $this->request->getGet('limit') ?? 10;
-
-        $data = $this->procedureService->getAllProcedures($page, $limit, $search);
+    $procedures = $this->procedureModel->orderBy('procedure_name', 'ASC')->findAll();
 
         return view('admin/procedures/index', [
             'user' => $user,
-            'procedures' => $data['procedures'],
-            'pagination' => [
-                'total' => $data['total'],
-                'pages' => $data['pages'],
-                'current_page' => $data['current_page'],
-                'limit' => $limit
-            ],
-            'search' => $search
+            'procedures' => $procedures
         ]);
     }
 
     /**
-     * Show create procedure form
+     * AJAX: return procedures as JSON for UI consumption
      */
-    public function create()
+    public function ajaxList()
     {
-        $user = $this->getAuthenticatedUser();
+        $user = $this->getAuthenticatedUserApi();
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(401);
         }
 
-        $patients = $this->procedureService->getPatients();
+        try {
+            $procs = $this->procedureModel->orderBy('procedure_name', 'ASC')->findAll();
+            $result = [];
+            foreach ($procs as $p) {
+                $result[] = [
+                    'id' => $p['id'],
+                    'name' => $p['procedure_name'] ?? ($p['title'] ?? 'Procedure'),
+                    'price' => $p['fee'] ?? ($p['price'] ?? 0)
+                ];
+            }
+            return $this->response->setJSON(['success' => true, 'data' => $result]);
+        } catch (\Throwable $e) {
+            log_message('error', 'ProcedureController::ajaxList failed: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to load procedures']);
+        }
+    }
+
+    public function create()
+    {
+    $user = $this->checkAdminAuth();
+        if (!$user) return redirect()->to('/login');
+
+        // Load patients for the dropdown
+        $patients = $this->userModel->where('user_type', 'patient')->findAll();
 
         return view('admin/procedures/create', [
             'user' => $user,
@@ -81,161 +91,86 @@ class ProcedureController extends BaseAdminController
         ]);
     }
 
-    /**
-     * Store new procedure
-     */
     public function store()
     {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
+    $user = $this->checkAdminAuth();
+        if (!$user) return redirect()->to('/login');
+
+        $data = [
+            'name' => $this->request->getPost('name'),
+            'price' => $this->request->getPost('price') ?: 0,
+            'description' => $this->request->getPost('description'),
+            'status' => $this->request->getPost('status') ?? 'active'
+        ];
+
+        $this->procedureModel->insert($data);
+        session()->setFlashdata('success', 'Procedure created');
+        return redirect()->to('/admin/procedures');
+    }
+
+    public function show($id)
+    {
+    $user = $this->checkAdminAuth();
+        if (!$user) return redirect()->to('/login');
+
+        $proc = $this->procedureModel->find($id);
+        if (!$proc) {
+            session()->setFlashdata('error', 'Procedure not found');
+            return redirect()->to('/admin/procedures');
         }
+
+        return view('admin/procedures/view_edit', ['user' => $user, 'procedure' => $proc]);
+    }
+
+    public function edit($id)
+    {
+        return $this->show($id);
+    }
+
+    public function update($id)
+    {
+    $user = $this->checkAdminAuth();
+        if (!$user) return redirect()->to('/login');
 
         $data = [
             'title' => $this->request->getPost('title'),
-            'procedure_name' => $this->request->getPost('procedure_name'),
-            'description' => $this->request->getPost('description'),
-            'user_id' => $this->request->getPost('user_id'),
-            'category' => $this->request->getPost('category'),
-            'fee' => $this->request->getPost('fee'),
-            'treatment_area' => $this->request->getPost('treatment_area'),
             'procedure_date' => $this->request->getPost('procedure_date'),
+            'category' => $this->request->getPost('category'),
+            'fee' => $this->request->getPost('fee') ?: 0,
+            'treatment_area' => $this->request->getPost('treatment_area'),
             'status' => $this->request->getPost('status') ?? 'scheduled'
         ];
 
-        $result = $this->procedureService->createProcedure($data);
-
-        if ($result['success']) {
-            session()->setFlashdata('success', $result['message']);
+        try {
+            $this->procedureModel->update($id, $data);
+            
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Procedure updated successfully']);
+            }
+            
+            session()->setFlashdata('success', 'Procedure updated');
             return redirect()->to('/admin/procedures');
-        } else {
-            session()->setFlashdata('error', $result['message']);
-            return redirect()->back()->withInput();
+        } catch (\Exception $e) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to update procedure: ' . $e->getMessage()]);
+            }
+            
+            session()->setFlashdata('error', 'Failed to update procedure');
+            return redirect()->to('/admin/procedures');
         }
     }
 
-    /**
-     * Show procedure details
-     */
-    public function show($id)
-    {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-
-        $result = $this->procedureService->getProcedureDetails($id);
-        
-        if (!$result['success']) {
-            session()->setFlashdata('error', $result['message']);
-            return redirect()->to('/admin/procedures');
-        }
-
-        return view('admin/procedures/view_edit', [
-            'user' => $user,
-            'procedure' => $result['data'],
-            'validation' => \Config\Services::validation()
-        ]);
-    }
-
-    /**
-     * Show edit procedure form
-     */
-    public function edit($id)
-    {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-
-        $result = $this->procedureService->getProcedureDetails($id);
-        if (!$result['success']) {
-            session()->setFlashdata('error', $result['message']);
-            return redirect()->to('/admin/procedures');
-        }
-        return view('admin/procedures/view_edit', [
-            'user' => $user,
-            'procedure' => $result['data'],
-            'validation' => \Config\Services::validation()
-        ]);
-    }
-
-    /**
-     * Update procedure
-     */
-    public function update($id)
-    {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-
-        $isAdmin = ($user['user_type'] === 'admin');
-        $rules = [
-            'procedure_date' => 'required|valid_date',
-            'treatment_area' => 'required',
-            'status' => 'required'
-        ];
-        if ($isAdmin) {
-            $rules['title'] = 'required|max_length[100]';
-            $rules['category'] = 'required';
-            $rules['fee'] = 'numeric';
-        }
-
-        if (!$this->validate($rules)) {
-            $result = $this->procedureService->getProcedureDetails($id);
-            $patients = $this->procedureService->getPatients();
-            return view('admin/procedures/view_edit', [
-                'user' => $user,
-                'procedure' => $result['data'],
-                'validation' => $this->validator
-            ]);
-        }
-
-        $data = [
-            'procedure_date' => $this->request->getPost('procedure_date'),
-            'treatment_area' => $this->request->getPost('treatment_area'),
-            'status' => $this->request->getPost('status') ?? 'pending'
-        ];
-        if ($isAdmin) {
-            $data['title'] = $this->request->getPost('title');
-            $data['category'] = $this->request->getPost('category');
-            $data['fee'] = $this->request->getPost('fee');
-        }
-
-        $result = $this->procedureService->updateProcedure($id, $data);
-
-        if ($result['success']) {
-            session()->setFlashdata('success', $result['message']);
-            return redirect()->to('/admin/procedures');
-        } else {
-            session()->setFlashdata('error', $result['message']);
-            return redirect()->back()->withInput();
-        }
-    }
-
-    /**
-     * Delete procedure
-     */
     public function delete($id)
     {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
+    $user = $this->checkAdminAuth();
+        if (!$user) return redirect()->to('/login');
 
-        $result = $this->procedureService->deleteProcedure($id);
-
+        $this->procedureModel->delete($id);
         if ($this->request->isAJAX()) {
-            return $this->response->setJSON($result);
+            return $this->response->setJSON(['success' => true]);
         }
 
-        if ($result['success']) {
-            session()->setFlashdata('success', $result['message']);
-        } else {
-            session()->setFlashdata('error', $result['message']);
-        }
-
+        session()->setFlashdata('success', 'Procedure deleted');
         return redirect()->to('/admin/procedures');
     }
 }

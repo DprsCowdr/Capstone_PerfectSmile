@@ -21,30 +21,28 @@
             padding: 0;
         }
 
-        /* Ensure landscape layout */
+        /* Use A5 landscape (half of A4 in landscape) with small print margins */
         @page {
-            size: landscape;
-            width: 11in;
-            height: 8.5in;
-            margin: 0;
+            size: 210mm 148mm; /* A5 landscape */
+            margin: 6mm;
         }
 
         /* PDF Document */
         .pdf-document {
             padding: 0;
             display: block;
-            width: 792px; /* Full 11" bond paper width in landscape */
-            height: 612px; /* Full 8.5" bond paper height in landscape */
+            width: 210mm;
+            height: 148mm;
             margin: 0;
             position: relative;
         }
 
         .page {
-            width: 396px; /* Exactly half of 11" bond paper width (792px / 2) */
-            height: 612px; /* Full 8.5" bond paper height in landscape */
+            width: 100%;
+            height: 100%;
             margin: 0;
             background: #fff;
-            padding: 15px;
+            padding: 6mm 8mm;
             box-sizing: border-box;
             position: relative;
             page-break-after: avoid;
@@ -298,14 +296,34 @@
         <div class="page">
             <div class="watermark">PRESCRIPTION</div>
             
-            <!-- Header -->
-            <div class="header">
-                <div class="clinic-name">Perfect Smile Dental Clinic</div>
-                <div class="dentist-name"><?= esc($prescription['dentist_name'] ?? 'Dentist') ?></div>
-                <div class="dentist-role"><?= esc($prescription['dentist_role'] ?? 'Dentist') ?></div>
-                <div class="contact">
-                    Unit No. 201 Tansylit Bldg., Alfelor St., Brgy San Roque, Iriga City, Camarines Sur — 0946-060-6381<br>
-                    Email: perfectsmile@dental.com
+            <!-- Header with clinic logo -->
+            <div class="header" style="display:flex;align-items:center;gap:8px;">
+                <?php
+                // Prefer a clinic logo in public/img (multiple common filenames), then public/uploads; fallback to text
+                $candidates = ['clinic_logo.png', 'clinic-logo.png', 'clinic_logo.jpg', 'clinic-logo.jpg'];
+                $found = null;
+                if (defined('FCPATH')) {
+                    foreach ($candidates as $c) {
+                        $p = FCPATH . 'img' . DIRECTORY_SEPARATOR . $c;
+                        if (file_exists($p)) { $found = ['src' => base_url('img/' . $c), 'path' => $p]; break; }
+                    }
+                    if (!$found) {
+                        foreach ($candidates as $c) {
+                            $p = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . $c;
+                            if (file_exists($p)) { $found = ['src' => base_url('uploads/' . $c), 'path' => $p]; break; }
+                        }
+                    }
+                }
+                if ($found): ?>
+                    <img src="<?= esc($found['src']) ?>" alt="Clinic logo" style="height:46px;object-fit:contain;" />
+                <?php else: ?>
+                    <div style="width:46px;height:46px;border-radius:3px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#1f2937;font-weight:700;">PS</div>
+                <?php endif; ?>
+                <div style="flex:1">
+                    <div class="clinic-name">Perfect Smile Dental Clinic</div>
+                    <div class="dentist-name"><?= esc($prescription['dentist_name'] ?? 'Dentist') ?></div>
+                    <div class="dentist-role"><?= esc($prescription['dentist_role'] ?? '') ?></div>
+                    <div class="contact">Unit No. 201 Tansylit Bldg., Alfelor St., Brgy San Roque, Iriga City — 0946-060-6381</div>
                 </div>
             </div>
 

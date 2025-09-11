@@ -32,24 +32,37 @@ class Checkup extends BaseController
     public function index()
     {
     $user = \App\Controllers\Auth::getCurrentUser();
-    // allow dentists (previously named 'doctor') and admins to access checkup
-    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+    // allow dentists (previously named 'doctor'), admins, and staff to access checkup
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor', 'staff'])) {
             return redirect()->to('/login');
         }
 
         // Auto-update appointment statuses
         $this->appointmentModel->autoUpdateStatuses();
 
-        // Get today's appointments
-    $dentistId = ($user['user_type'] === 'dentist') ? $user['id'] : null;
+        // Get today's appointments based on user type
+        $dentistId = null;
+        if ($user['user_type'] === 'dentist' || $user['user_type'] === 'doctor') {
+            $dentistId = $user['id'];
+        }
+        
         $todayAppointments = $this->appointmentModel->getTodayAppointments($dentistId);
 
         // Get ongoing checkup for today for this doctor
-        $ongoingCheckup = $this->appointmentModel
-            ->where('DATE(appointment_datetime)', date('Y-m-d'))
-            ->where('status', 'ongoing')
-            ->where('dentist_id', $dentistId)
-            ->first();
+        $ongoingCheckup = null;
+        if ($dentistId) {
+            $ongoingCheckup = $this->appointmentModel
+                ->where('DATE(appointment_datetime)', date('Y-m-d'))
+                ->where('status', 'ongoing')
+                ->where('dentist_id', $dentistId)
+                ->first();
+        } else {
+            // For admin, get any ongoing checkup
+            $ongoingCheckup = $this->appointmentModel
+                ->where('DATE(appointment_datetime)', date('Y-m-d'))
+                ->where('status', 'ongoing')
+                ->first();
+        }
 
         return view('checkup/dashboard', [
             'user' => $user,
@@ -63,8 +76,8 @@ class Checkup extends BaseController
      */
     public function startCheckup($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -82,7 +95,7 @@ class Checkup extends BaseController
         }
 
         // Check if appointment is valid for checkup and for today
-        if (!in_array($appointment['status'], ['confirmed', 'checked_in']) || date('Y-m-d') !== $appointment['appointment_date']) {
+        if (!in_array($appointment['status'], ['confirmed', 'checked_in', 'ongoing']) || date('Y-m-d') !== date('Y-m-d', strtotime($appointment['appointment_datetime']))) {
             return redirect()->to('/checkup')->with('error', 'Appointment cannot be started. Status: ' . $appointment['status']);
         }
 
@@ -97,8 +110,8 @@ class Checkup extends BaseController
      */
     public function patientCheckup($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -117,9 +130,15 @@ class Checkup extends BaseController
             log_message('debug', 'Patient checkup - Full appointment data: ' . json_encode($appointment));
         }
 
-        // Check if appointment is ongoing
-        if ($appointment['status'] !== 'ongoing') {
-            return redirect()->to('/checkup')->with('error', 'Appointment is not in progress.');
+        // Check if appointment is ongoing or can be started
+        if (!in_array($appointment['status'], ['ongoing', 'checked_in'])) {
+            return redirect()->to('/checkup')->with('error', 'Appointment is not in progress or ready to start.');
+        }
+
+        // If the appointment is checked_in, start it automatically
+        if ($appointment['status'] === 'checked_in') {
+            $this->appointmentModel->update($appointmentId, ['status' => 'ongoing']);
+            $appointment['status'] = 'ongoing';
         }
 
         // Get or create patient record (user record with medical history)
@@ -223,7 +242,7 @@ class Checkup extends BaseController
     public function saveCheckup($appointmentId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-    if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor'])) {
             return redirect()->to('/login');
         }
 
@@ -483,8 +502,8 @@ class Checkup extends BaseController
      */
     public function markNoShow($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -498,8 +517,8 @@ class Checkup extends BaseController
      */
     public function cancelAppointment($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -514,8 +533,8 @@ class Checkup extends BaseController
      */
     public function viewRecord($recordId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -539,7 +558,7 @@ class Checkup extends BaseController
     public function getPatientHistory($patientId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'staff'])) {
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
 
@@ -556,8 +575,8 @@ class Checkup extends BaseController
      */
     public function debug($appointmentId = null)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 

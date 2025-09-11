@@ -480,6 +480,24 @@ class Dentist extends BaseController
                 'dentist_id' => $currentUser['id']
             ];
 
+            // Attach branch_id automatically when creating records
+            if (empty($recordData['branch_id'])) {
+                $sessionBranch = session('selected_branch_id') ?: null;
+                if ($sessionBranch) {
+                    $recordData['branch_id'] = $sessionBranch;
+                } else {
+                    try {
+                        $branchUserModel = new \App\Models\BranchStaffModel();
+                        $assignments = $branchUserModel->where('user_id', $currentUser['id'])->findAll();
+                        if (!empty($assignments)) {
+                            $recordData['branch_id'] = $assignments[0]['branch_id'] ?? null;
+                        }
+                    } catch (\Throwable $_e) {
+                        // ignore
+                    }
+                }
+            }
+
             // Start transaction
             $db = \Config\Database::connect();
             $db->transStart();

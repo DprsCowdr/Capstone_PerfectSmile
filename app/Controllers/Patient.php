@@ -22,37 +22,37 @@ class Patient extends BaseController
             return redirect()->to('/dashboard');
         }
         
-        // Get patient's appointments
-        $appointmentModel = new \App\Models\AppointmentModel();
-        $myAppointments = $appointmentModel->select('appointments.*, branches.name as branch_name')
-                                          ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                          ->where('appointments.user_id', $user['id'])
-                                          ->orderBy('appointments.appointment_datetime', 'DESC')
-                                          ->limit(5)
-                                          ->findAll();
+    // Get patient's appointments (respect selected branch if set)
+    $appointmentModel = new \App\Models\AppointmentModel();
+    $selectedBranch = $this->resolveBranchId();
+    $baseQuery = $appointmentModel->select('appointments.*, branches.name as branch_name')
+                      ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                      ->where('appointments.user_id', $user['id']);
+    if ($selectedBranch) $baseQuery->where('appointments.branch_id', (int)$selectedBranch);
+    $myAppointments = $baseQuery->orderBy('appointments.appointment_datetime', 'DESC')->limit(5)->findAll();
         
         // Get upcoming appointments
-        $upcomingAppointments = $appointmentModel->select('appointments.*, branches.name as branch_name')
-                                                ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                                ->where('appointments.user_id', $user['id'])
-                                                ->where('appointments.appointment_datetime >=', date('Y-m-d H:i:s'))
-                                                ->whereIn('appointments.status', ['confirmed', 'scheduled'])
-                                                ->orderBy('appointments.appointment_datetime', 'ASC')
-                                                ->limit(3)
-                                                ->findAll();
+    $upcomingQuery = $appointmentModel->select('appointments.*, branches.name as branch_name')
+                     ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                     ->where('appointments.user_id', $user['id'])
+                     ->where('appointments.appointment_datetime >=', date('Y-m-d H:i:s'))
+                     ->whereIn('appointments.status', ['confirmed', 'scheduled'])
+                     ->orderBy('appointments.appointment_datetime', 'ASC');
+    if ($selectedBranch) $upcomingQuery->where('appointments.branch_id', (int)$selectedBranch);
+    $upcomingAppointments = $upcomingQuery->limit(3)->findAll();
         
-        // Get total appointment count
-        $totalAppointments = $appointmentModel->where('user_id', $user['id'])->countAllResults();
-        
-        // Get completed treatments count
-        $completedTreatments = $appointmentModel->where('user_id', $user['id'])
-                                               ->where('status', 'completed')
-                                               ->countAllResults();
-        
-        // Get pending appointments count
-        $pendingAppointments = $appointmentModel->where('user_id', $user['id'])
-                                               ->whereIn('status', ['pending', 'scheduled'])
-                                               ->countAllResults();
+    // Get total appointment counts (respect branch)
+    $countBase = $appointmentModel->where('user_id', $user['id']);
+    if ($selectedBranch) $countBase->where('branch_id', (int)$selectedBranch);
+    $totalAppointments = $countBase->countAllResults();
+
+    $completedBase = $appointmentModel->where('user_id', $user['id'])->where('status', 'completed');
+    if ($selectedBranch) $completedBase->where('branch_id', (int)$selectedBranch);
+    $completedTreatments = $completedBase->countAllResults();
+
+    $pendingBase = $appointmentModel->where('user_id', $user['id'])->whereIn('status', ['pending', 'scheduled']);
+    if ($selectedBranch) $pendingBase->where('branch_id', (int)$selectedBranch);
+    $pendingAppointments = $pendingBase->countAllResults();
 
         // Load branches for the dashboard booking panel
         $branches = [];
@@ -117,11 +117,14 @@ class Patient extends BaseController
         // If the calendar refactor feature is enabled, render the new patient calendar
         $appConfig = config('App');
         if (!empty($appConfig->enableCalendarRefactor)) {
+            // Resolve selected branch (may come from session/query) to scope appointments
+            $selectedBranch = method_exists($this, 'resolveBranchId') ? $this->resolveBranchId() : null;
+
             // Load patient's appointments and branch list for the patient calendar JS
             $appointmentModel = new \App\Models\AppointmentModel();
-            $appointments = $appointmentModel->where('user_id', $user['id'])
-                                             ->orderBy('appointment_datetime', 'DESC')
-                                             ->findAll();
+            $appointments = $appointmentModel->where('user_id', $user['id'])->orderBy('appointment_datetime', 'DESC');
+            if ($selectedBranch) $appointments->where('branch_id', (int)$selectedBranch);
+            $appointments = $appointments->findAll();
 
             // Load branches (if Branch model exists)
             $branches = [];
@@ -480,75 +483,231 @@ class Patient extends BaseController
             return redirect()->to('/login');
         }
 
-        $db = \Config\Database::connect();
-        
-        // Get dental records
-        $dentalRecordModel = new \App\Models\DentalRecordModel();
-        $records = $dentalRecordModel->select('dental_record.*, dentist.name as dentist_name')
-            ->join('user as dentist', 'dentist.id = dental_record.dentist_id', 'left')
-            ->where('dental_record.user_id', $user['id'])
-            ->orderBy('dental_record.record_date', 'DESC')
-            ->findAll();
+        // Gather multiple datasets for the patient "My Records" page.
+        $data = ['user' => $user];
 
-        // Get dental chart data for tooth conditions
-        $dentalChart = $db->table('dental_chart dc')
-            ->select('dc.*, dr.record_date')
-            ->join('dental_record dr', 'dr.id = dc.dental_record_id')
-            ->where('dr.user_id', $user['id'])
-            ->orderBy('dr.record_date', 'DESC')
-            ->get()->getResultArray();
+        // Appointments (paginated)
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $perPage = 10;
+            $page = (int) ($this->request->getGet('appointments_page') ?? 1);
+            $appointments = $appointmentModel
+                ->select('appointments.*, branches.name AS branch_name, dentist_user.name AS dentist_name')
+                ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                ->join('user AS dentist_user', 'dentist_user.id = appointments.dentist_id', 'left')
+                ->where('appointments.user_id', $user['id'])
+                ->orderBy('appointments.appointment_datetime', 'DESC')
+                ->paginate($perPage, 'appointments', $page);
+            $appointmentsPager = $appointmentModel->pager;
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to load appointments for records page: ' . $e->getMessage());
+            $appointments = [];
+            $appointmentsPager = null;
+        }
 
-        // Get visual charts
-        $visualCharts = $db->table('dental_record')
-            ->select('id, record_date, visual_chart_data')
-            ->where('user_id', $user['id'])
-            ->where('visual_chart_data IS NOT NULL')
-            ->where('visual_chart_data !=', '')
-            ->orderBy('record_date', 'DESC')
-            ->get()->getResultArray();
+        // Dental / Treatment records
+        // Treatments (paginated)
+        try {
+            $dentalRecordModel = new \App\Models\DentalRecordModel();
+            $perPage = 8;
+            $page = (int) ($this->request->getGet('treatments_page') ?? 1);
+            $treatments = $dentalRecordModel->where('user_id', $user['id'])->orderBy('record_date', 'DESC')->paginate($perPage, 'treatments', $page);
+            $treatmentsPager = $dentalRecordModel->pager;
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to load dental records for records page: ' . $e->getMessage());
+            $treatments = [];
+            $treatmentsPager = null;
+        }
 
-        // Process tooth conditions for latest record
-        $toothConditions = [];
-        $latestDate = '';
-        if (!empty($dentalChart)) {
-            $latestDate = $dentalChart[0]['record_date'];
-            $latestChart = array_filter($dentalChart, function($row) use ($latestDate) {
-                return $row['record_date'] === $latestDate;
-            });
-            
-            foreach ($latestChart as $tooth) {
-                $toothConditions[$tooth['tooth_number']] = $tooth['condition'] ?? 'healthy';
+        // Prescriptions (and items when available)
+        // Prescriptions (paginated). Include prescriptions created by staff/admin/dentist.
+        try {
+            $prescriptions = [];
+            if (class_exists('\App\\Models\\PrescriptionModel')) {
+                $presModel = new \App\Models\PrescriptionModel();
+                $perPage = 8;
+                $page = (int) ($this->request->getGet('prescriptions_page') ?? 1);
+                // Only patient_id must match; created_by could be staff/admin/dentist - show all prescs issued to this patient
+                $prescriptions = $presModel->where('patient_id', $user['id'])->orderBy('issue_date', 'DESC')->paginate($perPage, 'prescriptions', $page);
+                $prescriptionsPager = $presModel->pager;
+
+                // attach items when model exists
+                if (!empty($prescriptions)) {
+                    foreach ($prescriptions as &$pres) {
+                        try {
+                            if (class_exists('\App\\Models\\PrescriptionItemModel')) {
+                                $itemModel = new \App\Models\PrescriptionItemModel();
+                                $pres['items'] = $itemModel->where('prescription_id', $pres['id'])->findAll();
+                            } else {
+                                $pres['items'] = [];
+                            }
+                        } catch (\Exception $ie) {
+                            log_message('error', 'Failed to load prescription items: ' . $ie->getMessage());
+                            $pres['items'] = [];
+                        }
+                    }
+                    unset($pres);
+                }
+            } else {
+                $prescriptionsPager = null;
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to load prescriptions for records page: ' . $e->getMessage());
+            $prescriptions = [];
+            $prescriptionsPager = null;
+        }
+
+        // Invoices (paginated) - use InvoiceModel for invoices
+        try {
+            $invoices = [];
+            if (class_exists('\App\\Models\\InvoiceModel')) {
+                $invoiceModel = new \App\Models\InvoiceModel();
+                $perPage = 8;
+                $page = (int) ($this->request->getGet('invoices_page') ?? 1);
+                $invoices = $invoiceModel->where('patient_id', $user['id'])->orderBy('created_at', 'DESC')->paginate($perPage, 'invoices', $page);
+                $invoicesPager = $invoiceModel->pager;
+            } else {
+                $invoicesPager = null;
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to load invoices for records page: ' . $e->getMessage());
+            $invoices = [];
+            $invoicesPager = null;
+        }
+
+    $data['appointments'] = $appointments;
+    $data['appointmentsPager'] = $appointmentsPager ?? null;
+    $data['treatments'] = $treatments;
+    $data['treatmentsPager'] = $treatmentsPager ?? null;
+    $data['prescriptions'] = $prescriptions;
+    $data['prescriptionsPager'] = $prescriptionsPager ?? null;
+    $data['invoices'] = $invoices;
+    $data['invoicesPager'] = $invoicesPager ?? null;
+
+        // If this is an AJAX tab request, return only the tab partial so the frontend can inject fresh content
+        try {
+            $isAjax = (bool) ($this->request->getGet('ajax') ?? false);
+            $tab = $this->request->getGet('tab') ?? null;
+        } catch (\Exception $e) {
+            $isAjax = false;
+            $tab = null;
+        }
+
+        if ($isAjax && $tab) {
+            // Return only the partial for the requested tab. The partial will render the correct pager and items.
+            return view('patient/partials/records_tab', array_merge($data, ['tab' => $tab]));
+        }
+
+        return view('patient/records', $data);
+    }
+
+    /**
+     * Show a single invoice (patient-facing) and allow download as PDF.
+     * Route: /patient/invoice/{id}
+     */
+    public function invoice($id = null)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $id = (int) $id;
+        if (!$id) {
+            return redirect()->to('/patient/billing')->with('error', 'Invoice not found');
+        }
+
+        if (!class_exists('\App\\Models\\InvoiceModel')) {
+            return redirect()->to('/patient/billing')->with('error', 'Billing module unavailable');
+        }
+
+        $invoiceModel = new \App\Models\InvoiceModel();
+        $invoice = $invoiceModel->find($id);
+
+        if (!$invoice || (int)$invoice['patient_id'] !== (int)$user['id']) {
+            return redirect()->to('/patient/billing')->with('error', 'Invoice not found or access denied');
+        }
+
+        // Load invoice items if InvoiceItemModel exists
+        $items = [];
+        if (class_exists('\App\\Models\\InvoiceItemModel')) {
+            try {
+                $itemModel = new \App\Models\InvoiceItemModel();
+                $items = $itemModel->where('invoice_id', $invoice['id'])->orderBy('id','ASC')->findAll();
+            } catch (\Exception $e) { $items = []; }
+        }
+
+        return view('patient/invoice_show', ['user' => $user, 'invoice' => $invoice, 'items' => $items]);
+    }
+
+    /**
+     * Download invoice as PDF if Dompdf is available, otherwise render print-friendly HTML.
+     * Route: /patient/invoice/{id}/download
+     */
+    public function invoiceDownload($id = null)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $id = (int) $id;
+        if (!$id) return redirect()->back();
+
+        $invoiceModel = new \App\Models\InvoiceModel();
+        $invoice = $invoiceModel->find($id);
+        if (!$invoice || (int)$invoice['patient_id'] !== (int)$user['id']) {
+            return redirect()->back()->with('error', 'Invoice not found or access denied');
+        }
+
+        // Load invoice items via InvoiceItemModel if available
+        $items = [];
+        if (class_exists('\App\\Models\\InvoiceItemModel')) {
+            try {
+                $itemModel = new \App\Models\InvoiceItemModel();
+                $items = $itemModel->where('invoice_id', $invoice['id'])->orderBy('id','ASC')->findAll();
+            } catch (\Exception $e) { $items = []; }
+        }
+
+        // Render invoice HTML view (same show view)
+        $html = view('patient/invoice_pdf', ['user' => $user, 'invoice' => $invoice, 'items' => $items]);
+
+        // Try to generate PDF via Dompdf if available
+        if (class_exists('\Dompdf\\Dompdf')) {
+            try {
+                // Increase execution time and memory for PDF rendering
+                @ini_set('max_execution_time', '300');
+                @set_time_limit(300);
+                @ini_set('memory_limit', '512M');
+
+                // Prepare a dedicated temp dir for Dompdf under WRITEPATH when available
+                $tempDir = (defined('WRITEPATH') ? WRITEPATH : sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'writable' . DIRECTORY_SEPARATOR) . 'dompdf' . DIRECTORY_SEPARATOR;
+                if (!is_dir($tempDir)) {
+                    @mkdir($tempDir, 0777, true);
+                }
+
+                $dompdf = new \Dompdf\Dompdf();
+                $dompdf->set_option('isPhpEnabled', true);
+                $dompdf->set_option('isRemoteEnabled', true);
+                $dompdf->set_option('tempDir', $tempDir);
+                $dompdf->set_option('isHtml5ParserEnabled', true);
+                // Use A5 landscape to match half-A4 bondpaper size
+                $dompdf->setPaper('A5', 'landscape');
+                $dompdf->loadHtml($html);
+                $dompdf->render();
+                $output = $dompdf->output();
+                $filename = 'invoice_' . $invoice['id'] . '.pdf';
+                return $this->response->setHeader('Content-Type', 'application/pdf')
+                                      ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                                      ->setBody($output);
+            } catch (\Exception $e) {
+                log_message('error', 'Invoice PDF generation failed: ' . $e->getMessage());
+                // Fall through to HTML response
             }
         }
 
-        // Calculate statistics
-        $totalTeeth = 32;
-        $teethWithData = count($toothConditions);
-        $healthyTeeth = $totalTeeth - $teethWithData; // Assume unmarked teeth are healthy
-        $treatmentCounts = [
-            'filled' => 0,
-            'crown' => 0,
-            'root-canal' => 0,
-            'cavity' => 0,
-            'extracted' => 0
-        ];
-        
-        foreach ($toothConditions as $condition) {
-            if (isset($treatmentCounts[strtolower($condition)])) {
-                $treatmentCounts[strtolower($condition)]++;
-            }
-        }
-
-        return view('patient/records', [
-            'user' => $user, 
-            'records' => $records,
-            'dentalChart' => $dentalChart,
-            'visualCharts' => $visualCharts,
-            'toothConditions' => $toothConditions,
-            'latestDate' => $latestDate,
-            'healthyTeeth' => $healthyTeeth,
-            'treatmentCounts' => $treatmentCounts
-        ]);
+        // Fallback: send HTML for printing
+        return $html;
     }
 
     // Profile page (placeholder)
@@ -584,8 +743,18 @@ class Patient extends BaseController
             return redirect()->to('/login');
         }
 
+        // Collect posted fields we support
         $post = $this->request->getPost();
+        $name = trim($post['name'] ?? '');
+        $email = trim($post['email'] ?? '');
+        $phone = trim($post['phone'] ?? '');
+        $address = trim($post['address'] ?? '');
         $preferred = $post['preferred_dentist_id'] ?? null;
+
+        // Basic validation
+        if ($name === '') {
+            return redirect()->back()->with('error', 'Name is required')->withInput();
+        }
 
         // Validate preferred dentist if provided
         if (!empty($preferred)) {
@@ -601,23 +770,54 @@ class Patient extends BaseController
             $preferred = null; // clear
         }
 
+        // Prepare update payload
+        $update = [
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'address' => $address,
+            'preferred_dentist_id' => $preferred,
+        ];
+
+        // Handle avatar upload (optional)
+        try {
+            $avatar = $this->request->getFile('avatar');
+            if ($avatar && $avatar->isValid() && !$avatar->hasMoved()) {
+                // Ensure public uploads dir exists
+                if (!defined('FCPATH')) define('FCPATH', realpath(__DIR__ . '/../../public') . DIRECTORY_SEPARATOR);
+                $destDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'avatars' . DIRECTORY_SEPARATOR;
+                if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+                $newName = uniqid('avatar_') . '.' . $avatar->getClientExtension();
+                $avatar->move($destDir, $newName);
+                $avatarUrl = base_url('uploads/avatars/' . $newName);
+                $update['avatar'] = $avatarUrl;
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Avatar upload failed: ' . $e->getMessage());
+            // proceed without avatar change
+        }
+
         try {
             $userModel = new \App\Models\UserModel();
-            $userModel->update($user['id'], ['preferred_dentist_id' => $preferred]);
+            $userModel->update($user['id'], $update);
+
             // Update session user data if stored there
             try {
                 $session = session();
                 $sessionUser = $session->get('user');
                 if (is_array($sessionUser)) {
-                    $sessionUser['preferred_dentist_id'] = $preferred;
+                    foreach ($update as $k => $v) {
+                        $sessionUser[$k] = $v;
+                    }
                     $session->set('user', $sessionUser);
                 }
             } catch (\Exception $e) {
                 // ignore session update failures
             }
+
             return redirect()->back()->with('success', 'Profile updated');
         } catch (\Exception $e) {
-            log_message('error', 'Error saving profile preferred dentist: ' . $e->getMessage());
+            log_message('error', 'Error saving profile: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update profile');
         }
     }
@@ -953,10 +1153,10 @@ class Patient extends BaseController
         }
 
         try {
-            $paymentModel = new \App\Models\PaymentModel();
-            
-            // Get payments for the patient
-            $bills = $paymentModel->where('patient_id', $patientId)
+            $invoiceModel = new \App\Models\InvoiceModel();
+
+            // Get invoices for the patient
+            $bills = $invoiceModel->where('patient_id', $patientId)
                                  ->orderBy('created_at', 'DESC')
                                  ->findAll();
 
@@ -985,10 +1185,10 @@ class Patient extends BaseController
         }
 
         $bills = [];
-        if (class_exists('\App\\Models\\PaymentModel')) {
+        if (class_exists('\App\\Models\\InvoiceModel')) {
             try {
-                $paymentModel = new \App\Models\PaymentModel();
-                $bills = $paymentModel->where('patient_id', $user['id'])->orderBy('created_at', 'DESC')->findAll();
+                $invoiceModel = new \App\Models\InvoiceModel();
+                $bills = $invoiceModel->where('patient_id', $user['id'])->orderBy('created_at', 'DESC')->findAll();
             } catch (\Exception $e) {
                 log_message('error', 'Error loading bills for patient: ' . $e->getMessage());
                 $bills = [];
@@ -1046,6 +1246,46 @@ class Patient extends BaseController
     }
 
     /**
+     * Account & Security page for patient
+     */
+    public function security()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+        return view('patient/security', ['user' => $user]);
+    }
+
+    /**
+     * Preferences page for patient
+     */
+    public function preferences()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+        return view('patient/preferences', ['user' => $user]);
+    }
+
+    /**
+     * Privacy page for patient
+     */
+    public function privacy()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+        return view('patient/privacy', ['user' => $user]);
+    }
+
+    /**
+     * Support page for patient
+     */
+    public function support()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+        return view('patient/support', ['user' => $user]);
+    }
+
+    /**
      * Prescriptions / medication history
      */
     public function prescriptions()
@@ -1059,7 +1299,8 @@ class Patient extends BaseController
         if (class_exists('\App\\Models\\PrescriptionModel')) {
             try {
                 $presModel = new \App\Models\PrescriptionModel();
-                $prescriptions = $presModel->where('patient_id', $user['id'])->orderBy('issued_at', 'DESC')->findAll();
+                // Database column is 'issue_date' in prescriptions table (not 'issued_at')
+                $prescriptions = $presModel->where('patient_id', $user['id'])->orderBy('issue_date', 'DESC')->findAll();
             } catch (\Exception $e) {
                 log_message('error', 'Error loading prescriptions: ' . $e->getMessage());
                 $prescriptions = [];
@@ -1067,6 +1308,190 @@ class Patient extends BaseController
         }
 
         return view('patient/prescriptions', ['user' => $user, 'prescriptions' => $prescriptions]);
+    }
+
+    /**
+     * Show a single prescription to the logged-in patient.
+     */
+    public function prescription($id = null)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+
+        $id = (int) $id;
+        if (!$id) return redirect()->to('/patient/prescriptions');
+
+        // Ensure PrescriptionModel exists
+        if (!class_exists('\App\\Models\\PrescriptionModel')) {
+            return redirect()->back()->with('error', 'Prescription feature unavailable');
+        }
+
+        $presModel = new \App\Models\PrescriptionModel();
+        $itemModel = new \App\Models\PrescriptionItemModel();
+
+        try {
+            $pres = $presModel->find($id);
+            if (!$pres) return redirect()->to('/patient/prescriptions')->with('error', 'Prescription not found');
+
+            // Ownership check: patient_id must match logged-in user id
+            $patientId = $user['id'] ?? session()->get('user_id');
+            if ((int)$pres['patient_id'] !== (int)$patientId) {
+                return redirect()->to('/patient/prescriptions')->with('error', 'Access denied');
+            }
+
+            $items = $itemModel->where('prescription_id', $id)->findAll();
+
+            // Prefill fields similar to admin controller for consistent display
+            $userModel = new \App\Models\UserModel();
+            $patient = $userModel->find($pres['patient_id'] ?? null);
+            $dentist = $userModel->find($pres['dentist_id'] ?? null);
+
+            $patientAddress = $patient['address'] ?? '';
+            if (strpos($patientAddress, '@') !== false || $patientAddress === ($patient['email'] ?? '')) {
+                $patientAddress = '';
+            }
+
+            $pres['patient_name'] = $patient['name'] ?? 'Unknown';
+            $pres['patient_address'] = $patientAddress;
+            $pres['patient_age'] = $patient['age'] ?? '';
+            $pres['patient_gender'] = $patient['gender'] ?? '';
+            $pres['instructions'] = $pres['notes'] ?? null;
+            $pres['dentist_name'] = $pres['dentist_name'] ?? ($dentist['name'] ?? 'Unknown');
+            $pres['license_no'] = $pres['license_no'] ?? ($dentist['license_no'] ?? '');
+            $pres['ptr_no'] = $pres['ptr_no'] ?? ($dentist['ptr_no'] ?? '');
+
+            return view('patient/prescription_show', ['user' => $user, 'prescription' => $pres, 'items' => $items]);
+        } catch (\Exception $e) {
+            log_message('error', 'Error loading patient prescription: ' . $e->getMessage());
+            return redirect()->to('/patient/prescriptions')->with('error', 'Failed to load prescription');
+        }
+    }
+
+    /**
+     * Return HTML-only preview for a patient's prescription (used by modal)
+     */
+    public function previewPrescription($id = null)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return $this->response->setStatusCode(403)->setBody('Forbidden');
+
+        $id = (int)$id;
+        if (!$id) return $this->response->setStatusCode(404)->setBody('Not found');
+
+        if (!class_exists('\App\\Models\\PrescriptionModel')) {
+            return $this->response->setStatusCode(404)->setBody('Not found');
+        }
+
+        $presModel = new \App\Models\PrescriptionModel();
+        $itemModel = new \App\Models\PrescriptionItemModel();
+
+        $pres = $presModel->find($id);
+        if (!$pres) return $this->response->setStatusCode(404)->setBody('Not found');
+
+        $patientId = $user['id'] ?? session()->get('user_id');
+        if ((int)$pres['patient_id'] !== (int)$patientId) {
+            return $this->response->setStatusCode(403)->setBody('Access denied');
+        }
+
+        $items = $itemModel->where('prescription_id', $id)->findAll();
+
+        // Merge patient/dentist like admin preview
+        $userModel = new \App\Models\UserModel();
+        $patient = $userModel->find($pres['patient_id'] ?? null);
+        $dentist = $userModel->find($pres['dentist_id'] ?? null);
+        $patientAddress = $patient['address'] ?? '';
+        if (strpos($patientAddress, '@') !== false || $patientAddress === ($patient['email'] ?? '')) {
+            $patientAddress = '';
+        }
+        $pres['patient_name'] = $patient['name'] ?? 'Unknown';
+        $pres['patient_address'] = $patientAddress;
+        $pres['patient_age'] = $patient['age'] ?? '';
+        $pres['patient_gender'] = $patient['gender'] ?? '';
+        $pres['instructions'] = $pres['notes'] ?? null;
+        $pres['dentist_name'] = $pres['dentist_name'] ?? ($dentist['name'] ?? 'Unknown');
+        $pres['license_no'] = $pres['license_no'] ?? ($dentist['license_no'] ?? '');
+        $pres['ptr_no'] = $pres['ptr_no'] ?? ($dentist['ptr_no'] ?? '');
+
+        // Return HTML preview (same template used by admin preview)
+        return view('prescriptions/pdf', ['prescription' => $pres, 'items' => $items]);
+    }
+
+    /**
+     * Generate and stream a PDF file for a patient's prescription if Dompdf is available.
+     */
+    public function downloadPrescriptionFile($id = null)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+
+        $id = (int)$id;
+        if (!$id) return redirect()->to('/patient/prescriptions')->with('error', 'Not found');
+
+        if (!class_exists('\App\\Models\\PrescriptionModel')) {
+            return redirect()->back()->with('error', 'Feature unavailable');
+        }
+
+        $presModel = new \App\Models\PrescriptionModel();
+        $itemModel = new \App\Models\PrescriptionItemModel();
+
+        $pres = $presModel->find($id);
+        if (!$pres) return redirect()->to('/patient/prescriptions')->with('error', 'Not found');
+
+        $patientId = $user['id'] ?? session()->get('user_id');
+        if ((int)$pres['patient_id'] !== (int)$patientId) {
+            return redirect()->to('/patient/prescriptions')->with('error', 'Access denied');
+        }
+
+        $items = $itemModel->where('prescription_id', $id)->findAll();
+
+        // Merge patient/dentist like admin download
+        $userModel = new \App\Models\UserModel();
+        $patient = $userModel->find($pres['patient_id'] ?? null);
+        $dentist = $userModel->find($pres['dentist_id'] ?? null);
+        $patientAddress = $patient['address'] ?? '';
+        if (strpos($patientAddress, '@') !== false || $patientAddress === ($patient['email'] ?? '')) {
+            $patientAddress = '';
+        }
+        $pres['patient_name'] = $patient['name'] ?? 'Unknown';
+        $pres['patient_address'] = $patientAddress;
+        $pres['patient_age'] = $patient['age'] ?? '';
+        $pres['patient_gender'] = $patient['gender'] ?? '';
+        $pres['instructions'] = $pres['notes'] ?? null;
+        $pres['dentist_name'] = $pres['dentist_name'] ?? ($dentist['name'] ?? 'Unknown');
+        $pres['license_no'] = $pres['license_no'] ?? ($dentist['license_no'] ?? '');
+        $pres['ptr_no'] = $pres['ptr_no'] ?? ($dentist['ptr_no'] ?? '');
+
+        $html = view('prescriptions/pdf_download', ['prescription' => $pres, 'items' => $items]);
+
+        if (!class_exists('\Dompdf\\Dompdf')) {
+            // If Dompdf not available, show HTML in browser
+            return $this->response->setBody($html);
+        }
+
+    // Increase execution time and memory for PDF rendering
+    @ini_set('max_execution_time', '300');
+    @set_time_limit(300);
+    @ini_set('memory_limit', '512M');
+
+    // Prepare temp dir for Dompdf
+    $tempDir = (defined('WRITEPATH') ? WRITEPATH : sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'writable' . DIRECTORY_SEPARATOR) . 'dompdf' . DIRECTORY_SEPARATOR;
+    if (!is_dir($tempDir)) { @mkdir($tempDir, 0777, true); }
+
+    $dompdf = new \Dompdf\Dompdf();
+    $dompdf->set_option('isPhpEnabled', true);
+    $dompdf->set_option('isRemoteEnabled', true);
+    $dompdf->set_option('tempDir', $tempDir);
+    $dompdf->set_option('isHtml5ParserEnabled', true);
+    // A5 landscape for half-A4 prescription form
+    $dompdf->setPaper('A5', 'landscape');
+        $dompdf->loadHtml($html);
+        $dompdf->render();
+
+        $pdfOutput = $dompdf->output();
+
+        return $this->response->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="prescription_'.$id.'.pdf"')
+            ->setBody($pdfOutput);
     }
 
     /**
@@ -1094,38 +1519,34 @@ class Patient extends BaseController
     }
 
     /**
-     * Get patient's own dental chart data (API endpoint)
+     * Show a single treatment/dental record to the patient.
      */
-    public function getDentalChart()
+    public function treatment($id = null)
     {
         $user = Auth::getCurrentUser();
-        if (!$user || $user['user_type'] !== 'patient') {
-            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        if (!$user || $user['user_type'] !== 'patient') return redirect()->to('/login');
+
+        $id = (int) $id;
+        if (!$id) return redirect()->to('/patient/records');
+
+        if (!class_exists('\App\\Models\\DentalRecordModel')) {
+            return redirect()->back()->with('error', 'Treatment records unavailable');
         }
-        
-        $db = \Config\Database::connect();
-        
-        // Get dental chart data
-        $rows = $db->table('dental_chart dc')
-            ->select('dc.*, dr.record_date')
-            ->join('dental_record dr', 'dr.id = dc.dental_record_id')
-            ->where('dr.user_id', $user['id'])
-            ->orderBy('dr.record_date', 'DESC')
-            ->get()->getResultArray();
-        
-        // Get visual chart data from dental records
-        $visualChartRecords = $db->table('dental_record')
-            ->select('id, record_date, visual_chart_data')
-            ->where('user_id', $user['id'])
-            ->where('visual_chart_data IS NOT NULL')
-            ->where('visual_chart_data !=', '')
-            ->orderBy('record_date', 'DESC')
-            ->get()->getResultArray();
-        
-        return $this->response->setJSON([
-            'success' => true, 
-            'chart' => $rows,
-            'visual_charts' => $visualChartRecords
-        ]);
+
+        try {
+            $dr = new \App\Models\DentalRecordModel();
+            $record = $dr->find($id);
+            if (!$record) return redirect()->to('/patient/records')->with('error', 'Record not found');
+
+            // Ownership check: ensure record belongs to patient
+            if ((int)($record['user_id'] ?? $record['patient_id'] ?? 0) !== (int)$user['id']) {
+                return redirect()->to('/patient/records')->with('error', 'Access denied');
+            }
+
+            return view('patient/treatment_show', ['user' => $user, 'record' => $record]);
+        } catch (\Exception $e) {
+            log_message('error', 'Error loading treatment record for patient: ' . $e->getMessage());
+            return redirect()->to('/patient/records')->with('error', 'Failed to load record');
+        }
     }
 } 

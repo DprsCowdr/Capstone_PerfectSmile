@@ -25,7 +25,7 @@ class Staff extends BaseController
         $pendingAppointments = $appointmentModel->getPendingApprovalAppointments();
 
         // Restrict pending appointments to branches assigned to this staff user
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $userBranches = $branchUserModel->getUserBranches($user['id']);
         $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
         if (!empty($branchIds)) {
@@ -134,6 +134,14 @@ class Staff extends BaseController
         $user = Auth::getCurrentUser();
         if ($user['user_type'] !== 'staff') {
             return redirect()->to('/dashboard');
+        }
+
+        // Load helpers required by views (character_limiter used in partials)
+        if (! function_exists('helper')) {
+            // helper() should exist in CI; if not, ensure text helper functions are available via direct include
+            require_once APPPATH . 'Helpers/text_helper.php';
+        } else {
+            helper('text');
         }
         $userModel = new \App\Models\UserModel();
         $patients = $userModel->where('user_type', 'patient')->findAll();
@@ -361,7 +369,7 @@ class Staff extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
         }
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to approve appointments for this branch']);
         }
@@ -403,7 +411,7 @@ class Staff extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
         }
 
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized to decline appointments for this branch']);
         }
@@ -489,7 +497,7 @@ class Staff extends BaseController
         if (!$note) return $this->response->setJSON(['success' => false, 'message' => 'Notification not found']);
 
         // Verify staff is assigned to the branch
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $note['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
         }
@@ -517,7 +525,7 @@ class Staff extends BaseController
         if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
 
         // Check branch assignment
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
         }
@@ -589,7 +597,7 @@ class Staff extends BaseController
         if (!$appointment) return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found']);
 
         // Check branch assignment
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         if (!$branchUserModel->isUserAssignedToBranch($user['id'], $appointment['branch_id'])) {
             return $this->response->setJSON(['success' => false, 'message' => 'You are not authorized for this branch']);
         }
@@ -722,5 +730,174 @@ class Staff extends BaseController
         }
         
         return $formattedConflicts;
+    }
+
+    /**
+     * Staff Records - View patient records scoped to staff's branches
+     */
+    public function records()
+    {
+        // Check authentication and staff role
+        if (!Auth::isAuthenticated()) {
+            return redirect()->to('/login');
+        }
+
+        $user = Auth::getCurrentUser();
+        if ($user['user_type'] !== 'staff') {
+            return redirect()->to('/dashboard');
+        }
+
+        // Get staff's assigned branches
+        $branchUserModel = new \App\Models\BranchStaffModel();
+        $userBranches = $branchUserModel->getUserBranches($user['id']);
+        $branchIds = array_map(function($b) { return $b['branch_id']; }, $userBranches ?: []);
+
+        // Handle AJAX tab requests
+        $tab = $this->request->getGet('tab');
+        $ajax = $this->request->getGet('ajax');
+        $patientId = $this->request->getGet('patient_id');
+
+        if ($ajax === '1' && $tab && $patientId) {
+            return view('staff/partials/records_tab', [
+                'tab' => $tab,
+                'patient_id' => $patientId,
+                'user' => $user,
+                'branchIds' => $branchIds,
+                'tabData' => $this->getTabData($tab, $patientId, $branchIds)
+            ]);
+        }
+
+        // Get patients from staff's branches
+        $userModel = new \App\Models\UserModel();
+        $patients = [];
+        if (!empty($branchIds)) {
+            // Get patients who have appointments in staff's branches
+            $appointmentModel = new \App\Models\AppointmentModel();
+            // Use the query builder's distinct() method to avoid quoting DISTINCT as a column
+            $patientIds = $appointmentModel->distinct()->select('user_id')
+                                         ->whereIn('branch_id', $branchIds)
+                                         ->findColumn('user_id');
+            
+            if (!empty($patientIds)) {
+                $patients = $userModel->where('user_type', 'patient')
+                                    ->whereIn('id', $patientIds)
+                                    ->orderBy('name', 'ASC')
+                                    ->findAll();
+            }
+        }
+
+        return view('staff/records', [
+            'user' => $user,
+            'patients' => $patients,
+            'branchIds' => $branchIds
+        ]);
+    }
+
+    /**
+     * Get data for a specific tab
+     */
+    private function getTabData($tab, $patientId, $branchIds)
+    {
+        $data = [];
+        
+        switch ($tab) {
+            case 'appointments':
+                $appointmentModel = new \App\Models\AppointmentModel();
+                $data = $appointmentModel->select('appointments.*, branches.name as branch_name, doctor.name as dentist_name')
+                                        ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                        ->join('user as doctor', 'doctor.id = appointments.dentist_id', 'left')
+                                        ->where('appointments.user_id', $patientId)
+                                        ->whereIn('appointments.branch_id', $branchIds)
+                                        ->orderBy('appointments.appointment_datetime', 'DESC')
+                                        ->findAll();
+                break;
+
+            case 'treatments':
+                $treatmentModel = new \App\Models\TreatmentSessionModel();
+                // Join through appointments to get patient info - remove invalid procedure join
+                $data = $treatmentModel->select('treatment_sessions.*, user.name as dentist_name, 
+                                               a.appointment_datetime as session_date, 
+                                               a.user_id as patient_id,
+                                               a.appointment_type')
+                                      ->join('user', 'user.id = treatment_sessions.dentist_id', 'left')
+                                      ->join('appointments a', 'a.id = treatment_sessions.appointment_id', 'left')
+                                      ->where('a.user_id', $patientId)
+                                      ->whereIn('a.branch_id', $branchIds)
+                                      ->orderBy('treatment_sessions.started_at', 'DESC')
+                                      ->findAll();
+                break;
+
+            case 'dental_charts':
+                $dentalChartModel = new \App\Models\DentalChartModel();
+                // Join through dental_record to get patient-specific charts
+                $data = $dentalChartModel->select('dental_chart.*, dental_record.record_date, dental_record.user_id, user.name as dentist_name')
+                                        ->join('dental_record', 'dental_record.id = dental_chart.dental_record_id', 'left')
+                                        ->join('user', 'user.id = dental_record.dentist_id', 'left')
+                                        ->where('dental_record.user_id', $patientId)
+                                        ->orderBy('dental_chart.created_at', 'DESC')
+                                        ->findAll();
+                break;
+
+            case 'medical_history':
+                $medicalHistoryModel = new \App\Models\PatientMedicalHistoryModel();
+                $data = $medicalHistoryModel->where('user_id', $patientId)
+                                           ->orderBy('created_at', 'DESC')
+                                           ->findAll();
+                break;
+
+            case 'prescriptions':
+                $data = [];
+                if (class_exists('\App\Models\PrescriptionModel')) {
+                    try {
+                        $prescriptionModel = new \App\Models\PrescriptionModel();
+                        $prescriptions = $prescriptionModel->select('prescriptions.*, user.name as issued_by_name')
+                                                          ->join('user', 'user.id = prescriptions.dentist_id', 'left')
+                                                          ->where('prescriptions.patient_id', $patientId)
+                                                          ->orderBy('prescriptions.issue_date', 'DESC')
+                                                          ->findAll();
+
+                        // Prepare item model if available
+                        $prescriptionItemModel = null;
+                        if (class_exists('\App\Models\PrescriptionItemModel')) {
+                            $prescriptionItemModel = new \App\Models\PrescriptionItemModel();
+                        }
+
+                        // Attach items safely
+                        if (!empty($prescriptions)) {
+                            foreach ($prescriptions as &$prescription) {
+                                try {
+                                    if ($prescriptionItemModel) {
+                                        $prescription['items'] = $prescriptionItemModel->where('prescription_id', $prescription['id'])->findAll();
+                                    } else {
+                                        $prescription['items'] = [];
+                                    }
+                                } catch (\Exception $ie) {
+                                    log_message('error', 'Failed to load prescription items in staff records: ' . $ie->getMessage());
+                                    $prescription['items'] = [];
+                                }
+                            }
+                            unset($prescription);
+                        }
+
+                        $data = $prescriptions;
+                    } catch (\Exception $e) {
+                        log_message('error', 'Failed to load prescriptions in staff records: ' . $e->getMessage());
+                        $data = [];
+                    }
+                }
+                break;
+
+            case 'invoices':
+                $invoiceModel = new \App\Models\InvoiceModel();
+                $data = $invoiceModel->where('patient_id', $patientId)
+                                   ->orderBy('created_at', 'DESC')
+                                   ->findAll();
+                break;
+
+            default:
+                $data = [];
+        }
+
+        return $data;
     }
 } 

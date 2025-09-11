@@ -50,6 +50,15 @@ class InvoiceController extends BaseAdminController
         $limit = $this->request->getGet('limit') ?? 10;
 
         $data = $this->invoiceService->getAllInvoices($page, $limit, $search, $status);
+        // Debug: log invoice fetch results to help diagnose empty listings
+        try {
+            $count = is_array($data['invoices']) ? count($data['invoices']) : 0;
+            $sampleId = ($count > 0 && isset($data['invoices'][0]['id'])) ? $data['invoices'][0]['id'] : 'none';
+            log_message('debug', "InvoiceController::index - fetched invoices count={$count}, sampleId={$sampleId}, page={$page}, limit={$limit}");
+        } catch (\Throwable $e) {
+            log_message('error', 'InvoiceController::index - logging failed: ' . $e->getMessage());
+        }
+
         $stats = $this->invoiceService->getInvoiceStats();
 
         return view('admin/invoices/index', [
@@ -104,6 +113,8 @@ class InvoiceController extends BaseAdminController
             'due_date' => $this->request->getPost('due_date'),
             'payment_terms' => $this->request->getPost('payment_terms') ?? 'Net 30',
             'notes' => $this->request->getPost('notes'),
+            'discount' => $this->request->getPost('discount') ?? 0,
+            'items' => $this->request->getPost('items') ?? [],
             'created_by' => $user['id']
         ];
 
@@ -123,24 +134,63 @@ class InvoiceController extends BaseAdminController
      */
     public function show($id)
     {
-        $user = $this->getAuthenticatedUser();
-        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
-            return $user;
-        }
-
-        $result = $this->invoiceService->getInvoiceDetails($id);
+        // Enhanced debug logging
+        log_message('debug', "=== InvoiceController::show START ===");
+        log_message('debug', "InvoiceController::show called with ID: {$id}");
+        log_message('debug', "Request URI: " . $this->request->getUri());
+        log_message('debug', "User Agent: " . $this->request->getUserAgent());
+        log_message('debug', "Session ID: " . session_id());
         
-        if (!$result['success']) {
-            session()->setFlashdata('error', $result['message']);
+        // Check session state
+        $session = session();
+        $sessionData = [
+            'isLoggedIn' => $session->get('isLoggedIn'),
+            'user_id' => $session->get('user_id'),
+            'user_type' => $session->get('user_type'),
+            'user_name' => $session->get('user_name')
+        ];
+        log_message('debug', "Session data: " . json_encode($sessionData));
+        
+        try {
+            $user = $this->getAuthenticatedUser();
+            if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+                log_message('debug', "InvoiceController::show - authentication failed, redirecting to login");
+                log_message('debug', "Redirect headers: " . json_encode($user->getHeaders()));
+                return $user;
+            }
+
+            log_message('debug', "InvoiceController::show - user authenticated successfully");
+            log_message('debug', "Authenticated user data: " . json_encode($user));
+
+            $result = $this->invoiceService->getInvoiceDetails($id);
+            
+            if (!$result['success']) {
+                log_message('error', "InvoiceController::show - failed to get invoice details: " . $result['message']);
+                session()->setFlashdata('error', 'Error loading invoice: ' . $result['message']);
+                return redirect()->to('/admin/invoices');
+            }
+
+            log_message('debug', "InvoiceController::show - successfully retrieved invoice data");
+            log_message('debug', "Invoice data keys: " . json_encode(array_keys($result['data'])));
+            
+            $viewData = [
+                'user' => $user,
+                'invoice' => $result['data']['invoice'],
+                'items' => $result['data']['items'],
+                'totals' => $result['data']['totals']
+            ];
+            
+            log_message('debug', "View data prepared with keys: " . json_encode(array_keys($viewData)));
+            log_message('debug', "=== InvoiceController::show SUCCESS ===");
+
+            return view('admin/invoices/show', $viewData);
+            
+        } catch (\Exception $e) {
+            log_message('error', "InvoiceController::show - Exception: " . $e->getMessage());
+            log_message('error', "Exception trace: " . $e->getTraceAsString());
+            session()->setFlashdata('error', 'An error occurred while loading the invoice: ' . $e->getMessage());
             return redirect()->to('/admin/invoices');
         }
-
-        return view('admin/invoices/show', [
-            'user' => $user,
-            'invoice' => $result['data']['invoice'],
-            'items' => $result['data']['items'],
-            'totals' => $result['data']['totals']
-        ]);
     }
 
     /**
@@ -186,11 +236,9 @@ class InvoiceController extends BaseAdminController
         $data = [
             'patient_id' => $this->request->getPost('patient_id'),
             'procedure_id' => $this->request->getPost('procedure_id'),
-            'appointment_id' => $this->request->getPost('appointment_id'),
-            'status' => $this->request->getPost('status'),
-            'due_date' => $this->request->getPost('due_date'),
-            'payment_terms' => $this->request->getPost('payment_terms'),
-            'notes' => $this->request->getPost('notes')
+            'discount' => $this->request->getPost('discount') ?? 0,
+            'notes' => $this->request->getPost('notes'),
+            'items' => $this->request->getPost('items') ?? []
         ];
 
         $result = $this->invoiceService->updateInvoice($id, $data);

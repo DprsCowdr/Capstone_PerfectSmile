@@ -256,7 +256,7 @@ $currentUrl = current_url();
             <!-- Administration Section -->
             <div class="space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Administration</label>
-                <?= nav_link(base_url('admin/role-permission'), 'fas fa-user-shield', 'Role Permission', $currentUrl) ?>
+                <?= nav_link(base_url('admin/roles'), 'fas fa-user-shield', 'Role Permission', $currentUrl) ?>
                 <?= nav_link(base_url('admin/branches'), 'fas fa-code-branch', 'Branches', $currentUrl) ?>
                 <?= nav_link(base_url('admin/settings'), 'fas fa-cog', 'Settings', $currentUrl) ?>
             </div>
@@ -282,6 +282,7 @@ $currentUrl = current_url();
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Management</label>
                 <?= nav_link(base_url('staff/appointments'), 'fas fa-calendar-check', 'Appointments', $currentUrl) ?>
                 <?= nav_link(base_url('staff/patients'), 'fas fa-users', 'Patients', $currentUrl) ?>
+                <?= nav_link(base_url('staff/records'), 'fas fa-folder-open', 'Patient Records', $currentUrl) ?>
                 <?= nav_link(base_url('staff/waitlist'), 'fas fa-clipboard-list', 'Waitlist', $currentUrl) ?>
                 <?= nav_link('#', 'fas fa-file-invoice-dollar', 'Invoices', $currentUrl) ?>
             </div>
@@ -299,16 +300,11 @@ $currentUrl = current_url();
             <div class="space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Menu</label>
                 <!-- Appointments parent linking to My Appointments -->
-                <?= nav_link(base_url('patient/appointments'), 'fas fa-calendar-check', 'Appointments', $currentUrl) ?>
-                <?= nav_link(base_url('patient/calendar'), 'fas fa-calendar-alt', 'Calendar', $currentUrl) ?>
-                <?php if (function_exists('module_enabled') ? module_enabled('billing') : (class_exists('\App\Controllers\Billing') || env('ENABLE_BILLING'))): ?>
-                    <?= nav_link(base_url('patient/invoice'), 'fas fa-file-invoice-dollar', 'Invoice', $currentUrl) ?>
-                <?php endif; ?>
+                <?= nav_link(base_url('patient/appointments'), 'fas fa-calendar-check', 'My Appointments', $currentUrl) ?>
+                <?= nav_link(base_url('patient/calendar'), 'fas fa-calendar-alt', 'My Calendar', $currentUrl) ?>
+                <?= nav_link(base_url('patient/records'), 'fas fa-file-medical-alt', 'My Records', $currentUrl) ?>
                 <?= nav_link(base_url('patient/notifications'), 'fas fa-bell', 'Notifications', $currentUrl) ?>
-                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Account</label>
-                <?= nav_link(base_url('auth/profile'), 'fas fa-user', 'My Profile', $currentUrl) ?>
-                <?= nav_link(base_url('auth/settings'), 'fas fa-cog', 'Account Settings', $currentUrl) ?>
-
+                <?php /* Removed: My Invoice and My Prescriptions are now available in My Records to avoid redundancy */ ?>
             </div>
             <?php endif; ?>
 
@@ -479,14 +475,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Reload the page to reflect the new branch context
                     window.location.reload();
                 } else {
-                    alert('Error switching branch: ' + (data.message || 'Unknown error'));
+                    if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error switching branch: ' + (data.message || 'Unknown error'), 'error', 5000); else alert('Error switching branch: ' + (data.message || 'Unknown error'));
                     // Reset to previous selection
                     this.value = '<?= session('selected_branch_id') ?? '' ?>';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error switching branch. Please try again.');
+                if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error switching branch. Please try again.', 'error', 5000); else alert('Error switching branch. Please try again.');
                 // Reset to previous selection
                 this.value = '<?= session('selected_branch_id') ?? '' ?>';
             })

@@ -239,6 +239,28 @@ class AdminController extends BaseAdminController
                      ->where('a.branch_id', (int)$branchId);
             $trow = $tb->get()->getRowArray();
             $treatmentCounts[] = (int) ($trow['cnt'] ?? 0);
+
+            // revenue per day (invoices created) and payments received per day
+            try {
+                $ib = $db->table('invoices')
+                         ->select('COALESCE(SUM(total_amount),0) as total')
+                         ->where('DATE(created_at)', $d)
+                         ->where('branch_id', (int)$branchId);
+                $irow = $ib->get()->getRowArray();
+                $revenues[] = (float) ($irow['total'] ?? 0);
+            } catch (\Exception $e) {
+                $revenues[] = 0.0;
+            }
+            try {
+                $pb = $db->table('payments')
+                         ->select('COALESCE(SUM(amount),0) as total')
+                         ->where('DATE(created_at)', $d)
+                         ->where('branch_id', (int)$branchId);
+                $prow = $pb->get()->getRowArray();
+                $paymentTotals[] = (float) ($prow['total'] ?? 0);
+            } catch (\Exception $e) {
+                $paymentTotals[] = 0.0;
+            }
         }
 
         // status counts for last 7 days
@@ -257,14 +279,25 @@ class AdminController extends BaseAdminController
         $avgPerDay = (count($counts) ? (array_sum($counts) / count($counts)) : 0);
         $peakDay = count($counts) ? $labels[array_search(max($counts), $counts)] : null;
 
+        // compute revenue totals for the period
+        $totalRevenue = array_sum($revenues ?? []);
+        $totalPayments = array_sum($paymentTotals ?? []);
+
+        $mergedTotals = array_merge((array)$totals, [
+            'total_revenue' => $totalRevenue,
+            'total_payments' => $totalPayments
+        ]);
+
         return $this->response->setJSON([
             'success' => true,
-            'totals' => $totals,
+            'totals' => $mergedTotals,
             'nextAppointment' => $nextAppointment,
             'labels' => $labels,
             'counts' => $counts,
             'patientCounts' => $patientCounts,
             'treatmentCounts' => $treatmentCounts,
+            'revenueTotals' => $revenues ?? [],
+            'paymentTotals' => $paymentTotals ?? [],
             'statusCounts' => $statusCounts,
             'avgPerDay' => round($avgPerDay, 1),
             'peakDay' => $peakDay
@@ -531,17 +564,50 @@ class AdminController extends BaseAdminController
         // Load models
         $dentalRecordModel = new \App\Models\DentalRecordModel();
         $userModel = new \App\Models\UserModel();
+        $branchModel = new \App\Models\BranchModel();
         
-        // Get all dental records with complete patient and medical history information
-        $records = $dentalRecordModel->getRecordsWithPatientInfo(50, 0);
+    // Get all dental records with complete patient and medical history information AND branch info
+    // No limit so admin sees historical records from all branches
+    $records = $dentalRecordModel->getRecordsWithPatientAndBranchInfo();
+
+        // Get all branches for categorization
+        $branches = $branchModel->where('status', 'active')->orderBy('name', 'ASC')->findAll();
+        
+        // Categorize records by branch
+        $recordsByBranch = [];
+        $unassignedRecords = [];
+        
+        foreach ($records as $record) {
+            $branchId = $record['branch_id'] ?? null;
+            if ($branchId) {
+                if (!isset($recordsByBranch[$branchId])) {
+                    $recordsByBranch[$branchId] = [
+                        'branch' => null,
+                        'records' => []
+                    ];
+                    // Find branch info
+                    foreach ($branches as $branch) {
+                        if ($branch['id'] == $branchId) {
+                            $recordsByBranch[$branchId]['branch'] = $branch;
+                            break;
+                        }
+                    }
+                }
+                $recordsByBranch[$branchId]['records'][] = $record;
+            } else {
+                $unassignedRecords[] = $record;
+            }
+        }
 
         // Calculate statistics
         $totalRecords = $dentalRecordModel->countAll();
         
         // Count active patients (patients with records in last 6 months)
-        $activePatients = $dentalRecordModel->select('DISTINCT user_id')
-                                          ->where('record_date >=', date('Y-m-d', strtotime('-6 months')))
-                                          ->countAllResults();
+    // Use distinct() + select() so DISTINCT is not quoted as a column name
+    $activePatients = $dentalRecordModel->distinct()
+                      ->select('user_id')
+                      ->where('record_date >=', date('Y-m-d', strtotime('-6 months')))
+                      ->countAllResults();
         
         // Count records with X-rays
         $withXrays = $dentalRecordModel->where('xray_image_url IS NOT NULL')
@@ -554,7 +620,10 @@ class AdminController extends BaseAdminController
 
         $data = [
             'user' => $user,
-            'records' => $records,
+            'records' => $records, // Keep original for backward compatibility
+            'recordsByBranch' => $recordsByBranch,
+            'unassignedRecords' => $unassignedRecords,
+            'branches' => $branches,
             'stats' => [
                 'total_records' => $totalRecords,
                 'active_patients' => $activePatients,
@@ -621,7 +690,8 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-        return view('admin/management/roles', ['user' => $user]);
+    // Redirect to RoleController index which prepares and renders the roles list
+    return redirect()->to(site_url('admin/roles'));
     }
 
     public function branches()
@@ -658,12 +728,12 @@ class AdminController extends BaseAdminController
         $branches = $branchModel->findAll();
         
         // Get branch assignments for each user with branch names
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
         $branchAssignments = [];
         foreach ($users as $userData) {
-            $assignments = $branchUserModel->select('branch_user.*, branches.name as branch_name')
-                                          ->join('branches', 'branches.id = branch_user.branch_id')
-                                          ->where('branch_user.user_id', $userData['id'])
+            $assignments = $branchUserModel->select('branch_staff.*, branches.name as branch_name')
+                                          ->join('branches', 'branches.id = branch_staff.branch_id')
+                                          ->where('branch_staff.user_id', $userData['id'])
                                           ->findAll();
             $branchAssignments[$userData['id']] = $assignments;
         }
@@ -722,7 +792,7 @@ class AdminController extends BaseAdminController
         }
 
         $userModel = new \App\Models\UserModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         // Create user
         $userData = [
@@ -805,7 +875,7 @@ class AdminController extends BaseAdminController
 
         $userModel = new \App\Models\UserModel();
         $branchModel = new \App\Models\BranchModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         $userData = $userModel->find($id);
         if (!$userData) {
@@ -834,7 +904,7 @@ class AdminController extends BaseAdminController
         $formData = $this->request->getPost();
         
         $userModel = new \App\Models\UserModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         $userData = $userModel->find($id);
         if (!$userData) {
@@ -921,7 +991,7 @@ class AdminController extends BaseAdminController
         }
 
         $userModel = new \App\Models\UserModel();
-        $branchUserModel = new \App\Models\BranchUserModel();
+    $branchUserModel = new \App\Models\BranchStaffModel();
 
         // Delete branch assignments first
         $branchUserModel->where('user_id', $id)->delete();
@@ -988,11 +1058,14 @@ class AdminController extends BaseAdminController
      */
     public function switchBranch()
     {
-        if (!$this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
+        // Accept AJAX JSON or traditional POST form submissions
+        $branchId = null;
+        if ($this->request->isAJAX()) {
+            $json = $this->request->getJSON(true);
+            $branchId = $json['branch_id'] ?? null;
+        } else {
+            $branchId = $this->request->getPost('branch_id') ?: $this->request->getGet('branch_id');
         }
-
-        $branchId = $this->request->getJSON()->branch_id ?? '';
         
         // Validate branch exists
         if ($branchId) {
@@ -1125,19 +1198,18 @@ class AdminController extends BaseAdminController
             ->orderBy('dr.record_date', 'DESC')
             ->get()->getResultArray();
         
-        // Get visual chart data from dental records
-        $visualChartRecords = $db->table('dental_record')
-            ->select('id, record_date, visual_chart_data')
+        // Get dental records for this patient (alternative to visual chart data)
+        $dentalRecords = $db->table('dental_record')
+            ->select('id, record_date, treatment, notes')
             ->where('user_id', $id)
-            ->where('visual_chart_data IS NOT NULL')
-            ->where('visual_chart_data !=', '')
             ->orderBy('record_date', 'DESC')
             ->get()->getResultArray();
         
         return $this->response->setJSON([
             'success' => true, 
             'chart' => $rows,
-            'visual_charts' => $visualChartRecords
+            'visual_charts' => [], // Empty array since column doesn't exist
+            'dental_records' => $dentalRecords
         ]);
     }
 
@@ -1179,6 +1251,54 @@ class AdminController extends BaseAdminController
                 'medical_conditions' => $p['medical_conditions'] ?? null,
                 'special_notes' => $p['special_notes'] ?? null
             ]
+        ]);
+    }
+
+    public function getPatientInvoiceHistory($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        
+        $db = \Config\Database::connect();
+        
+        // Get invoices for this patient
+        $invoices = $db->table('invoices i')
+            ->select('i.*, pr.procedure_name, u.name as patient_name')
+            ->join('procedures pr', 'pr.id = i.procedure_id', 'left')
+            ->join('user u', 'u.id = i.patient_id', 'left')
+            ->where('i.patient_id', $id)
+            ->orderBy('i.created_at', 'DESC')
+            ->get()->getResultArray();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'invoices' => $invoices
+        ]);
+    }
+
+    public function getPatientPrescriptions($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        
+        $db = \Config\Database::connect();
+        
+        // Get prescriptions for this patient
+        $prescriptions = $db->table('prescriptions pr')
+            ->select('pr.*, u.name as patient_name, d.name as dentist_name')
+            ->join('user u', 'u.id = pr.patient_id', 'left')
+            ->join('user d', 'd.id = pr.dentist_id', 'left')
+            ->where('pr.patient_id', $id)
+            ->orderBy('pr.issue_date', 'DESC')
+            ->get()->getResultArray();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'prescriptions' => $prescriptions
         ]);
     }
 }

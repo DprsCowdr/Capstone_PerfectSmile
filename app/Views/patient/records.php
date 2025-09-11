@@ -1,845 +1,132 @@
-<?= view('templates/header') ?>
+<?php echo view('templates/header', ['title' => 'My Records']); ?>
 
-<style>
-    .tooth-grid {
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        gap: 8px;
-        max-width: 600px;
-        margin: 0 auto;
-    }
-    .tooth-item {
-        aspect-ratio: 1;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        position: relative;
-        background: white;
-    }
-    .tooth-number {
-        font-weight: bold;
-        color: #374151;
-    }
-    .tooth-visual {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        margin: 2px 0;
-    }
-    .condition-healthy { background-color: #10b981; }
-    .condition-cavity { background-color: #f59e0b; }
-    .condition-filled { background-color: #3b82f6; }
-    .condition-crown { background-color: #8b5cf6; }
-    .condition-root-canal { background-color: #ec4899; }
-    .condition-extracted { background-color: #ef4444; }
-    
-    .stats-card {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .stats-number {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #3b82f6;
-    }
-    
-    .visual-chart-item {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 16px;
-        background: white;
-    }
-    .visual-chart-toggle {
-        cursor: pointer;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 4px;
-        font-size: 14px;
-    }
-    .visual-chart-content {
-        display: none;
-        margin-top: 16px;
-        padding: 16px;
-        background: #f9fafb;
-        border-radius: 4px;
-    }
-    .visual-chart-content.show {
-        display: block;
-    }
-    
-    .visual-chart-screen-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-    }
-    
-    #screen-chart-canvas {
-        max-width: 100%;
-        height: auto;
-        display: block;
-        margin: 0 auto;
-        max-height: 600px;
-    }
-    
-    @media (max-width: 768px) {
-        #screen-chart-canvas {
-            max-width: 100%;
-            max-height: 400px;
-        }
-    }
-    
-    .no-chart-available {
-        text-align: center;
-        padding: 20px;
-        color: #666;
-    }
-</style>
+<?php echo view('templates/sidebar', ['active' => 'records', 'user' => $user]); ?>
 
-<div class="min-h-screen bg-white flex">
-    <?= view('templates/sidebar', ['user' => $user]) ?>
-    
-    <div class="flex-1 flex flex-col min-h-screen bg-white">
-        <!-- Topbar -->
-        <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6">
-            <button id="sidebarToggleTop" class="block lg:hidden text-gray-600 mr-3 text-2xl focus:outline-none">
-                <i class="fa fa-bars"></i>
-            </button>
-            <div class="flex items-center ml-auto">
-                <span class="mr-4 hidden lg:inline text-gray-600 font-semibold"><?= $user['name'] ?? 'Patient' ?></span>
-                <div class="relative">
-                    <button class="focus:outline-none">
-                        <img class="w-10 h-10 rounded-full border-2 border-gray-200" src="<?= base_url('img/undraw_profile.svg') ?>" alt="Profile">
-                    </button>
-                </div>
-            </div>
-        </nav>
+<div class="main-content" data-sidebar-offset>
+	<?php echo view('templates/patient_topbar', ['user' => $user]); ?>
 
-        <!-- Main Content -->
-        <main class="flex-1 p-6">
-            <div class="max-w-6xl mx-auto">
-                <!-- Page Header -->
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">My Dental Records</h1>
-                    <p class="text-gray-600">View your dental history and tooth conditions</p>
-                </div>
+	<div class="container mx-auto p-6">
+		<div class="bg-gradient-to-r from-green-600 to-green-700 rounded-lg p-6 mb-8 text-white">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold mb-2">My Records</h1>
+					<p class="text-green-100 text-lg">View your appointments, treatments, prescriptions and invoices</p>
+				</div>
+				<div class="hidden md:block">
+					<svg class="w-16 h-16 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+					</svg>
+				</div>
+			</div>
+		</div>
 
-                <!-- Statistics Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="stats-card">
-                        <div class="stats-number"><?= count($records) ?></div>
-                        <div class="text-sm text-gray-600">Total Records</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-number"><?= $healthyTeeth + ($treatmentCounts['filled'] ?? 0) ?></div>
-                        <div class="text-sm text-gray-600">Healthy Teeth</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-number"><?= ($treatmentCounts['filled'] ?? 0) + ($treatmentCounts['crown'] ?? 0) + ($treatmentCounts['root-canal'] ?? 0) ?></div>
-                        <div class="text-sm text-gray-600">Treatments</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-number">
-                            <?php if (!empty($latestDate)): ?>
-                                <?= date('M j', strtotime($latestDate)) ?>
-                            <?php else: ?>
-                                None
-                            <?php endif; ?>
-                        </div>
-                        <div class="text-sm text-gray-600">Last Visit</div>
-                    </div>
-                </div>
+	<!-- Patient Info removed for privacy on patient records page -->
 
-                <!-- Visual Charts Section -->
-                <?php if (!empty($visualCharts)): ?>
-                <?php $latestChart = $visualCharts[0]; // Get the most recent chart ?>
-                <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-900 mb-2">Visual Dental Chart</h2>
-                            <p class="text-gray-600">Latest dental examination chart</p>
-                        </div>
-                                            <button onclick="printChart()" class="btn btn-outline-primary btn-sm screen-only">
-                        <i class="fas fa-print me-1"></i>Print Chart
-                    </button>
-                    </div>
+		<!-- Tabs -->
+		<div class="bg-white rounded-lg shadow-md mb-6">
+			<div class="px-6 py-4 border-b border-gray-200">
+				<h3 class="text-lg font-semibold text-gray-900">Records</h3>
+				<p class="text-sm text-gray-600">Access your personal records</p>
+			</div>
+			<div class="px-6 py-4">
+				<div class="flex flex-wrap gap-2">
+					<button class="records-tab flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-colors" data-tab="appointments">
+						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+						</svg>
+						Appointments
+					</button>
+					<button class="records-tab flex items-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors" data-tab="treatments">
+						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+						</svg>
+						Treatments
+					</button>
+					<button class="records-tab flex items-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors" data-tab="prescriptions">
+						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+						</svg>
+						Prescriptions
+					</button>
+					<button class="records-tab flex items-center px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors" data-tab="invoices">
+						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+						</svg>
+						Invoices
+					</button>
+				</div>
+			</div>
+		</div>
 
-                    <!-- Printable A4 Format -->
-                    <div id="printable-chart" class="print-section">
-                        <div class="a4-page">
-                            <div class="chart-header">
-                                <h1>Visual Dental Chart</h1>
-                                <div class="patient-info">
-                                    <p><strong>Patient:</strong> <?= session()->get('patient_name') ?? 'Patient' ?></p>
-                                    <p><strong>Date Printed:</strong> <?= date('F j, Y') ?></p>
-                                </div>
-                            </div>
+		<div id="tab-content" class="bg-white rounded-lg shadow-md min-h-48">
+			<div class="flex items-center justify-center py-16">
+				<div class="text-center">
+					<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+					<p class="text-gray-500 text-lg">Loading your records...</p>
+				</div>
+			</div>
+		</div>
 
-                            <!-- Chart Image -->
-                            <?php if (!empty($latestChart['visual_chart_data'])): ?>
-                                <?php 
-                                // Parse JSON visual chart data
-                                $chartData = json_decode($latestChart['visual_chart_data'], true);
-                                $backgroundImage = '';
-                                $hasStrokes = false;
-                                
-                                if ($chartData && isset($chartData['background'])) {
-                                    $bgPath = $chartData['background'];
-                                    
-                                    // Check if it's already a full URL
-                                    if (str_starts_with($bgPath, 'http://') || str_starts_with($bgPath, 'https://')) {
-                                        $backgroundImage = $bgPath;
-                                    } else {
-                                        // Ensure the path starts with / for proper URL construction
-                                        if (!str_starts_with($bgPath, '/')) {
-                                            $bgPath = '/' . $bgPath;
-                                        }
-                                        $backgroundImage = base_url($bgPath);
-                                    }
-                                    
-                                    $hasStrokes = !empty($chartData['strokes']);
-                                    
-                                    // Debug: Log the constructed URL
-                                    error_log("Background image URL: " . $backgroundImage);
-                                }
-                                ?>
-                                <div class="chart-image-container">
-                                    <?php if ($backgroundImage): ?>
-                                        <div class="visual-chart-wrapper" 
-                                             data-chart-data="<?= htmlspecialchars($latestChart['visual_chart_data']) ?>"
-                                             data-background="<?= $backgroundImage ?>">
-                                            <canvas id="print-chart-canvas" width="800" height="600"></canvas>
-                                        </div>
-                                    <?php else: ?>
-                                        <div class="no-chart-available">
-                                            <p>Visual chart data is not in the expected format.</p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="chart-image-container">
-                                    <div class="no-chart-available">
-                                        <p>No visual chart available for this record.</p>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Treatments Section -->
-                            <div class="treatments-section">
-                                <h3>Treatment History</h3>
-                                <div class="treatment-list">
-                                    <?php if (!empty($records)): ?>
-                                        <?php foreach ($records as $record): ?>
-                                            <?php if (!empty($record['treatment'])): ?>
-                                                <div class="treatment-item">
-                                                    <span class="treatment-date"><?= date('M j, Y', strtotime($record['record_date'])) ?>:</span>
-                                                    <span class="treatment-description"><?= htmlspecialchars($record['treatment']) ?></span>
-                                                </div>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <div class="treatment-item">
-                                            <span class="treatment-date"><?= date('M j, Y') ?>:</span>
-                                            <span class="treatment-description">No treatments recorded.</span>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Screen View (Non-printable) -->
-                    <div class="screen-only">
-                        <div class="latest-chart-display">
-                            <div class="chart-info mb-4">
-                                <h3 class="text-lg font-semibold text-gray-900">
-                                    <?= date('F j, Y', strtotime($latestChart['record_date'])) ?>
-                                </h3>
-                                <p class="text-gray-600">Latest dental examination</p>
-                            </div>
-                            
-                            <?php if (!empty($latestChart['visual_chart_data'])): ?>
-                                <?php 
-                                // Parse JSON visual chart data for screen view
-                                $chartData = json_decode($latestChart['visual_chart_data'], true);
-                                $backgroundImage = '';
-                                $hasStrokes = false;
-                                
-                                if ($chartData && isset($chartData['background'])) {
-                                    $bgPath = $chartData['background'];
-                                    
-                                    // Check if it's already a full URL
-                                    if (str_starts_with($bgPath, 'http://') || str_starts_with($bgPath, 'https://')) {
-                                        $backgroundImage = $bgPath;
-                                    } else {
-                                        // Ensure the path starts with / for proper URL construction
-                                        if (!str_starts_with($bgPath, '/')) {
-                                            $bgPath = '/' . $bgPath;
-                                        }
-                                        $backgroundImage = base_url($bgPath);
-                                    }
-                                    
-                                    $hasStrokes = !empty($chartData['strokes']);
-                                    
-                                    // Debug: Log the constructed URL
-                                    error_log("Background image URL (screen): " . $backgroundImage);
-                                }
-                                
-                                // Debug output (remove in production)
-                                if (ENVIRONMENT === 'development') {
-                                    echo '<div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc; font-size: 12px;">';
-                                    echo '<strong>Debug Info:</strong><br>';
-                                    echo 'Raw chart data: ' . htmlspecialchars(substr($latestChart['visual_chart_data'], 0, 100)) . '...<br>';
-                                    echo 'Parsed background: ' . ($chartData['background'] ?? 'Not found') . '<br>';
-                                    echo 'Constructed URL: ' . $backgroundImage . '<br>';
-                                    echo 'Has strokes: ' . ($hasStrokes ? 'Yes' : 'No') . '<br>';
-                                    echo '</div>';
-                                }
-                                ?>
-                                <div class="chart-display mb-6 text-center">
-                                    <?php if ($backgroundImage): ?>
-                                        <div class="visual-chart-screen-wrapper" 
-                                             data-chart-data="<?= htmlspecialchars($latestChart['visual_chart_data']) ?>"
-                                             data-background="<?= $backgroundImage ?>">
-                                            <canvas id="screen-chart-canvas" width="800" height="600" class="max-w-3xl mx-auto rounded border shadow-sm"></canvas>
-                                        </div>
-                                    <?php else: ?>
-                                        <div class="no-chart-available text-center py-8 text-gray-500">
-                                            <i class="fas fa-image text-3xl mb-2"></i>
-                                            <p>Visual chart data is not in the expected format.</p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php else: ?>
-                                <div class="chart-display mb-6">
-                                    <div class="no-chart-available text-center py-8 text-gray-500">
-                                        <i class="fas fa-image text-3xl mb-2"></i>
-                                        <p>No visual chart available for this record.</p>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="treatment-info bg-gray-50 p-4 rounded-lg">
-                                <h4 class="font-semibold text-gray-900 mb-3">Treatment</h4>
-                                <div class="treatment-entry">
-                                    <span class="text-blue-600 font-medium"><?= date('M j, Y', strtotime($latestChart['record_date'])) ?>:</span>
-                                    <span class="text-gray-800 ml-2">
-                                        <?php if (!empty($latestChart['treatment'])): ?>
-                                            <?= htmlspecialchars($latestChart['treatment']) ?>
-                                        <?php else: ?>
-                                            Fluoride treatment applied for cavity prevention.
-                                        <?php endif; ?>
-                                    </span>
-                                </div>
-                                
-                                <?php if (!empty($latestChart['notes'])): ?>
-                                    <div class="mt-3 pt-3 border-t border-gray-200">
-                                        <strong class="text-gray-700">Additional Notes:</strong><br>
-                                        <span class="text-gray-600"><?= nl2br(htmlspecialchars($latestChart['notes'])) ?></span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Records History -->
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Records History</h2>
-                    
-                    <?php if (empty($records)): ?>
-                        <div class="text-center py-12">
-                            <i class="fas fa-tooth text-6xl text-gray-300 mb-4"></i>
-                            <h3 class="text-lg font-semibold text-gray-900 mb-2">No Records Yet</h3>
-                            <p class="text-gray-600 mb-6">You haven't had any dental checkups recorded.</p>
-                            <a href="<?= base_url('/patient/book-appointment') ?>" 
-                               class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-                                Book Your First Appointment
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <div class="space-y-4">
-                            <?php foreach ($records as $record): ?>
-                                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                                    <div class="flex items-start justify-between mb-4">
-                                        <div>
-                                            <h3 class="text-lg font-semibold text-gray-900">Dental Checkup</h3>
-                                            <p class="text-gray-600">
-                                                <i class="fas fa-calendar mr-2"></i>
-                                                <?= !empty($record['record_date']) ? date('F j, Y', strtotime($record['record_date'])) : 'Date not specified' ?>
-                                            </p>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="text-sm text-gray-500">Record #<?= $record['id'] ?></div>
-                                            <?php if (!empty($record['dentist_name'])): ?>
-                                                <div class="text-sm text-gray-600">
-                                                    <i class="fas fa-user-md mr-1"></i>Dr. <?= htmlspecialchars($record['dentist_name']) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-
-                                    <?php if (!empty($record['treatment'])): ?>
-                                        <div class="mb-4">
-                                            <h4 class="font-medium text-gray-900 mb-2">Treatment</h4>
-                                            <p class="text-gray-700 bg-gray-50 p-3 rounded"><?= nl2br(htmlspecialchars($record['treatment'])) ?></p>
-                                        </div>
-                                    <?php endif; ?>
-
-                                    <?php if (!empty($record['notes'])): ?>
-                                        <div>
-                                            <h4 class="font-medium text-gray-900 mb-2">Notes</h4>
-                                            <p class="text-gray-700 bg-blue-50 p-3 rounded"><?= nl2br(htmlspecialchars($record['notes'])) ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="bg-white rounded-lg shadow-lg p-6 mt-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <a href="<?= base_url('/patient/book-appointment') ?>" 
-                           class="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
-                                <i class="fas fa-calendar-plus text-white"></i>
-                            </div>
-                            <div>
-                                <div class="font-medium text-gray-900">Book Appointment</div>
-                                <div class="text-sm text-gray-600">Schedule your next visit</div>
-                            </div>
-                        </a>
-                        <a href="<?= base_url('/patient/appointments') ?>" 
-                           class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                            <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center mr-4">
-                                <i class="fas fa-clock text-white"></i>
-                            </div>
-                            <div>
-                                <div class="font-medium text-gray-900">View Appointments</div>
-                                <div class="text-sm text-gray-600">Check upcoming visits</div>
-                            </div>
-                        </a>
-                        <a href="<?= base_url('/patient/profile') ?>" 
-                           class="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                            <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center mr-4">
-                                <i class="fas fa-user text-white"></i>
-                            </div>
-                            <div>
-                                <div class="font-medium text-gray-900">Update Profile</div>
-                                <div class="text-sm text-gray-600">Manage your information</div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+	</div>
 </div>
 
-<style>
-/* Print Styles for A4 Format - Single Page */
-@media print {
-    @page {
-        size: A4;
-        margin: 10mm;
-    }
-    
-    * {
-        font-size: 8pt !important;
-        line-height: 1.1 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    
-    body * {
-        visibility: hidden;
-    }
-    
-    #printable-chart, #printable-chart * {
-        visibility: visible;
-    }
-    
-    #printable-chart {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100vh;
-        overflow: hidden;
-    }
-    
-    .screen-only {
-        display: none !important;
-    }
-}
-
-/* A4 Page Styles - Ultra Compact */
-.print-section {
-    display: none;
-}
-
-@media print {
-    .print-section {
-        display: block;
-    }
-}
-
-.a4-page {
-    width: 190mm;
-    height: 277mm;
-    padding: 5mm;
-    margin: 0;
-    background: white;
-    font-family: Arial, sans-serif;
-    font-size: 7pt;
-    line-height: 1.0;
-    overflow: hidden;
-    box-sizing: border-box;
-}
-
-.chart-header {
-    text-align: center;
-    margin-bottom: 3mm;
-    border-bottom: 1px solid #333;
-    padding-bottom: 1mm;
-}
-
-.chart-header h1 {
-    font-size: 12pt;
-    font-weight: bold;
-    margin: 0 0 1mm 0;
-    color: #333;
-}
-
-.patient-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 7pt;
-    margin-bottom: 1mm;
-}
-
-.patient-info p {
-    margin: 0;
-}
-
-.chart-date-header {
-    margin: 1mm 0;
-    padding: 1mm 0;
-    border-bottom: 1px solid #ddd;
-}
-
-.chart-date-header h2 {
-    font-size: 9pt;
-    color: #007bff;
-    margin: 0;
-}
-
-.chart-image-container {
-    margin: 2mm 0;
-    text-align: center;
-    height: 120mm;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.visual-chart-wrapper {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-#print-chart-canvas {
-    max-width: 160mm;
-    max-height: 115mm;
-    border: 1px solid #ddd;
-    border-radius: 2px;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto;
-}
-
-.main-dental-chart {
-    max-width: 160mm;
-    max-height: 115mm;
-    border: 1px solid #ddd;
-    border-radius: 2px;
-    object-fit: contain;
-}
-
-.treatments-section {
-    margin-top: 2mm;
-    height: 130mm;
-    overflow: hidden;
-}
-
-.treatments-section h3 {
-    font-size: 9pt;
-    font-weight: bold;
-    color: #333;
-    margin: 0 0 1mm 0;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 0.5mm;
-}
-
-.treatment-list {
-    margin-left: 1mm;
-    max-height: 125mm;
-    overflow: hidden;
-    column-count: 3;
-    column-gap: 2mm;
-    column-fill: auto;
-}
-
-.treatment-item {
-    margin-bottom: 1mm;
-    font-size: 6pt;
-    break-inside: avoid;
-    display: block;
-    line-height: 1.1;
-}
-
-.treatment-date {
-    font-weight: bold;
-    color: #007bff;
-    display: inline;
-}
-
-.treatment-description {
-    color: #333;
-    display: inline;
-}
-
-.additional-notes {
-    background: #f8f9fa;
-    padding: 1mm;
-    border-radius: 1px;
-    border-left: 1px solid #28a745;
-    font-size: 6pt;
-    margin-top: 1mm;
-}
-
-/* Force single page */
-@media print {
-    .a4-page {
-        page-break-after: avoid;
-        page-break-inside: avoid;
-    }
-    
-    .chart-image-container,
-    .treatments-section {
-        page-break-inside: avoid;
-    }
-    
-    .treatment-item {
-        page-break-inside: avoid;
-    }
-}
-</style>
-
 <script>
-function toggleChart(index) {
-    const content = document.getElementById(`chart-${index}`);
-    const button = content.previousElementSibling.querySelector('.visual-chart-toggle');
-    
-    if (content.classList.contains('show')) {
-        content.classList.remove('show');
-        content.classList.add('hidden');
-        button.innerHTML = '<i class="fas fa-eye mr-1"></i>View Chart';
-        button.className = 'visual-chart-toggle bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700';
-    } else {
-        content.classList.add('show');
-        content.classList.remove('hidden');
-        button.innerHTML = '<i class="fas fa-eye-slash mr-1"></i>Hide Chart';
-        button.className = 'visual-chart-toggle bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700';
-    }
-}
-
-function printChart() {
-    // Render the visual chart before printing
-    renderVisualCharts();
-    window.print();
-}
-
-// Function to render visual chart data onto canvas
-function renderVisualCharts() {
-    console.log('renderVisualCharts called');
-    
-    // Render screen chart
-    const screenWrapper = document.querySelector('.visual-chart-screen-wrapper');
-    console.log('Screen wrapper found:', !!screenWrapper);
-    if (screenWrapper) {
-        renderChartToCanvas('screen-chart-canvas', screenWrapper);
-    }
-    
-    // Render print chart
-    const printWrapper = document.querySelector('.visual-chart-wrapper');
-    console.log('Print wrapper found:', !!printWrapper);
-    if (printWrapper) {
-        renderChartToCanvas('print-chart-canvas', printWrapper);
-    }
-    
-    // If no wrappers found, log all available elements
-    if (!screenWrapper && !printWrapper) {
-        console.log('No visual chart wrappers found. Available elements:');
-        const allElements = document.querySelectorAll('*');
-        allElements.forEach(el => {
-            if (el.className && el.className.includes('visual')) {
-                console.log('Found visual element:', el.className, el);
-            }
-        });
-    }
-}
-
-function renderChartToCanvas(canvasId, wrapper) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.error('Canvas not found:', canvasId);
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    const chartData = wrapper.getAttribute('data-chart-data');
-    const backgroundImage = wrapper.getAttribute('data-background');
-    
-    console.log('Rendering chart to canvas:', canvasId);
-    console.log('Chart data:', chartData ? 'Present' : 'Missing');
-    console.log('Background image:', backgroundImage);
-    
-    if (!chartData || !backgroundImage) {
-        console.error('Missing chart data or background image');
-        return;
-    }
-    
-    try {
-        const data = JSON.parse(chartData);
-        console.log('Parsed chart data:', data);
-        
-        // Load and draw background image
-        const img = new Image();
-        img.onload = function() {
-            console.log('Background image loaded successfully');
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw background image
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            console.log('Background image drawn to canvas');
-            
-            // Draw strokes if they exist
-            if (data.strokes && Array.isArray(data.strokes)) {
-                console.log('Drawing', data.strokes.length, 'strokes');
-                drawStrokes(ctx, data.strokes);
-            } else {
-                console.log('No strokes to draw');
-            }
-        };
-        img.onerror = function() {
-            console.error('Failed to load background image:', backgroundImage);
-            
-            // Try alternative URL if the first one failed (port 8080 -> 8081)
-            const altUrl = backgroundImage.replace('localhost:8080', 'localhost:8081');
-            if (altUrl !== backgroundImage) {
-                console.log('Trying alternative URL:', altUrl);
-                // Create a new image to avoid infinite loop
-                const altImg = new Image();
-                altImg.onload = function() {
-                    console.log('Alternative image loaded successfully');
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(altImg, 0, 0, canvas.width, canvas.height);
-                    if (data.strokes && Array.isArray(data.strokes)) {
-                        drawStrokes(ctx, data.strokes);
-                    }
-                };
-                altImg.onerror = function() {
-                    console.error('Alternative URL also failed');
-                    // Draw a placeholder
-                    ctx.fillStyle = '#f0f0f0';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.fillStyle = '#666';
-                    ctx.font = '16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
-                };
-                altImg.src = altUrl;
-                return;
-            }
-            
-            // Draw a placeholder
-            ctx.fillStyle = '#f0f0f0';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#666';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
-        };
-        img.src = backgroundImage;
-    } catch (error) {
-        console.error('Error rendering visual chart:', error);
-        // Draw error placeholder
-        ctx.fillStyle = '#ffebee';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#d32f2f';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Error loading chart data', canvas.width/2, canvas.height/2);
-    }
-}
-
-function drawStrokes(ctx, strokes) {
-    for (const stroke of strokes) {
-        if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
-        
-        ctx.save();
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.lineWidth = Number(stroke.size) || 2;
-        
-        if (stroke.tool === 'eraser') {
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.strokeStyle = 'rgba(0,0,0,1)';
-        } else {
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.strokeStyle = stroke.color || '#ff0000';
-        }
-        
-        ctx.beginPath();
-        ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-        for (let i = 1; i < stroke.points.length; i++) {
-            ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-        }
-        ctx.stroke();
-        ctx.restore();
-    }
-}
-
-// Initialize charts when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing visual charts...');
-    renderVisualCharts();
-});
+	const tabContent = document.getElementById('tab-content');
+	const tabs = document.querySelectorAll('.records-tab');
+	let currentTab = 'appointments';
 
-// Also try to render after a short delay in case elements aren't ready
-setTimeout(function() {
-    console.log('Delayed initialization of visual charts...');
-    renderVisualCharts();
-}, 1000);
+	function updateActiveTab() {
+		tabs.forEach(tab => {
+			if (tab.dataset.tab === currentTab) {
+				tab.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+				tab.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+			} else {
+				tab.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+				tab.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+			}
+		});
+	}
+
+	function loadTabContent() {
+		if (!currentTab) return;
+		tabContent.innerHTML = `
+			<div class="flex items-center justify-center py-16">
+				<div class="text-center">
+					<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+					<p class="text-gray-500 text-lg">Loading ${currentTab.replace('_',' ')}...</p>
+				</div>
+			</div>
+		`;
+
+		const url = `<?php echo site_url('patient/records'); ?>?ajax=1&tab=${currentTab}`;
+
+		fetch(url)
+			.then(res => { if (!res.ok) throw new Error('Status ' + res.status); return res.text(); })
+			.then(html => {
+				const trimmed = (html || '').trim();
+				if (!trimmed) {
+					tabContent.innerHTML = `<div class="p-8 text-center text-gray-500">No records found.</div>`;
+					return;
+				}
+				tabContent.innerHTML = html;
+			})
+			.catch(err => {
+				tabContent.innerHTML = `<div class="p-8 text-center text-red-600">Unable to load records. ${err.message}</div>`;
+			});
+	}
+
+	tabs.forEach(t => t.addEventListener('click', function() {
+		currentTab = this.dataset.tab;
+		updateActiveTab();
+		loadTabContent();
+	}));
+
+	// initial load
+	updateActiveTab();
+	loadTabContent();
+});
 </script>
 
-<?= view('templates/footer') ?>
+<?php echo view('templates/footer'); ?>
+

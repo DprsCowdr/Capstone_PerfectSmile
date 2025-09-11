@@ -64,35 +64,10 @@
     <main class="p-6 bg-gray-50 min-h-screen">
         <div class="max-w-4xl mx-auto space-y-6">
             
-            <!-- Status Banner -->
+            <!-- Issue Date Banner -->
             <div class="bg-white shadow-sm rounded-xl border border-gray-200 p-4">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="text-sm text-gray-600">Status:</div>
-                        <?php if (!empty($prescription['status'])): ?>
-                            <?php if ($prescription['status'] === 'final'): ?>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200">
-                                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                                    Final
-                                </span>
-                            <?php elseif ($prescription['status'] === 'draft'): ?>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                    <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                                    Draft
-                                </span>
-                            <?php else: ?>
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200">
-                                    <div class="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                                    Cancelled
-                                </span>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                                <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
-                                N/A
-                            </span>
-                        <?php endif; ?>
-                    </div>
+                    <div></div>
                     <div class="text-sm text-gray-600">
                         Issue Date: <span class="font-medium text-gray-900"><?= date('M d, Y', strtotime($prescription['issue_date'])) ?></span>
                     </div>

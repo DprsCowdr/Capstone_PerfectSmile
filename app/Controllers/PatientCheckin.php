@@ -66,13 +66,15 @@ class PatientCheckin extends BaseController
     public function checkinPatient($appointmentId)
     {
         log_message('info', "PatientCheckin::checkinPatient called with ID: " . $appointmentId);
-        log_message('info', "Session data: " . json_encode(session()->get()));
-        log_message('info', "Is logged in: " . (session()->get('isLoggedIn') ? 'YES' : 'NO'));
         log_message('info', "Request method: " . $this->request->getMethod());
-        
+        log_message('info', "Is AJAX: " . ($this->request->isAJAX() ? 'YES' : 'NO'));
+
         // Try to get current user, but don't fail if not available
         $user = Auth::getCurrentUser();
         if (!$user || !in_array($user['user_type'], ['staff', 'admin'])) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
             return redirect()->to('/login');
         }
 
@@ -80,6 +82,9 @@ class PatientCheckin extends BaseController
 
         $appointment = $this->appointmentModel->find($appointmentId);
         if (!$appointment) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Appointment not found']);
+            }
             session()->setFlashdata('error', 'Appointment not found');
             return redirect()->to('/checkin');
         }
@@ -129,23 +134,26 @@ class PatientCheckin extends BaseController
                 throw new \Exception('Transaction failed');
             }
 
-            session()->setFlashdata('success', 'Patient checked in successfully');
+            log_message('info', 'Patient checked in successfully: ' . $appointmentId);
+            
             if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => true, 'message' => 'Checked in']);
+                return $this->response->setJSON(['success' => true, 'message' => 'Patient checked in successfully']);
             }
+            
+            session()->setFlashdata('success', 'Patient checked in successfully');
+            return redirect()->to('/checkin');
+            
         } catch (\Exception $e) {
             $db->transRollback();
             log_message('error', 'Check-in failed: ' . $e->getMessage());
+            
             if ($this->request->isAJAX()) {
                 return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => 'Failed to check in: ' . $e->getMessage()]);
             }
             session()->setFlashdata('error', 'Failed to check in patient: ' . $e->getMessage());
+            return redirect()->to('/checkin');
         }
-
-        return redirect()->to('/checkin');
-    }
-    
-    /**
+    }    /**
      * Process check-in request (alias for checkinPatient to match routes)
      */
     public function process($appointmentId)

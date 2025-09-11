@@ -1120,6 +1120,16 @@ class DisplayManager {
         this.setModalContent(content);
     }
 
+    displayInvoiceHistory(invoiceData) {
+        const content = this.generateInvoiceHistoryHTML(invoiceData);
+        this.setModalContent(content);
+    }
+
+    displayPrescriptions(prescriptionData) {
+        const content = this.generatePrescriptionsHTML(prescriptionData);
+        this.setModalContent(content);
+    }
+
     // ==================== HELPER METHODS ====================
 
     setModalContent(content) {
@@ -1644,6 +1654,140 @@ class DisplayManager {
                         </button>
                     </div>
                 </form>
+            </div>
+        `;
+    }
+
+    generateInvoiceHistoryHTML(invoiceData) {
+        console.log('💰 Generating invoice history HTML with data:', invoiceData);
+        
+        if (!invoiceData || !invoiceData.invoices || invoiceData.invoices.length === 0) {
+            return `
+                <div class="bg-white p-6">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-file-invoice text-green-600 mr-2"></i>Invoices
+                    </h3>
+                    <p class="text-gray-500">No invoices found for this patient.</p>
+                </div>
+            `;
+        }
+
+        const invoices = invoiceData.invoices || [];
+
+        return `
+            <div class="bg-white p-6">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-file-invoice text-green-600 mr-2"></i>Invoices
+                </h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Amount</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Final Amount</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${invoices.map(invoice => `
+                                <tr class="border-t">
+                                    <td class="px-4 py-2 text-sm font-medium text-gray-900">${invoice.invoice_number || 'N/A'}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">${invoice.procedure_name || 'General Service'}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">₱${parseFloat(invoice.total_amount || 0).toFixed(2)}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">₱${parseFloat(invoice.discount || 0).toFixed(2)}</td>
+                                    <td class="px-4 py-2 text-sm font-medium text-green-600">₱${parseFloat(invoice.final_amount || 0).toFixed(2)}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">${this.formatDate(invoice.created_at)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    generatePrescriptionsHTML(prescriptionData) {
+        console.log('💊 Generating prescriptions HTML with data:', prescriptionData);
+        
+        if (!prescriptionData || !prescriptionData.prescriptions || prescriptionData.prescriptions.length === 0) {
+            return `
+                <div class="bg-white p-6">
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-prescription text-purple-600 mr-2"></i>Prescriptions
+                    </h3>
+                    <p class="text-gray-500">No prescriptions found for this patient.</p>
+                </div>
+            `;
+        }
+
+        const prescriptions = prescriptionData.prescriptions || [];
+
+        return `
+            <div class="bg-white p-6">
+                <h3 class="text-lg font-bold mb-4">
+                    <i class="fas fa-prescription text-purple-600 mr-2"></i>Prescriptions
+                </h3>
+                
+                <div class="space-y-4">
+                    ${prescriptions.map(prescription => `
+                        <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 class="text-md font-semibold text-purple-800">
+                                        Prescription #${prescription.id}
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-user-md mr-1"></i>Dr. ${prescription.dentist_name || 'Unknown'}
+                                        ${prescription.license_no ? `(License: ${prescription.license_no})` : ''}
+                                    </p>
+                                </div>
+                                <span class="px-2 py-1 text-xs rounded-full ${prescription.status === 'active' ? 'bg-green-100 text-green-800' : 
+                                prescription.status === 'completed' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${prescription.status || 'Unknown'}
+                                </span>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <strong class="text-gray-700">Issue Date:</strong>
+                                    <span class="text-gray-600">${this.formatDate(prescription.issue_date)}</span>
+                                </div>
+                                ${prescription.next_appointment ? `
+                                    <div>
+                                        <strong class="text-gray-700">Next Appointment:</strong>
+                                        <span class="text-gray-600">${this.formatDate(prescription.next_appointment)}</span>
+                                    </div>
+                                ` : ''}
+                                ${prescription.ptr_no ? `
+                                    <div>
+                                        <strong class="text-gray-700">PTR No:</strong>
+                                        <span class="text-gray-600">${prescription.ptr_no}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            ${prescription.notes ? `
+                                <div class="mt-3">
+                                    <strong class="text-gray-700">Notes:</strong>
+                                    <p class="text-gray-600 mt-1">${prescription.notes}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${prescription.signature_url ? `
+                                <div class="mt-3">
+                                    <strong class="text-gray-700">Digital Signature:</strong>
+                                    <div class="mt-1">
+                                        <img src="${prescription.signature_url}" alt="Doctor's Signature" class="max-w-xs border rounded">
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         `;
     }

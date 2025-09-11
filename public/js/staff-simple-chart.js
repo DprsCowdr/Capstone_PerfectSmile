@@ -17,6 +17,10 @@
     let lastFetchedJson = null;
     // store separate series per metric
     const METRIC_KEYS = { patients: 'patients', appointments: 'appointments', treatments: 'treatments' };
+    // currency formatting helper
+    function formatCurrency(v){
+        try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(Number(v || 0)); } catch(e) { return (Number(v || 0)).toFixed(2); }
+    }
     let triedAdminProxy = false;
 
     function restoreHistory(metric) {
@@ -97,6 +101,12 @@
     function updateUIFromTotals(json, value) {
         const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = (v === null || v === undefined) ? '—' : v; };
         setText('patientTotal', value);
+        // if revenue present, show formatted totals
+        if (document.getElementById('patientTotal') && (metricSelect && metricSelect.value === 'revenue')) {
+            // display the total_revenue if provided else the numeric value
+            const tot = (json && json.totals && typeof json.totals.total_revenue !== 'undefined') ? json.totals.total_revenue : value;
+            setText('patientTotal', formatCurrency(tot));
+        }
         // Compute average/peak from available client series when possible to ensure consistency with chart
         try {
             const avgEl = document.getElementById('avgPerDayTop');
@@ -293,6 +303,7 @@
                     let serverArr = null;
                     if (currentMetric === 'patients' && Array.isArray(json.patientCounts)) serverArr = json.patientCounts.slice(-MAX_POINTS);
                     else if (currentMetric === 'treatments' && Array.isArray(json.treatmentCounts)) serverArr = json.treatmentCounts.slice(-MAX_POINTS);
+                    else if (currentMetric === 'revenue' && Array.isArray(json.revenueTotals)) serverArr = json.revenueTotals.slice(-MAX_POINTS);
                     else if (Array.isArray(json.counts)) serverArr = json.counts.slice(-MAX_POINTS);
 
                     if (serverArr && serverLabels) {
@@ -347,6 +358,7 @@
                 let incomingArr = null;
                 if (currentMetric === 'patients' && Array.isArray(json.patientCounts)) incomingArr = json.patientCounts;
                 else if (currentMetric === 'treatments' && Array.isArray(json.treatmentCounts)) incomingArr = json.treatmentCounts;
+                else if (currentMetric === 'revenue' && Array.isArray(json.revenueTotals)) incomingArr = json.revenueTotals;
                 else if (Array.isArray(json.counts)) incomingArr = json.counts; // appointments fallback
                 // if we still have no array, abort this branch
                 if (!Array.isArray(incomingArr)) {
@@ -389,7 +401,10 @@
                     if (lastNextKey !== nextKey) {
                         lastNextKey = nextKey;
                     }
-                    updateUIFromTotals(json, data.slice(-1)[0]);
+                    // For revenue metric, format total appropriately
+                    const lastVal = data.slice(-1)[0];
+                    if (currentMetric === 'revenue') updateUIFromTotals(json, lastVal);
+                    else updateUIFromTotals(json, lastVal);
                     saveHistory(currentMetric);
                     return;
                 }

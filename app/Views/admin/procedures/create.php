@@ -89,11 +89,15 @@
                                     class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
                                     required>
                                 <option value="">Select a patient</option>
-                                <?php foreach ($patients as $patient): ?>
-                                    <option value="<?= $patient['id'] ?>" <?= old('user_id') == $patient['id'] ? 'selected' : '' ?>>
-                                        <?= esc($patient['name']) ?> (<?= esc($patient['email']) ?>)
-                                    </option>
-                                <?php endforeach; ?>
+                                <?php if (isset($patients) && is_array($patients)): ?>
+                                    <?php foreach ($patients as $patient): ?>
+                                        <option value="<?= $patient['id'] ?>" <?= old('user_id') == $patient['id'] ? 'selected' : '' ?>>
+                                            <?= esc($patient['name'] ?? $patient['first_name'] . ' ' . $patient['last_name'] ?? 'Unknown') ?> (<?= esc($patient['email']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>No patients found</option>
+                                <?php endif; ?>
                             </select>
                         </div>
 

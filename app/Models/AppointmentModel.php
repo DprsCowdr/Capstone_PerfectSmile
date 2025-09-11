@@ -580,10 +580,10 @@ class AppointmentModel extends Model
         $db = \Config\Database::connect();
         $builder = $db->table('user');
         $builder->select('user.id, user.name, user.email')
-                ->join('branch_user', 'branch_user.user_id = user.id')
+                ->join('branch_staff', 'branch_staff.user_id = user.id')
                 ->where('user.user_type', 'doctor')
                 ->where('user.status', 'active')
-                ->where('branch_user.branch_id', $branchId);
+                ->where('branch_staff.branch_id', $branchId);
         
         $allDentists = $builder->get()->getResultArray();
         

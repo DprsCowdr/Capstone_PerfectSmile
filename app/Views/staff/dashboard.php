@@ -220,7 +220,8 @@
 
 <?= view('templates/footer') ?> 
 <script>
-function staffApproveAppointment(appointmentId) {
+async function staffApproveAppointment(appointmentId) {
+    // Use confirm for fast path; could be replaced with modal later
     if (!confirm('Approve this appointment?')) return;
     const formData = new FormData();
     formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
@@ -230,13 +231,13 @@ function staffApproveAppointment(appointmentId) {
         body: formData
     })
     .then(r => r.json())
-    .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
-    .catch(e => { console.error(e); alert('An error occurred'); });
+    .then(data => { if (data.success) location.reload(); else (typeof showInvoiceAlert === 'function' ? showInvoiceAlert('Error: ' + (data.message || 'Unknown'), 'error', 4000) : alert('Error: ' + (data.message || 'Unknown'))); })
+    .catch(e => { console.error(e); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('An error occurred', 'error', 4000); else alert('An error occurred'); });
 }
 
 function staffDeclineAppointment(appointmentId) {
-    const reason = prompt('Reason for declining the appointment (required):');
-    if (!reason || !reason.trim()) { alert('Decline reason is required'); return; }
+    const reason = await (typeof showPrompt === 'function' ? showPrompt('Reason for declining the appointment (required):', 'Reason') : Promise.resolve(prompt('Reason for declining the appointment (required):')));
+    if (!reason || !reason.trim()) { if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Decline reason is required', 'warning', 4000); else alert('Decline reason is required'); return; }
     const formData = new FormData();
     formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
     formData.append('reason', reason);
@@ -246,8 +247,8 @@ function staffDeclineAppointment(appointmentId) {
         body: formData
     })
     .then(r => r.json())
-    .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
-    .catch(e => { console.error(e); alert('An error occurred'); });
+    .then(data => { if (data.success) location.reload(); else (typeof showInvoiceAlert === 'function' ? showInvoiceAlert('Error: ' + (data.message || 'Unknown'), 'error', 4000) : alert('Error: ' + (data.message || 'Unknown'))); })
+    .catch(e => { console.error(e); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('An error occurred', 'error', 4000); else alert('An error occurred'); });
 }
 </script>
 <script>
@@ -261,8 +262,8 @@ function markNotificationHandled(notificationId) {
         body: formData
     })
     .then(r => r.json())
-    .then(data => { if (data.success) location.reload(); else alert('Error: ' + (data.message || 'Unknown')); })
-    .catch(e => { console.error(e); alert('An error occurred'); });
+    .then(data => { if (data.success) location.reload(); else (typeof showInvoiceAlert === 'function' ? showInvoiceAlert('Error: ' + (data.message || 'Unknown'), 'error', 4000) : alert('Error: ' + (data.message || 'Unknown'))); })
+    .catch(e => { console.error(e); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('An error occurred', 'error', 4000); else alert('An error occurred'); });
 }
 
 function approveChangeRequest(appointmentId) {
@@ -277,19 +278,19 @@ function approveChangeRequest(appointmentId) {
     .then(r => r.json())
     .then(data => { 
         if (data.success) {
-            alert('Change request approved successfully!');
-            location.reload();
+        if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Change request approved successfully!', 'success', 3500); else alert('Change request approved successfully!');
+        setTimeout(() => location.reload(), 600);
         } else {
-            alert('Error: ' + (data.message || 'Unknown'));
+        if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error: ' + (data.message || 'Unknown'), 'error', 5000); else alert('Error: ' + (data.message || 'Unknown'));
         }
     })
-    .catch(e => { console.error(e); alert('An error occurred'); });
+    .catch(e => { console.error(e); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('An error occurred', 'error', 4000); else alert('An error occurred'); });
 }
 
-function rejectChangeRequest(appointmentId) {
-    const reason = prompt('Reason for rejecting the change request (required):');
+async function rejectChangeRequest(appointmentId) {
+    const reason = await (typeof showPrompt === 'function' ? showPrompt('Reason for rejecting the change request (required):', 'Reason') : Promise.resolve(prompt('Reason for rejecting the change request (required):')));
     if (!reason || !reason.trim()) { 
-        alert('Rejection reason is required'); 
+        if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Rejection reason is required', 'warning', 4000); else alert('Rejection reason is required');
         return; 
     }
     const formData = new FormData();
@@ -303,13 +304,13 @@ function rejectChangeRequest(appointmentId) {
     .then(r => r.json())
     .then(data => { 
         if (data.success) {
-            alert('Change request rejected successfully!');
-            location.reload();
+            if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Change request rejected successfully!', 'success', 3500); else alert('Change request rejected successfully!');
+            setTimeout(() => location.reload(), 600);
         } else {
-            alert('Error: ' + (data.message || 'Unknown'));
+            if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error: ' + (data.message || 'Unknown'), 'error', 5000); else alert('Error: ' + (data.message || 'Unknown'));
         }
     })
-    .catch(e => { console.error(e); alert('An error occurred'); });
+    .catch(e => { console.error(e); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('An error occurred', 'error', 4000); else alert('An error occurred'); });
 }
 </script>
 <!-- staff live charts removed; no chart scripts loaded here -->
