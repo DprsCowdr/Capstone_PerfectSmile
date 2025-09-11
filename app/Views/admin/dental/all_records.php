@@ -39,11 +39,11 @@ window.BASE_URL = '<?= base_url() ?>';
             <p class="text-sm text-gray-500">Comprehensive dental records management system</p>
         </header>
 
-        <!-- Main Content Area - Patient Folders View -->
+        <!-- Main Content Area - Branch-Categorized Records View -->
         <section class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
             <div class="p-6 border-b border-gray-100">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold text-gray-700">Patient Records</h2>
+                    <h2 class="text-sm font-semibold text-gray-700">Patient Records by Branch</h2>
                     <div class="flex items-center gap-2">
                         <button id="viewToggle" onclick="toggleView()" class="px-3 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors flex items-center gap-1">
                             <i id="viewIcon" class="fas fa-list"></i>
@@ -63,11 +63,19 @@ window.BASE_URL = '<?= base_url() ?>';
                             <input type="text" 
                                    id="recordsSearchInput" 
                                    class="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm placeholder:text-gray-400"
-                                   placeholder="Search patient name, email, phone...">
+                                   placeholder="Search patient name, email, phone, or branch...">
                         </div>
                         
                         <!-- Search Filters -->
                         <div class="flex gap-3 md:w-auto">
+                            <select id="branchFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
+                                <option value="">All Branches</option>
+                                <?php foreach ($branches as $branch): ?>
+                                    <option value="<?= $branch['id'] ?>"><?= esc($branch['name']) ?></option>
+                                <?php endforeach; ?>
+                                <option value="unassigned">Unassigned</option>
+                            </select>
+                            
                             <select id="statusFilter" class="px-3 py-2.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-xs text-gray-700">
                                 <option value="">All Status</option>
                                 <option value="active">Active</option>
@@ -89,106 +97,276 @@ window.BASE_URL = '<?= base_url() ?>';
                 </div>
             </div>
 
-            <!-- Patient Folders View -->
-            <div id="foldersView" class="p-6 space-y-3">
-                <?php 
-                // Group records by patient
-                $patientGroups = [];
-                if (!empty($records)) {
-                    foreach ($records as $record) {
-                        $patientId = $record['user_id'];
-                        if (!isset($patientGroups[$patientId])) {
-                            $patientGroups[$patientId] = [
-                                'patient_info' => [
-                                    'id' => $patientId,
-                                    'name' => $record['patient_name'],
-                                    'email' => $record['patient_email'],
-                                    'phone' => $record['patient_phone'] ?? '',
-                                    'status' => $record['status'] ?? 'active'
-                                ],
-                                'records' => []
-                            ];
-                        }
-                        $patientGroups[$patientId]['records'][] = $record;
-                    }
-                }
-                ?>
-
-                <?php if (!empty($patientGroups)): ?>
-                    <?php foreach ($patientGroups as $patientId => $group): ?>
-                        <div class="patient-folder border border-gray-200 rounded-lg hover:border-gray-300 transition-colors" data-patient-id="<?= $patientId ?>">
-                            <!-- Folder Header -->
-                            <div class="folder-header flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors" onclick="toggleFolder(<?= $patientId ?>)">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex items-center gap-2">
-                                        <i class="folder-icon fas fa-folder text-blue-600 text-lg"></i>
-                                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
-                                            <?= strtoupper(substr($group['patient_info']['name'], 0, 1)) ?>
+            <!-- Branch-Categorized Records View -->
+            <div id="foldersView" class="p-6 space-y-6">
+                
+                <!-- Records by Branch -->
+                <?php if (!empty($recordsByBranch)): ?>
+                    <?php foreach ($recordsByBranch as $branchId => $branchData): ?>
+                        <div class="branch-section border border-gray-200 rounded-lg overflow-hidden" data-branch-id="<?= $branchId ?>">
+                            <!-- Branch Header -->
+                            <div class="branch-header bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 cursor-pointer hover:from-blue-100 hover:to-indigo-100 transition-all duration-200" onclick="toggleBranchSection(<?= $branchId ?>)">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-building text-blue-600 text-lg mr-2"></i>
+                                            <i class="fas fa-chevron-right branch-chevron text-gray-400 transition-transform" id="branch-icon-<?= $branchId ?>"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-base font-semibold text-gray-900"><?= esc($branchData['branch']['name'] ?? 'Unknown Branch') ?></h3>
+                                            <p class="text-sm text-gray-600"><?= esc($branchData['branch']['address'] ?? '') ?></p>
                                         </div>
                                     </div>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <h3 class="text-sm font-medium text-gray-900 truncate"><?= esc($group['patient_info']['name']) ?></h3>
-                                            <span class="px-2 py-0.5 inline-flex text-[10px] font-medium rounded-full tracking-wide <?= $group['patient_info']['status'] === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600' ?>">
-                                                <?= ucfirst($group['patient_info']['status']) ?>
-                                            </span>
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-0.5">
-                                            <?= esc($group['patient_info']['email']) ?>
-                                            <?php if (!empty($group['patient_info']['phone'])): ?>
-                                                • <?= esc($group['patient_info']['phone']) ?>
-                                            <?php endif; ?>
-                                        </div>
+                                    <div class="flex items-center gap-3 text-sm text-gray-600">
+                                        <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                                            <?= count($branchData['records']) ?> record<?= count($branchData['records']) !== 1 ? 's' : '' ?>
+                                        </span>
                                     </div>
-                                </div>
-                                <div class="flex items-center gap-3 text-xs text-gray-500">
-                                    <span class="bg-gray-100 px-2 py-1 rounded-full">
-                                        <?= count($group['records']) ?> record<?= count($group['records']) !== 1 ? 's' : '' ?>
-                                    </span>
-                                    <i class="folder-chevron fas fa-chevron-down text-gray-400 transition-transform"></i>
                                 </div>
                             </div>
 
-                            <!-- Folder Content (Records) -->
-                            <div class="folder-content hidden border-t border-gray-100 bg-gray-50">
-                                <div class="p-4 space-y-2">
-                                    <?php foreach ($group['records'] as $record): ?>
-                                        <div class="record-item flex items-center justify-between p-3 bg-white rounded-md border border-gray-100 hover:border-gray-200 transition-colors">
-                                            <div class="flex items-center gap-3 flex-1 min-w-0">
-                                                <div class="flex-shrink-0">
-                                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                                                        <i class="fas fa-file-medical text-gray-500 text-xs"></i>
+                            <!-- Branch Records -->
+                            <div class="branch-records hidden border-t border-gray-100" id="branch-records-<?= $branchId ?>">
+                                <div class="p-4 bg-gray-50">
+                                    <?php 
+                                    // Group records by patient within this branch
+                                    $branchPatientGroups = [];
+                                    foreach ($branchData['records'] as $record) {
+                                        $patientId = $record['user_id'];
+                                        if (!isset($branchPatientGroups[$patientId])) {
+                                            $branchPatientGroups[$patientId] = [
+                                                'patient_info' => [
+                                                    'id' => $patientId,
+                                                    'name' => $record['patient_name'],
+                                                    'email' => $record['patient_email'],
+                                                    'phone' => $record['patient_phone'] ?? '',
+                                                    'status' => $record['status'] ?? 'active'
+                                                ],
+                                                'records' => []
+                                            ];
+                                        }
+                                        $branchPatientGroups[$patientId]['records'][] = $record;
+                                    }
+                                    ?>
+                                    
+                                    <div class="space-y-3">
+                                        <?php foreach ($branchPatientGroups as $patientId => $group): ?>
+                                            <div class="patient-folder border border-gray-200 rounded-lg hover:border-gray-300 transition-colors bg-white" data-patient-id="<?= $patientId ?>" data-branch-id="<?= $branchId ?>">
+                                                <!-- Patient Folder Header -->
+                                                <div class="folder-header flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors" onclick="togglePatientFolder(<?= $patientId ?>, <?= $branchId ?>)">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex items-center gap-2">
+                                                            <i class="folder-icon fas fa-folder text-yellow-500 text-lg"></i>
+                                                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-medium">
+                                                                <?= strtoupper(substr($group['patient_info']['name'], 0, 1)) ?>
+                                                            </div>
+                                                        </div>
+                                                        <div class="min-w-0 flex-1">
+                                                            <div class="flex items-center gap-2">
+                                                                <h4 class="text-sm font-medium text-gray-900 truncate"><?= esc($group['patient_info']['name']) ?></h4>
+                                                                <span class="px-2 py-0.5 inline-flex text-[10px] font-medium rounded-full tracking-wide <?= $group['patient_info']['status'] === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600' ?>">
+                                                                    <?= ucfirst($group['patient_info']['status']) ?>
+                                                                </span>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-0.5">
+                                                                <?= esc($group['patient_info']['email']) ?>
+                                                                <?php if (!empty($group['patient_info']['phone'])): ?>
+                                                                    • <?= esc($group['patient_info']['phone']) ?>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-center gap-3 text-xs text-gray-500">
+                                                        <span class="bg-gray-100 px-2 py-1 rounded-full">
+                                                            <?= count($group['records']) ?> record<?= count($group['records']) !== 1 ? 's' : '' ?>
+                                                        </span>
+                                                        <i class="patient-chevron fas fa-chevron-down text-gray-400 transition-transform" id="patient-icon-<?= $patientId ?>-<?= $branchId ?>"></i>
                                                     </div>
                                                 </div>
-                                                <div class="min-w-0 flex-1">
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="text-sm font-medium text-gray-900"><?= ucfirst($record['record_type'] ?? 'General') ?> Record</span>
-                                                        <span class="text-xs text-gray-500">•</span>
-                                                        <span class="text-xs text-gray-500"><?= date('M j, Y', strtotime($record['record_date'])) ?></span>
+
+                                                <!-- Patient Records -->
+                                                <div class="patient-records hidden border-t border-gray-100 bg-gray-50" id="patient-records-<?= $patientId ?>-<?= $branchId ?>">
+                                                    <div class="p-4 space-y-2">
+                                                        <?php foreach ($group['records'] as $record): ?>
+                                                            <div class="record-item flex items-center justify-between p-3 bg-white rounded-md border border-gray-100 hover:border-gray-200 transition-colors">
+                                                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                                    <div class="flex-shrink-0">
+                                                                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                                                            <i class="fas fa-file-medical text-gray-500 text-xs"></i>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="min-w-0 flex-1">
+                                                                        <div class="flex items-center gap-2">
+                                                                            <span class="text-sm font-medium text-gray-900">Record #<?= $record['id'] ?></span>
+                                                                            <span class="text-xs text-gray-500">•</span>
+                                                                            <span class="text-xs text-gray-500"><?= date('M j, Y', strtotime($record['record_date'])) ?></span>
+                                                                            <?php if (!empty($record['dentist_name'])): ?>
+                                                                                <span class="text-xs text-gray-500">•</span>
+                                                                                <span class="text-xs text-gray-500">Dr. <?= esc($record['dentist_name']) ?></span>
+                                                                            <?php endif; ?>
+                                                                        </div>
+                                                                        <?php if (!empty($record['diagnosis'])): ?>
+                                                                            <div class="text-xs text-gray-600 mt-1 truncate">
+                                                                                <i class="fas fa-stethoscope mr-1"></i>
+                                                                                <?= esc(substr($record['diagnosis'], 0, 100)) ?><?= strlen($record['diagnosis']) > 100 ? '...' : '' ?>
+                                                                            </div>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="flex items-center gap-2 ml-3">
+                                                                    <button onclick="window.recordsManager?.openPatientRecordsModal(<?= $record['user_id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors">
+                                                                        View
+                                                                    </button>
+                                                                    <button onclick="deleteRecord(<?= $record['id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
+                                                                        Delete
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        <?php endforeach; ?>
                                                     </div>
-                                                    <?php if (!empty($record['allergies'])): ?>
-                                                        <div class="text-xs text-red-600 mt-1 flex items-center gap-1">
-                                                            <i class="fas fa-exclamation-triangle"></i>
-                                                            <span><?= esc($record['allergies']) ?></span>
-                                                        </div>
-                                                    <?php endif; ?>
                                                 </div>
                                             </div>
-                                            <div class="flex items-center gap-2 ml-3">
-                                                <button onclick="window.recordsManager?.openPatientRecordsModal(<?= $record['user_id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors">
-                                                    View
-                                                </button>
-                                                <button onclick="deleteRecord(<?= $record['id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
-                                                    Delete
-                                                </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+
+                <!-- Unassigned Records Section -->
+                <?php if (!empty($unassignedRecords)): ?>
+                    <div class="branch-section border border-amber-200 rounded-lg overflow-hidden" data-branch-id="unassigned">
+                        <!-- Unassigned Header -->
+                        <div class="branch-header bg-gradient-to-r from-amber-50 to-yellow-50 px-4 py-3 cursor-pointer hover:from-amber-100 hover:to-yellow-100 transition-all duration-200" onclick="toggleBranchSection('unassigned')">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-exclamation-triangle text-amber-600 text-lg mr-2"></i>
+                                        <i class="fas fa-chevron-right branch-chevron text-gray-400 transition-transform" id="branch-icon-unassigned"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-semibold text-gray-900">Unassigned Records</h3>
+                                        <p class="text-sm text-gray-600">Records not associated with any branch</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm text-gray-600">
+                                    <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-medium">
+                                        <?= count($unassignedRecords) ?> record<?= count($unassignedRecords) !== 1 ? 's' : '' ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unassigned Records -->
+                        <div class="branch-records hidden border-t border-amber-100" id="branch-records-unassigned">
+                            <div class="p-4 bg-amber-50">
+                                <?php 
+                                // Group unassigned records by patient
+                                $unassignedPatientGroups = [];
+                                foreach ($unassignedRecords as $record) {
+                                    $patientId = $record['user_id'];
+                                    if (!isset($unassignedPatientGroups[$patientId])) {
+                                        $unassignedPatientGroups[$patientId] = [
+                                            'patient_info' => [
+                                                'id' => $patientId,
+                                                'name' => $record['patient_name'],
+                                                'email' => $record['patient_email'],
+                                                'phone' => $record['patient_phone'] ?? '',
+                                                'status' => $record['status'] ?? 'active'
+                                            ],
+                                            'records' => []
+                                        ];
+                                    }
+                                    $unassignedPatientGroups[$patientId]['records'][] = $record;
+                                }
+                                ?>
+                                
+                                <div class="space-y-3">
+                                    <?php foreach ($unassignedPatientGroups as $patientId => $group): ?>
+                                        <div class="patient-folder border border-amber-200 rounded-lg hover:border-amber-300 transition-colors bg-white" data-patient-id="<?= $patientId ?>" data-branch-id="unassigned">
+                                            <!-- Patient Folder Header -->
+                                            <div class="folder-header flex items-center justify-between p-4 cursor-pointer hover:bg-amber-50 transition-colors" onclick="togglePatientFolder(<?= $patientId ?>, 'unassigned')">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="flex items-center gap-2">
+                                                        <i class="folder-icon fas fa-folder text-amber-500 text-lg"></i>
+                                                        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-sm font-medium">
+                                                            <?= strtoupper(substr($group['patient_info']['name'], 0, 1)) ?>
+                                                        </div>
+                                                    </div>
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex items-center gap-2">
+                                                            <h4 class="text-sm font-medium text-gray-900 truncate"><?= esc($group['patient_info']['name']) ?></h4>
+                                                            <span class="px-2 py-0.5 inline-flex text-[10px] font-medium rounded-full tracking-wide <?= $group['patient_info']['status'] === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600' ?>">
+                                                                <?= ucfirst($group['patient_info']['status']) ?>
+                                                            </span>
+                                                        </div>
+                                                        <div class="text-xs text-gray-500 mt-0.5">
+                                                            <?= esc($group['patient_info']['email']) ?>
+                                                            <?php if (!empty($group['patient_info']['phone'])): ?>
+                                                                • <?= esc($group['patient_info']['phone']) ?>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-3 text-xs text-gray-500">
+                                                    <span class="bg-amber-100 px-2 py-1 rounded-full">
+                                                        <?= count($group['records']) ?> record<?= count($group['records']) !== 1 ? 's' : '' ?>
+                                                    </span>
+                                                    <i class="patient-chevron fas fa-chevron-down text-gray-400 transition-transform" id="patient-icon-<?= $patientId ?>-unassigned"></i>
+                                                </div>
+                                            </div>
+
+                                            <!-- Patient Records -->
+                                            <div class="patient-records hidden border-t border-amber-100 bg-amber-50" id="patient-records-<?= $patientId ?>-unassigned">
+                                                <div class="p-4 space-y-2">
+                                                    <?php foreach ($group['records'] as $record): ?>
+                                                        <div class="record-item flex items-center justify-between p-3 bg-white rounded-md border border-amber-100 hover:border-amber-200 transition-colors">
+                                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                                <div class="flex-shrink-0">
+                                                                    <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                                                        <i class="fas fa-file-medical text-amber-600 text-xs"></i>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="min-w-0 flex-1">
+                                                                    <div class="flex items-center gap-2">
+                                                                        <span class="text-sm font-medium text-gray-900">Record #<?= $record['id'] ?></span>
+                                                                        <span class="text-xs text-gray-500">•</span>
+                                                                        <span class="text-xs text-gray-500"><?= date('M j, Y', strtotime($record['record_date'])) ?></span>
+                                                                        <?php if (!empty($record['dentist_name'])): ?>
+                                                                            <span class="text-xs text-gray-500">•</span>
+                                                                            <span class="text-xs text-gray-500">Dr. <?= esc($record['dentist_name']) ?></span>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                    <?php if (!empty($record['diagnosis'])): ?>
+                                                                        <div class="text-xs text-gray-600 mt-1 truncate">
+                                                                            <i class="fas fa-stethoscope mr-1"></i>
+                                                                            <?= esc(substr($record['diagnosis'], 0, 100)) ?><?= strlen($record['diagnosis']) > 100 ? '...' : '' ?>
+                                                                        </div>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center gap-2 ml-3">
+                                                                <button onclick="window.recordsManager?.openPatientRecordsModal(<?= $record['user_id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors">
+                                                                    View
+                                                                </button>
+                                                                <button onclick="deleteRecord(<?= $record['id'] ?>); event.stopPropagation();" class="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (empty($recordsByBranch) && empty($unassignedRecords)): ?>
                     <div class="text-center py-12">
                         <div class="flex flex-col items-center">
                             <i class="fas fa-folder-open text-4xl text-gray-300 mb-4"></i>
@@ -295,6 +473,8 @@ window.BASE_URL = '<?= base_url() ?>';
                 <button id="appointments-tab" onclick="window.recordsManager?.showRecordTab('appointments')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Appointments</button>
                 <button id="treatments-tab" onclick="window.recordsManager?.showRecordTab('treatments')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Treatments</button>
                 <button id="medical-records-tab" onclick="window.recordsManager?.showRecordTab('medical-records')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Medical Records</button>
+                <button id="invoice-history-tab" onclick="window.recordsManager?.showRecordTab('invoice-history')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Invoices</button>
+                <button id="prescriptions-tab" onclick="window.recordsManager?.showRecordTab('prescriptions')" class="record-tab px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100">Prescriptions</button>
             </nav>
             
             <!-- Modal Content -->
@@ -343,19 +523,72 @@ function toggleView() {
     initializeRecordsSearch();
 }
 
-// Toggle individual folder open/close
-function toggleFolder(patientId) {
-    const folder = document.querySelector(`[data-patient-id="${patientId}"]`);
+// Toggle branch section open/close
+function toggleBranchSection(branchId) {
+    const branchSection = document.querySelector(`[data-branch-id="${branchId}"]`);
+    if (!branchSection) return;
+    
+    const content = branchSection.querySelector('.branch-records');
+    const chevron = branchSection.querySelector('.branch-chevron');
+    
+    if (content.classList.contains('hidden')) {
+        // Open branch section
+        content.classList.remove('hidden');
+        chevron.style.transform = 'rotate(90deg)';
+        
+        // Add smooth animation
+        content.style.maxHeight = '0px';
+        content.style.overflow = 'hidden';
+        content.style.transition = 'max-height 0.3s ease-out';
+        
+        // Calculate and set max height
+        setTimeout(() => {
+            const scrollHeight = content.scrollHeight;
+            content.style.maxHeight = `${scrollHeight}px`;
+        }, 10);
+        
+        // Remove inline styles after animation
+        setTimeout(() => {
+            content.style.maxHeight = '';
+            content.style.overflow = '';
+            content.style.transition = '';
+        }, 350);
+        
+    } else {
+        // Close branch section
+        content.style.maxHeight = `${content.scrollHeight}px`;
+        content.style.overflow = 'hidden';
+        content.style.transition = 'max-height 0.3s ease-out';
+        
+        // Trigger reflow
+        content.offsetHeight;
+        
+        content.style.maxHeight = '0px';
+        chevron.style.transform = 'rotate(0deg)';
+        
+        // Hide after animation
+        setTimeout(() => {
+            content.classList.add('hidden');
+            content.style.maxHeight = '';
+            content.style.overflow = '';
+            content.style.transition = '';
+        }, 350);
+    }
+}
+
+// Toggle individual patient folder within a branch
+function togglePatientFolder(patientId, branchId) {
+    const folder = document.querySelector(`[data-patient-id="${patientId}"][data-branch-id="${branchId}"]`);
     if (!folder) return;
     
-    const content = folder.querySelector('.folder-content');
+    const content = folder.querySelector('.patient-records');
     const icon = folder.querySelector('.folder-icon');
-    const chevron = folder.querySelector('.folder-chevron');
+    const chevron = folder.querySelector('.patient-chevron');
     
     if (content.classList.contains('hidden')) {
         // Open folder
         content.classList.remove('hidden');
-        icon.className = 'folder-icon fas fa-folder-open text-blue-600 text-lg';
+        icon.className = 'folder-icon fas fa-folder-open text-yellow-500 text-lg';
         chevron.style.transform = 'rotate(180deg)';
         
         // Add smooth animation
@@ -386,7 +619,7 @@ function toggleFolder(patientId) {
         content.offsetHeight;
         
         content.style.maxHeight = '0px';
-        icon.className = 'folder-icon fas fa-folder text-blue-600 text-lg';
+        icon.className = branchId === 'unassigned' ? 'folder-icon fas fa-folder text-amber-500 text-lg' : 'folder-icon fas fa-folder text-yellow-500 text-lg';
         chevron.style.transform = 'rotate(0deg)';
         
         // Hide after animation
@@ -397,6 +630,16 @@ function toggleFolder(patientId) {
             content.style.transition = '';
         }, 350);
     }
+}
+
+// Legacy function for backward compatibility (now calls togglePatientFolder)
+function toggleFolder(patientId) {
+    // Try to find the patient folder in any branch
+    const folder = document.querySelector(`[data-patient-id="${patientId}"]`);
+    if (!folder) return;
+    
+    const branchId = folder.dataset.branchId || 'unknown';
+    togglePatientFolder(patientId, branchId);
 }
 
 // Expand all folders
@@ -431,14 +674,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeRecordsSearch() {
     const searchInput = document.getElementById('recordsSearchInput');
     const statusFilter = document.getElementById('statusFilter');
+    const branchFilter = document.getElementById('branchFilter');
     const clearButton = document.getElementById('clearSearch');
     const searchSummary = document.getElementById('searchSummary');
     const searchResultsCount = document.getElementById('searchResultsCount');
     const searchTermDisplay = document.getElementById('searchTermDisplay');
     
     if (currentView === 'folders') {
-        // Folder view search
+        // Branch-based folder view search
         const allFolders = Array.from(document.querySelectorAll('.patient-folder'));
+        const allBranchSections = Array.from(document.querySelectorAll('.branch-section'));
         
         let searchTimeout;
         
@@ -447,58 +692,102 @@ function initializeRecordsSearch() {
             searchTimeout = setTimeout(() => {
                 const searchTerm = searchInput.value.toLowerCase().trim();
                 const statusValue = statusFilter.value.toLowerCase();
+                const branchValue = branchFilter.value;
                 
                 let visibleCount = 0;
+                let visibleBranches = 0;
                 
-                allFolders.forEach(folder => {
-                    const shouldShow = matchesFolderCriteria(folder, searchTerm, statusValue);
+                // Handle branch filtering and search
+                allBranchSections.forEach(branchSection => {
+                    const branchId = branchSection.dataset.branchId;
+                    const branchFolders = branchSection.querySelectorAll('.patient-folder');
+                    let branchHasVisibleFolders = false;
                     
-                    if (shouldShow) {
-                        folder.style.display = '';
-                        folder.classList.add('search-match');
-                        visibleCount++;
-                        
-                        // If searching, auto-expand matching folders
-                        if (searchTerm && !folder.querySelector('.folder-content').classList.contains('hidden') === false) {
-                            const patientId = parseInt(folder.dataset.patientId);
-                            const content = folder.querySelector('.folder-content');
-                            if (content.classList.contains('hidden')) {
-                                toggleFolder(patientId);
+                    // Check if this branch should be shown based on branch filter
+                    const shouldShowBranch = !branchValue || branchValue === branchId;
+                    
+                    if (shouldShowBranch) {
+                        // Check each patient folder within this branch
+                        branchFolders.forEach(folder => {
+                            const shouldShow = matchesFolderCriteria(folder, searchTerm, statusValue, branchValue);
+                            
+                            if (shouldShow) {
+                                folder.style.display = '';
+                                folder.classList.add('search-match');
+                                visibleCount++;
+                                branchHasVisibleFolders = true;
+                                
+                                // If searching, auto-expand matching folders
+                                if (searchTerm) {
+                                    const patientId = folder.dataset.patientId;
+                                    const branchId = folder.dataset.branchId;
+                                    const content = folder.querySelector('.patient-records');
+                                    if (content && content.classList.contains('hidden')) {
+                                        togglePatientFolder(parseInt(patientId), branchId);
+                                    }
+                                }
+                            } else {
+                                folder.style.display = 'none';
+                                folder.classList.remove('search-match');
                             }
+                        });
+                        
+                        // Show/hide the entire branch section based on whether it has visible folders
+                        if (branchHasVisibleFolders) {
+                            branchSection.style.display = '';
+                            visibleBranches++;
+                            
+                            // Auto-expand branch if searching
+                            if (searchTerm || statusValue) {
+                                const branchRecords = branchSection.querySelector('.branch-records');
+                                if (branchRecords && branchRecords.classList.contains('hidden')) {
+                                    toggleBranchSection(branchId);
+                                }
+                            }
+                        } else {
+                            branchSection.style.display = 'none';
                         }
                     } else {
-                        folder.style.display = 'none';
-                        folder.classList.remove('search-match');
+                        // Hide entire branch if not matching branch filter
+                        branchSection.style.display = 'none';
                     }
                 });
                 
-                updateSearchSummary(visibleCount, searchTerm, statusValue);
+                updateSearchSummary(visibleCount, searchTerm, statusValue, branchValue, visibleBranches);
                 handleEmptyFolderResults(visibleCount);
             }, 300);
         }
         
-        function matchesFolderCriteria(folder, searchTerm, statusValue) {
-            const patientName = folder.querySelector('h3')?.textContent.toLowerCase() || '';
+        function matchesFolderCriteria(folder, searchTerm, statusValue, branchValue) {
+            const patientName = folder.querySelector('h4')?.textContent.toLowerCase() || '';
             const patientEmail = folder.querySelector('.text-xs.text-gray-500')?.textContent.toLowerCase() || '';
             const patientStatus = folder.querySelector('.rounded-full')?.textContent.toLowerCase() || '';
+            const folderBranchId = folder.dataset.branchId;
             
             const matchesSearchTerm = !searchTerm || 
                 patientName.includes(searchTerm) ||
                 patientEmail.includes(searchTerm);
             
             const matchesStatus = !statusValue || patientStatus.includes(statusValue);
+            const matchesBranch = !branchValue || branchValue === folderBranchId;
             
-            return matchesSearchTerm && matchesStatus;
+            return matchesSearchTerm && matchesStatus && matchesBranch;
         }
         
-        function updateSearchSummary(visibleCount, searchTerm, statusValue) {
-            if (searchTerm || statusValue) {
+        function updateSearchSummary(visibleCount, searchTerm, statusValue, branchValue, visibleBranches) {
+            if (searchTerm || statusValue || branchValue) {
                 searchSummary.classList.remove('hidden');
                 searchResultsCount.textContent = visibleCount;
                 
                 let summaryText = '';
                 if (searchTerm) summaryText += ` for "${searchTerm}"`;
                 if (statusValue) summaryText += ` • Status: ${statusValue}`;
+                if (branchValue) {
+                    const branchName = branchValue === 'unassigned' ? 'Unassigned' : 
+                        document.querySelector(`option[value="${branchValue}"]`)?.textContent || 'Selected Branch';
+                    summaryText += ` • Branch: ${branchName}`;
+                }
+                if (visibleBranches > 0) summaryText += ` • ${visibleBranches} branch${visibleBranches !== 1 ? 'es' : ''}`;
                 
                 searchTermDisplay.textContent = summaryText;
             } else {
@@ -531,10 +820,15 @@ function initializeRecordsSearch() {
         function clearAllFilters() {
             searchInput.value = '';
             statusFilter.value = '';
+            branchFilter.value = '';
             
             allFolders.forEach(folder => {
                 folder.style.display = '';
                 folder.classList.remove('search-match');
+            });
+            
+            allBranchSections.forEach(branchSection => {
+                branchSection.style.display = '';
             });
             
             searchSummary.classList.add('hidden');
@@ -550,6 +844,7 @@ function initializeRecordsSearch() {
         // Event listeners for folder search
         searchInput.addEventListener('input', performFolderSearch);
         statusFilter.addEventListener('change', performFolderSearch);
+        branchFilter.addEventListener('change', performFolderSearch);
         clearButton.addEventListener('click', clearAllFilters);
         
     } else {

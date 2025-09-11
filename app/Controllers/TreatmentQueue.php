@@ -22,8 +22,8 @@ class TreatmentQueue extends BaseController
      */
     public function index()
     {
-        $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin'])) {
+    $user = Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -182,7 +182,7 @@ class TreatmentQueue extends BaseController
     public function getQueueStatus()
     {
         $user = Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'doctor', 'admin', 'staff'])) {
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
 

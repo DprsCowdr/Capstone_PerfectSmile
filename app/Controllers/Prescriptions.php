@@ -111,6 +111,24 @@ class Prescriptions extends BaseAdminController
             'notes' => $post['instructions'] ?? null,
         ];
 
+        // Attach branch_id if available (session selected branch or user's assigned branch)
+        if (empty($data['branch_id'])) {
+            $sessionBranch = session('selected_branch_id') ?: null;
+            if ($sessionBranch) {
+                $data['branch_id'] = $sessionBranch;
+            } else {
+                try {
+                    $branchUserModel = new \App\Models\BranchStaffModel();
+                    $assignments = $branchUserModel->where('user_id', $user['id'])->findAll();
+                    if (!empty($assignments)) {
+                        $data['branch_id'] = $assignments[0]['branch_id'] ?? null;
+                    }
+                } catch (\Throwable $_e) {
+                    // ignore
+                }
+            }
+        }
+
         $result = $this->presModel->insert($data);
         if (!$result) {
             return redirect()->back()->with('error', 'Failed to create prescription')->withInput();

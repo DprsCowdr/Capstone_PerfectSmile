@@ -31,9 +31,9 @@ class Checkup extends BaseController
      */
     public function index()
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        // allow dentists (previously named 'doctor') and admins to access checkup
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    // allow dentists (previously named 'doctor'), admins, and staff to access checkup
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -76,8 +76,8 @@ class Checkup extends BaseController
      */
     public function startCheckup($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -110,8 +110,8 @@ class Checkup extends BaseController
      */
     public function patientCheckup($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'doctor', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -403,8 +403,8 @@ class Checkup extends BaseController
      */
     public function markNoShow($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -418,8 +418,8 @@ class Checkup extends BaseController
      */
     public function cancelAppointment($appointmentId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -434,8 +434,8 @@ class Checkup extends BaseController
      */
     public function viewRecord($recordId)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 
@@ -459,7 +459,7 @@ class Checkup extends BaseController
     public function getPatientHistory($patientId)
     {
         $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['dentist', 'admin'])) {
+        if (!$user || !in_array($user['user_type'], ['dentist', 'admin', 'staff'])) {
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
 
@@ -476,8 +476,8 @@ class Checkup extends BaseController
      */
     public function debug($appointmentId = null)
     {
-        $user = \App\Controllers\Auth::getCurrentUser();
-        if (!$user || !in_array($user['user_type'], ['doctor', 'admin'])) {
+    $user = \App\Controllers\Auth::getCurrentUser();
+    if (!$user || !in_array($user['user_type'], ['doctor', 'admin', 'staff'])) {
             return redirect()->to('/login');
         }
 

@@ -1,19 +1,16 @@
+<?php $user = $user ?? session('user') ?? []; ?>
+
 <?= view('templates/header') ?>
 
 <?= view('templates/sidebar', ['user' => $user ?? null]) ?>
 
 <div class="min-h-screen bg-gray-50 flex">
     <div class="flex-1 flex flex-col min-h-screen min-w-0 overflow-hidden" data-sidebar-offset>
-        <!-- Topbar -->
-        <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6 flex-shrink-0">
-            <h1 class="text-xl font-semibold text-gray-800">My Appointments</h1>
-            <div class="flex items-center">
-                <!-- Booking disabled from My Appointments module; patients should use the Book page or contact clinic -->
-            </div>
-        </nav>
+    <?= view('templates/patient_topbar', ['user' => $user ?? null]) ?>
 
     <!-- Main Content -->
     <main class="flex-1 px-6 pb-6 overflow-auto min-w-0" data-sidebar-offset>
+        <h1 class="text-xl font-semibold text-gray-800 mb-4">My Appointments</h1>
             <?php if (!empty($appointments)): ?>
                 <div id="myAppointmentsList" class="grid grid-cols-1 gap-6">
                     <?php foreach ($appointments as $appointment): ?>

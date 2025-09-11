@@ -563,17 +563,50 @@ class AdminController extends BaseAdminController
         // Load models
         $dentalRecordModel = new \App\Models\DentalRecordModel();
         $userModel = new \App\Models\UserModel();
+        $branchModel = new \App\Models\BranchModel();
         
-        // Get all dental records with complete patient and medical history information
-        $records = $dentalRecordModel->getRecordsWithPatientInfo(50, 0);
+    // Get all dental records with complete patient and medical history information AND branch info
+    // No limit so admin sees historical records from all branches
+    $records = $dentalRecordModel->getRecordsWithPatientAndBranchInfo();
+
+        // Get all branches for categorization
+        $branches = $branchModel->where('status', 'active')->orderBy('name', 'ASC')->findAll();
+        
+        // Categorize records by branch
+        $recordsByBranch = [];
+        $unassignedRecords = [];
+        
+        foreach ($records as $record) {
+            $branchId = $record['branch_id'] ?? null;
+            if ($branchId) {
+                if (!isset($recordsByBranch[$branchId])) {
+                    $recordsByBranch[$branchId] = [
+                        'branch' => null,
+                        'records' => []
+                    ];
+                    // Find branch info
+                    foreach ($branches as $branch) {
+                        if ($branch['id'] == $branchId) {
+                            $recordsByBranch[$branchId]['branch'] = $branch;
+                            break;
+                        }
+                    }
+                }
+                $recordsByBranch[$branchId]['records'][] = $record;
+            } else {
+                $unassignedRecords[] = $record;
+            }
+        }
 
         // Calculate statistics
         $totalRecords = $dentalRecordModel->countAll();
         
         // Count active patients (patients with records in last 6 months)
-        $activePatients = $dentalRecordModel->select('DISTINCT user_id')
-                                          ->where('record_date >=', date('Y-m-d', strtotime('-6 months')))
-                                          ->countAllResults();
+    // Use distinct() + select() so DISTINCT is not quoted as a column name
+    $activePatients = $dentalRecordModel->distinct()
+                      ->select('user_id')
+                      ->where('record_date >=', date('Y-m-d', strtotime('-6 months')))
+                      ->countAllResults();
         
         // Count records with X-rays
         $withXrays = $dentalRecordModel->where('xray_image_url IS NOT NULL')
@@ -586,7 +619,10 @@ class AdminController extends BaseAdminController
 
         $data = [
             'user' => $user,
-            'records' => $records,
+            'records' => $records, // Keep original for backward compatibility
+            'recordsByBranch' => $recordsByBranch,
+            'unassignedRecords' => $unassignedRecords,
+            'branches' => $branches,
             'stats' => [
                 'total_records' => $totalRecords,
                 'active_patients' => $activePatients,
@@ -653,7 +689,8 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-        return view('admin/management/roles', ['user' => $user]);
+    // Redirect to RoleController index which prepares and renders the roles list
+    return redirect()->to(site_url('admin/roles'));
     }
 
     public function branches()
@@ -1156,19 +1193,18 @@ class AdminController extends BaseAdminController
             ->orderBy('dr.record_date', 'DESC')
             ->get()->getResultArray();
         
-        // Get visual chart data from dental records
-        $visualChartRecords = $db->table('dental_record')
-            ->select('id, record_date, visual_chart_data')
+        // Get dental records for this patient (alternative to visual chart data)
+        $dentalRecords = $db->table('dental_record')
+            ->select('id, record_date, treatment, notes')
             ->where('user_id', $id)
-            ->where('visual_chart_data IS NOT NULL')
-            ->where('visual_chart_data !=', '')
             ->orderBy('record_date', 'DESC')
             ->get()->getResultArray();
         
         return $this->response->setJSON([
             'success' => true, 
             'chart' => $rows,
-            'visual_charts' => $visualChartRecords
+            'visual_charts' => [], // Empty array since column doesn't exist
+            'dental_records' => $dentalRecords
         ]);
     }
 
@@ -1209,6 +1245,54 @@ class AdminController extends BaseAdminController
                 'medical_conditions' => $p['medical_conditions'] ?? null,
                 'special_notes' => $p['special_notes'] ?? null
             ]
+        ]);
+    }
+
+    public function getPatientInvoiceHistory($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        
+        $db = \Config\Database::connect();
+        
+        // Get invoices for this patient
+        $invoices = $db->table('invoices i')
+            ->select('i.*, pr.procedure_name, u.name as patient_name')
+            ->join('procedures pr', 'pr.id = i.procedure_id', 'left')
+            ->join('user u', 'u.id = i.patient_id', 'left')
+            ->where('i.patient_id', $id)
+            ->orderBy('i.created_at', 'DESC')
+            ->get()->getResultArray();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'invoices' => $invoices
+        ]);
+    }
+
+    public function getPatientPrescriptions($id)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized'], 401);
+        }
+        
+        $db = \Config\Database::connect();
+        
+        // Get prescriptions for this patient
+        $prescriptions = $db->table('prescriptions pr')
+            ->select('pr.*, u.name as patient_name, d.name as dentist_name')
+            ->join('user u', 'u.id = pr.patient_id', 'left')
+            ->join('user d', 'd.id = pr.dentist_id', 'left')
+            ->where('pr.patient_id', $id)
+            ->orderBy('pr.issue_date', 'DESC')
+            ->get()->getResultArray();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'prescriptions' => $prescriptions
         ]);
     }
 }

@@ -360,7 +360,7 @@
             window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: res.appointment || null }));
             form.reset();
           } else {
-            alert((res && res.message) ? res.message : 'Failed to create appointment');
+            if (typeof showInvoiceAlert === 'function') showInvoiceAlert((res && res.message) ? res.message : 'Failed to create appointment', 'error', 5000); else alert((res && res.message) ? res.message : 'Failed to create appointment');
           }
         }catch(err){
           console.error('[patient-calendar] appointment submit error', err);
@@ -373,10 +373,10 @@
             return;
           }
           if(err && err.status === 401){
-            alert('Session expired or unauthorized. Please log in again.');
+            if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Session expired or unauthorized. Please log in again.', 'warning', 6000); else alert('Session expired or unauthorized. Please log in again.');
             return;
           }
-          alert('Error submitting appointment');
+          if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error submitting appointment', 'error', 5000); else alert('Error submitting appointment');
         }
       });
     }

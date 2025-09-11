@@ -39,7 +39,7 @@
         <tbody>
             <?php if (!empty($procedures)): ?>
                 <?php foreach ($procedures as $procedure): ?>
-                <tr class="border-b last:border-b-0 hover:bg-indigo-50 transition cursor-pointer" onclick="openProcedureModal(<?= $procedure['id'] ?>)">
+                <tr class="border-b last:border-b-0 hover:bg-indigo-50 transition">
                     <td class="min-w-[180px] px-8 py-5">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center font-bold text-lg text-indigo-400">
@@ -78,11 +78,19 @@
                         </span>
                     </td>
                     <td class="px-6 py-5">
-                        <?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
-                        <button onclick="event.stopPropagation(); deleteProcedure(<?= $procedure['id'] ?>)" title="Delete" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <?php endif; ?>
+                        <div class="flex justify-end gap-2">
+                            <?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
+                            <button onclick="openProcedureModal(<?= $procedure['id'] ?>, 'view')" title="View" class="p-2 text-blue-400 hover:bg-blue-50 rounded-lg transition">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="openProcedureModal(<?= $procedure['id'] ?>, 'edit')" title="Edit" class="p-2 text-green-400 hover:bg-green-50 rounded-lg transition">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteProcedure(<?= $procedure['id'] ?>)" title="Delete" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -146,7 +154,13 @@
             
             <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
                 <?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
-                <button onclick="event.stopPropagation(); deleteProcedure(<?= $procedure['id'] ?>)" title="Delete" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition">
+                <button onclick="openProcedureModal(<?= $procedure['id'] ?>, 'view')" title="View" class="p-2 text-blue-400 hover:bg-blue-50 rounded-lg transition">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button onclick="openProcedureModal(<?= $procedure['id'] ?>, 'edit')" title="Edit" class="p-2 text-green-400 hover:bg-green-50 rounded-lg transition">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteProcedure(<?= $procedure['id'] ?>)" title="Delete" class="p-2 text-red-400 hover:bg-red-50 rounded-lg transition">
                     <i class="fas fa-trash"></i>
                 </button>
                 <?php endif; ?>
@@ -164,7 +178,7 @@
 <!-- Scripts -->
 <script>
 function deleteProcedure(id) {
-    if (confirm('Are you sure you want to delete this procedure?')) {
+    const confirmDelete = () => {
         fetch('<?= base_url('admin/procedures/delete/') ?>' + id, {
             method: 'DELETE',
             headers: {
@@ -177,13 +191,23 @@ function deleteProcedure(id) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.message);
+                if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error: ' + (data.message || ''), 'error', 4000); else alert('Error: ' + data.message);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('An error occurred while deleting the procedure.');
+            if (typeof showInvoiceAlert === 'function') showInvoiceAlert('An error occurred while deleting the procedure.', 'error', 4000); else alert('An error occurred while deleting the procedure.');
         });
+    };
+
+    if (typeof showPrompt === 'function') {
+        showPrompt('Are you sure you want to delete this procedure?', '', '').then(result => {
+            if (result !== null) confirmDelete();
+        });
+    } else {
+        if (confirm('Are you sure you want to delete this procedure?')) {
+            confirmDelete();
+        }
     }
 }
 
@@ -199,7 +223,7 @@ if (!document.getElementById('procedureModal')) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-function openProcedureModal(id) {
+function openProcedureModal(id, mode = 'view') {
     const modal = document.getElementById('procedureModal');
     const content = document.getElementById('procedureModalContent');
     content.innerHTML = '<div class="flex items-center justify-center h-32"><i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i></div>';
@@ -213,20 +237,22 @@ function openProcedureModal(id) {
         panel.style.padding = '0';
     }
 
-        <?php
-            // determine show url based on user type so the same template works for admin and dentist
-            $procedureShowBase = (isset($user['user_type']) && $user['user_type'] === 'admin') ? base_url('admin/procedures/show/') : base_url('dentist/procedures/');
-        ?>
-        fetch('<?= $procedureShowBase ?>' + id + '?modal=1')
-            .then(res => res.text())
-            .then(html => {
-                content.innerHTML = html;
-                // Re-initialize edit button after modal content is loaded
+    <?php
+        // determine show url based on user type so the same template works for admin and dentist
+        $procedureShowBase = (isset($user['user_type']) && $user['user_type'] === 'admin') ? base_url('admin/procedures/show/') : base_url('dentist/procedures/');
+    ?>
+    fetch('<?= $procedureShowBase ?>' + id + '?modal=1&mode=' + mode)
+        .then(res => res.text())
+        .then(html => {
+            content.innerHTML = html;
+            // Re-initialize edit button after modal content is loaded if in view mode
+            if (mode === 'view') {
                 initProcedureEditBtn();
-            })
-            .catch(() => {
-                content.innerHTML = '<div class="text-center py-8 text-red-600">Failed to load procedure details.</div>';
-            });
+            }
+        })
+        .catch(() => {
+            content.innerHTML = '<div class="text-center py-8 text-red-600">Failed to load procedure details.</div>';
+        });
 }
 
 // Modal close
@@ -236,39 +262,122 @@ document.addEventListener('click', function(e) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     }
+    
+    // Close modal when clicking outside
+    if (e.target && e.target.id === 'procedureModal') {
+        const modal = document.getElementById('procedureModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
 });
 
-// Edit form toggler
+// Edit form toggler for view mode
 function initProcedureEditBtn() {
     const editBtn = document.getElementById("editBtn");
     const saveBtn = document.getElementById("saveBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
     const form = document.getElementById("procedureForm");
 
     if (!editBtn) {
         console.log("[EditBtn] Edit button not found in DOM");
-    } else {
-        console.log("[EditBtn] Edit button found");
-        editBtn.addEventListener("click", function () {
-            if (!form) {
-                console.log("[EditBtn] Form not found when clicking edit");
-                return;
-            }
-            // Enable all inputs
-            form.querySelectorAll("input, select").forEach(el => {
-                el.removeAttribute("readonly");
-                el.removeAttribute("disabled");
-            });
-            console.log("[EditBtn] All form fields enabled for editing");
+        return;
+    }
 
-            // Toggle buttons
-            editBtn.classList.add("hidden");
-            saveBtn.classList.remove("hidden");
-            console.log("[EditBtn] Edit button hidden, Save button shown");
+    console.log("[EditBtn] Edit button found");
+    editBtn.addEventListener("click", function () {
+        if (!form) {
+            console.log("[EditBtn] Form not found when clicking edit");
+            return;
+        }
+        // Enable all inputs
+        form.querySelectorAll("input, select, textarea").forEach(el => {
+            el.removeAttribute("readonly");
+            el.removeAttribute("disabled");
+        });
+        console.log("[EditBtn] All form fields enabled for editing");
+
+        // Toggle buttons
+        editBtn.classList.add("hidden");
+        if (saveBtn) saveBtn.classList.remove("hidden");
+        if (cancelBtn) cancelBtn.classList.remove("hidden");
+        console.log("[EditBtn] Edit button hidden, Save/Cancel buttons shown");
+    });
+
+    // Cancel button functionality
+    if (cancelBtn) {
+        cancelBtn.addEventListener("click", function () {
+            // Disable all inputs
+            form.querySelectorAll("input, select, textarea").forEach(el => {
+                el.setAttribute("readonly", true);
+            });
+
+            // Toggle buttons back
+            editBtn.classList.remove("hidden");
+            saveBtn.classList.add("hidden");
+            cancelBtn.classList.add("hidden");
+            
+            // Reload modal content to reset form
+            const procedureId = form.action.split('/').pop();
+            openProcedureModal(procedureId, 'view');
+        });
+    }
+
+    // Handle form submission for edit mode
+    if (form && saveBtn) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const procedureId = form.action.split('/').pop();
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': '<?= csrf_hash() ?>'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and reload page to show updated data
+                    const modal = document.getElementById('procedureModal');
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    location.reload();
+                } else {
+                    if (typeof showInvoiceAlert === 'function') {
+                        showInvoiceAlert('Error: ' + (data.message || 'Failed to update procedure'), 'error', 4000);
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to update procedure'));
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (typeof showInvoiceAlert === 'function') {
+                    showInvoiceAlert('An error occurred while updating the procedure.', 'error', 4000);
+                } else {
+                    alert('An error occurred while updating the procedure.');
+                }
+            });
         });
     }
 }
 
 document.addEventListener("DOMContentLoaded", function () {
     initProcedureEditBtn();
+});
+
+// ESC key to close modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('procedureModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
 });
 </script>
