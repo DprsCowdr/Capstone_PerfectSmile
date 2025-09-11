@@ -1205,10 +1205,20 @@ class AdminController extends BaseAdminController
             ->orderBy('record_date', 'DESC')
             ->get()->getResultArray();
         
+        // Get visual chart data (JSON state) saved on dental_record.visual_chart_data
+        // Only include non-empty values
+        $visualChartRecords = $db->table('dental_record')
+            ->select('id, record_date, visual_chart_data')
+            ->where('user_id', $id)
+            ->where('visual_chart_data IS NOT NULL')
+            ->where('visual_chart_data !=', '')
+            ->orderBy('record_date', 'DESC')
+            ->get()->getResultArray();
+
         return $this->response->setJSON([
             'success' => true, 
             'chart' => $rows,
-            'visual_charts' => [], // Empty array since column doesn't exist
+            'visual_charts' => $visualChartRecords,
             'dental_records' => $dentalRecords
         ]);
     }

@@ -11,6 +11,7 @@
 <!-- 3D Dental Viewer Styles and Scripts -->
 <link rel="stylesheet" href="<?= base_url('css/dental-3d-viewer.css') ?>">
 <link rel="stylesheet" href="<?= base_url('css/records-management.css') ?>">
+<link rel="stylesheet" href="<?= base_url('css/print-dental-records.css') ?>">
 <script src="<?= base_url('js/dental-3d-viewer.js') ?>"></script>
 
 <!-- Modular Records Management System -->
@@ -31,6 +32,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const canvas = container.querySelector('.visual-chart-canvas');
         if (!canvas || !raw.trim()) return;
         const ctx = canvas.getContext('2d');
+
+        // Normalize background URL for both relative and absolute paths and dev port mismatch
+        function normalizeBgUrl(bg) {
+            try {
+                if (!bg) return '';
+                // If already absolute, optionally fix port
+                if (bg.startsWith('http://') || bg.startsWith('https://')) {
+                    // Port fallback: 8080 -> 8081 when current origin differs
+                    const cur = window.location.origin;
+                    if (bg.includes('localhost:8080') && cur.includes('localhost:8081')) {
+                        return bg.replace('localhost:8080', 'localhost:8081');
+                    }
+                    return bg;
+                }
+                // Ensure leading slash then prepend current origin
+                if (!bg.startsWith('/')) bg = '/' + bg;
+                return window.location.origin + bg;
+            } catch (e) { return bg; }
+        }
 
         function drawStrokes(ctx, strokes) {
             (strokes || []).forEach((s) => {
@@ -68,8 +88,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
                         drawStrokes(ctx, state.strokes || []);
                     };
-                    bg.onerror = () => drawStrokes(ctx, state.strokes || []);
-                    bg.src = state.background;
+                    bg.onerror = () => {
+                        // Try port fallback once
+                        const alt = normalizeBgUrl(state.background);
+                        if (alt && alt !== state.background) {
+                            bg.src = alt;
+                        } else {
+                            drawStrokes(ctx, state.strokes || []);
+                        }
+                    };
+                    bg.src = normalizeBgUrl(state.background);
                 } else {
                     drawStrokes(ctx, state.strokes || []);
                 }
@@ -583,7 +611,18 @@ function toggleView() {
     const tableView = document.getElementById('tableView');
     const viewIcon = document.getElementById('viewIcon');
     const viewText = document.getElementById('viewText');
-    
+
+    // Guard against missing elements
+    if (!foldersView || !tableView || !viewIcon || !viewText) {
+        console.warn('toggleView: required elements not found', {
+            foldersView: !!foldersView,
+            tableView: !!tableView,
+            viewIcon: !!viewIcon,
+            viewText: !!viewText
+        });
+        return false;
+    }
+
     if (currentView === 'folders') {
         // Switch to table view
         foldersView.classList.add('hidden');
@@ -599,10 +638,14 @@ function toggleView() {
         viewText.textContent = 'List View';
         currentView = 'folders';
     }
-    
+
     // Re-initialize search for the new view
-    initializeRecordsSearch();
+    try { initializeRecordsSearch(); } catch (e) { console.warn('initializeRecordsSearch failed', e); }
+    return true;
 }
+
+// Ensure global access for inline onclick
+window.toggleView = toggleView;
 
 // Toggle branch section open/close
 function toggleBranchSection(branchId) {
@@ -750,6 +793,14 @@ function collapseAllFolders() {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize search functionality
     initializeRecordsSearch();
+    // Also bind toggle button explicitly in case inline handler is blocked
+    const viewToggleBtn = document.getElementById('viewToggle');
+    if (viewToggleBtn) {
+        viewToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            try { toggleView(); } catch (err) { console.error('toggleView failed', err); }
+        });
+    }
 });
 
 function initializeRecordsSearch() {

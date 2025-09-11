@@ -25,8 +25,17 @@
 		<!-- Tabs -->
 		<div class="bg-white rounded-lg shadow-md mb-6">
 			<div class="px-6 py-4 border-b border-gray-200">
-				<h3 class="text-lg font-semibold text-gray-900">Records</h3>
-				<p class="text-sm text-gray-600">Access your personal records</p>
+				<div class="flex items-center justify-between gap-3 flex-wrap">
+					<div>
+						<h3 class="text-lg font-semibold text-gray-900">Records</h3>
+						<p class="text-sm text-gray-600">Access your personal records</p>
+					</div>
+					<div class="flex items-center gap-2">
+						<button id="printVisualChartBtn" class="px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 shadow-sm" title="Print latest visual chart with treatment list">
+							<i class="fas fa-print mr-2"></i>Print Visual Chart
+						</button>
+					</div>
+				</div>
 			</div>
 			<div class="px-6 py-4">
 				<div class="flex flex-wrap gap-2">
@@ -67,6 +76,30 @@
 			</div>
 		</div>
 
+	</div>
+</div>
+
+<!-- Printable A4 section (hidden on screen) -->
+<div id="print-visual-chart" class="hidden">
+	<div class="a4-page">
+		<div class="chart-header">
+			<h1>Visual Dental Chart</h1>
+			<div class="patient-info">
+				<p><strong>Patient:</strong> <?= esc($user['name'] ?? 'Patient') ?></p>
+				<p><strong>Date Printed:</strong> <?= date('F j, Y') ?></p>
+			</div>
+
+			<div class="chart-date" id="printChartDate"></div>
+		</div>
+
+		<div class="chart-image-container">
+			<canvas id="printChartCanvas" width="800" height="600"></canvas>
+		</div>
+
+		<div class="treatments-section">
+			<h3>Treatment History</h3>
+			<div class="treatment-list" id="printTreatmentList"></div>
+		</div>
 	</div>
 </div>
 
@@ -125,8 +158,170 @@ document.addEventListener('DOMContentLoaded', function() {
 	// initial load
 	updateActiveTab();
 	loadTabContent();
+
+	// ============== Visual Chart Printing ==============
+	const printBtn = document.getElementById('printVisualChartBtn');
+	if (printBtn) {
+		printBtn.addEventListener('click', async function() {
+			try {
+				// Fetch patient visual chart JSON and records
+				const resp = await fetch('<?= site_url('patient/dental-chart') ?>', { credentials: 'same-origin' });
+				if (!resp.ok) throw new Error('Failed to load dental chart');
+				const data = await resp.json();
+
+				const charts = Array.isArray(data.visual_charts) ? data.visual_charts : [];
+				if (charts.length === 0) {
+					alert('No visual chart available to print.');
+					return;
+				}
+
+				// Pick the first chart that has a valid JSON state with background or a data URL fallback
+				let selected = null;
+				let state = null;
+				for (const c of charts) {
+					const raw = c.visual_chart_data || '';
+					if (!raw) continue;
+					if (raw.trim().startsWith('{')) {
+						try {
+							const parsed = JSON.parse(raw);
+							if (parsed && parsed.background) { selected = c; state = parsed; break; }
+						} catch (_) { /* ignore and try next */ }
+					} else if (raw.startsWith('data:image/')) {
+						selected = c; state = { background: null, strokes: null, dataUrl: raw, width: 1000, height: 600 }; break;
+					}
+				}
+				if (!selected) { selected = charts[0]; }
+				if (!state) { try { state = JSON.parse(selected.visual_chart_data); } catch (_) { state = null; } }
+
+				// Populate date header
+				document.getElementById('printChartDate').textContent = selected.record_date ? new Date(selected.record_date).toLocaleDateString() : '';
+
+				// Build treatment list from visual chart dates (fallback if no treatments API)
+				const listEl = document.getElementById('printTreatmentList');
+				listEl.innerHTML = charts.map(c => {
+					const d = new Date(c.record_date).toLocaleDateString();
+					return `<div class="treatment-item"><span class="treatment-date">${d}:</span> <span class="treatment-description">Visual dental examination with annotations</span></div>`;
+				}).join('');
+
+				// Render canvas
+				await renderPrintCanvas(state);
+
+				// Print only the section
+				prepareAndPrintSection();
+			} catch (err) {
+				console.error(err);
+				alert('Unable to print visual chart right now.');
+			}
+		});
+	}
+
+	async function renderPrintCanvas(state) {
+		const canvas = document.getElementById('printChartCanvas');
+		const ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		if (!state) return;
+
+		// Fallback: if we stored a composite image (data URL), render directly
+		if (state.dataUrl && state.dataUrl.startsWith('data:image/')) {
+			await new Promise((resolve) => {
+				const img = new Image();
+				img.onload = function() {
+					canvas.width = img.width; canvas.height = img.height;
+					ctx.drawImage(img, 0, 0);
+					resolve();
+				};
+				img.onerror = function() { resolve(); };
+				img.src = state.dataUrl;
+			});
+			return;
+		}
+
+		if (!state.background) return;
+
+		const bgUrl = normalizeBgUrl(state.background);
+		await new Promise((resolve) => {
+			const img = new Image();
+			img.crossOrigin = 'anonymous';
+			img.onload = function() {
+				ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+				if (Array.isArray(state.strokes)) drawStrokes(ctx, state.strokes);
+				resolve();
+			};
+			img.onerror = function() {
+				const alt = bgUrl.replace('localhost:8080', 'localhost:8081');
+				if (alt !== bgUrl) { img.src = alt; return; }
+				// try with leading slash fix if missing
+				try {
+					let fixed = state.background;
+					if (fixed && !fixed.startsWith('http') && !fixed.startsWith('/')) fixed = '/' + fixed;
+					img.src = window.location.origin + fixed;
+					return;
+				} catch(_) {}
+				resolve();
+			};
+			img.src = bgUrl;
+		});
+	}
+
+	function drawStrokes(ctx, strokes) {
+		for (const s of strokes) {
+			if (!s || !Array.isArray(s.points) || s.points.length === 0) continue;
+			ctx.save();
+			ctx.lineJoin = 'round';
+			ctx.lineCap = 'round';
+			ctx.lineWidth = Number(s.size) || 2;
+			if (s.tool === 'eraser') { ctx.globalCompositeOperation = 'destination-out'; ctx.strokeStyle = 'rgba(0,0,0,1)'; }
+			else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = s.color || '#ff0000'; }
+			ctx.beginPath();
+			ctx.moveTo(s.points[0].x, s.points[0].y);
+			for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
+			ctx.stroke();
+			ctx.restore();
+		}
+	}
+
+	function normalizeBgUrl(bg) {
+		try {
+			if (bg.startsWith('http://') || bg.startsWith('https://')) return bg;
+			if (!bg.startsWith('/')) bg = '/' + bg;
+			return window.location.origin + bg;
+		} catch (e) { return bg; }
+	}
+
+	function prepareAndPrintSection() {
+		const section = document.getElementById('print-visual-chart');
+		if (!section) return;
+		// Temporarily show section for print
+		section.classList.remove('hidden');
+		window.onafterprint = () => section.classList.add('hidden');
+		window.print();
+	}
 });
 </script>
+
+<style>
+@media print {
+	@page { size: A4; margin: 10mm; }
+	body * { visibility: hidden; }
+	#print-visual-chart, #print-visual-chart * { visibility: visible; }
+	#print-visual-chart { position: absolute; inset: 0; }
+	.screen-only { display: none !important; }
+}
+
+.a4-page { width: 190mm; height: 277mm; padding: 5mm; background: #fff; box-sizing: border-box; }
+.chart-header { text-align: center; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+.chart-header h1 { font-size: 16px; font-weight: 700; color: #333; margin: 0 0 4px 0; }
+.patient-info { display: flex; justify-content: space-between; font-size: 11px; }
+.chart-date { font-size: 12px; color: #2563eb; margin-top: 4px; }
+.chart-image-container { margin: 8px 0; display: flex; align-items: center; justify-content: center; height: 120mm; }
+#printChartCanvas { max-width: 160mm; max-height: 115mm; border: 1px solid #e5e7eb; border-radius: 2px; }
+.treatments-section h3 { font-size: 13px; margin: 6px 0; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+.treatment-list { column-count: 3; column-gap: 8px; }
+.treatment-item { break-inside: avoid; font-size: 11px; margin-bottom: 4px; }
+.treatment-date { font-weight: 600; color: #2563eb; }
+.treatment-description { color: #374151; }
+</style>
 
 <?php echo view('templates/footer'); ?>
 

@@ -6,11 +6,15 @@
 class DisplayManager {
     constructor() {
         this.utilities = new RecordsUtilities();
+        this.currentPatientId = null; // Store current patient ID for printing
     }
 
     // ==================== PATIENT INFO DISPLAY ====================
 
     displayPatientInfo(patient) {
+        // Store current patient ID for printing functionality
+        this.currentPatientId = patient.id;
+        
         const content = this.generatePatientInfoHTML(patient);
         this.setModalContent(content);
     }
@@ -43,7 +47,7 @@ class DisplayManager {
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="window.print()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium rounded-md">Print</button>
+                        <button onclick="recordsManager.displayManager.printPatientRecord()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium rounded-md">Print</button>
                         <button onclick="recordsManager.exportPatientData(${patient.id})" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-medium rounded-md border border-blue-200">Export</button>
                     </div>
                 </div>
@@ -92,17 +96,7 @@ class DisplayManager {
     // ==================== DENTAL RECORDS DISPLAY ====================
 
     displayDentalRecords(records) {
-        let content = '<div class="bg-white p-6">';
-        content += '<div class="flex justify-between items-center mb-4">';
-        content += '<h3 class="text-lg font-bold">Dental Records</h3>';
-        if (records.length > 0) {
-            content += `<button onclick="recordsManager.displayManager.printDentalRecords(${JSON.stringify(records).replace(/"/g, '&quot;')})" 
-                            class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors flex items-center gap-1">
-                        <i class="fas fa-print"></i>
-                        Print Records
-                    </button>`;
-        }
-        content += '</div>';
+        let content = '<div class="bg-white p-6"><h3 class="text-lg font-bold mb-4">Dental Records</h3>';
         
         if (records.length === 0) {
             content += '<p class="text-gray-500 text-center py-8">No dental records found</p>';
@@ -135,71 +129,39 @@ class DisplayManager {
     // ==================== DENTAL CHART DISPLAY ====================
 
     displayDentalChart(chartResponse) {
-        console.log('🎨 Displaying dental chart with response:', chartResponse);
-        console.log('📊 Visual charts data:', chartResponse.visual_charts);
-        
         const content = this.generateDentalChartHTML(chartResponse);
         this.setModalContent(content);
         
         // Initialize visual charts after content is loaded
         if (chartResponse.visual_charts && chartResponse.visual_charts.length > 0) {
-            console.log('✅ Initializing visual charts:', chartResponse.visual_charts.length, 'charts found');
             setTimeout(() => {
                 this.initializeVisualCharts(chartResponse.visual_charts);
             }, 100);
-        } else {
-            console.log('❌ No visual charts found in response');
         }
     }
 
     generateDentalChartHTML(chartResponse) {
         return `
         <div class="bg-white p-6">
-            <h3 class="text-lg font-bold mb-4">
-                <i class="fas fa-chart-line text-blue-500 mr-2"></i>
-                Dental Chart
-                <span class="text-sm font-normal text-gray-600 ml-2">(Interactive View)</span>
-            </h3>
-            
-            ${this.generateVisualChartsSection(chartResponse)}
-            
-            <!-- Enhanced 3D Dental Model Viewer -->
-            <div class="bg-gray-50 rounded-lg p-6">
-                <h4 class="font-semibold text-gray-800 mb-4 text-center">
-                    <i class="fas fa-cube text-blue-500 mr-2"></i>
-                    Interactive 3D Dental Model
-                </h4>
-                
-                <div class="dental-3d-viewer relative" id="dentalModalViewer" style="height: 500px;">
-                    <div class="model-loading text-center py-8" id="modalModelLoading">
-                        <i class="fas fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i>
-                        <p class="text-gray-600">Loading 3D Model...</p>
-                    </div>
-                    <div class="model-error hidden text-center py-8" id="modalModelError">
-                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
-                        <p class="text-red-600 mb-2">Failed to load 3D model</p>
-                        <button onclick="recordsManager.dental3DManager.initModal3D()" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
-                            Retry
-                        </button>
-                    </div>
-                    <canvas class="dental-3d-canvas"></canvas>
-                    
-                    <!-- Enhanced Model Controls -->
-                    <div class="model-controls" style="position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px;">
-                        <button class="model-control-btn" onclick="recordsManager.dental3DManager.resetCamera()" title="Reset View" style="padding: 8px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            <i class="fas fa-home"></i>
-                        </button>
-                        <button class="model-control-btn" onclick="recordsManager.dental3DManager.toggleWireframe()" title="Toggle Wireframe" style="padding: 8px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            <i class="fas fa-border-all"></i>
-                        </button>
-                        <button class="model-control-btn" onclick="recordsManager.dental3DManager.toggleAutoRotate()" title="Auto Rotate" style="padding: 8px; background: rgba(0,0,0,0.7); color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-lg font-bold">
+                        <i class="fas fa-chart-line text-blue-500 mr-2"></i>
+                        Dental Chart
+                        <span class="text-sm font-normal text-gray-600 ml-2">(Interactive View)</span>
+                    </h3>
                 </div>
-                
+                <div class="flex gap-2">
+                    <button onclick="recordsManager.displayManager.printDentalChartOnly()" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-md">
+                        <i class="fas fa-print mr-1"></i>Print Chart
+                    </button>
+                    <button onclick="recordsManager.displayManager.printPatientRecord()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md">
+                        <i class="fas fa-file-alt mr-1"></i>Full Report
+                    </button>
+                </div>
             </div>
             
+            ${this.generateVisualChartsSection(chartResponse)}
         </div>
         `;
     }
@@ -234,23 +196,17 @@ class DisplayManager {
                             <i class="fas fa-calendar text-blue-500 mr-1"></i>
                             ${this.formatDate(chart.record_date)}
                         </h5>
-                        <div class="flex gap-1">
-                            <button onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')" 
-                                    class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
-                                <i class="fas fa-eye mr-1"></i>Toggle View
-                            </button>
-                            <button onclick="recordsManager.displayManager.printSingleChart(${JSON.stringify(chart).replace(/"/g, '&quot;')})" 
-                                    class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">
-                                <i class="fas fa-print mr-1"></i>Print
-                            </button>
-                        </div>
+                        <button onclick="this.parentElement.parentElement.nextElementSibling.classList.toggle('hidden')" 
+                                class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                            <i class="fas fa-eye mr-1"></i>Toggle View
+                        </button>
                     </div>
                 </div>
                 <div class="hidden p-4 bg-white">
                     <div class="flex justify-center">
                         <div class="border-2 border-gray-200 rounded-lg overflow-hidden bg-white max-w-full relative">
                             <!-- Container for the visual chart -->
-                            <div class="visual-chart-container" data-chart-data="${chart.visual_chart_data}" data-chart-index="${index}">
+                            <div class="visual-chart-container" data-chart-data="${this.escapeHtml(chart.visual_chart_data || '')}" data-chart-index="${index}">
                                 <canvas class="visual-chart-canvas" style="max-height: 600px; max-width: 100%; display: block;"></canvas>
                             </div>
                         </div>
@@ -267,18 +223,11 @@ class DisplayManager {
 
         return `
             <div class="bg-green-50 rounded-lg p-4 mb-6 border border-green-200">
-                <div class="flex justify-between items-center mb-3">
-                    <h4 class="font-semibold text-gray-800 flex items-center">
-                        <i class="fas fa-image text-green-500 mr-2"></i>
-                        Visual Dental Charts 
-                        <span class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded">${chartResponse.visual_charts.length}</span>
-                    </h4>
-                    <button onclick="recordsManager.displayManager.printVisualCharts(${JSON.stringify(chartResponse.visual_charts).replace(/"/g, '&quot;')})" 
-                            class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors flex items-center gap-1">
-                        <i class="fas fa-print"></i>
-                        Print Charts
-                    </button>
-                </div>
+                <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-image text-green-500 mr-2"></i>
+                    Visual Dental Charts 
+                    <span class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded">${chartResponse.visual_charts.length}</span>
+                </h4>
                 <p class="text-sm text-gray-600 mb-4">
                     <i class="fas fa-info-circle text-green-500 mr-1"></i>
                     Visual annotations and markings made by dentists during examinations.
@@ -289,118 +238,140 @@ class DisplayManager {
     }
 
     initializeVisualCharts(visualCharts) {
-        console.log('🎨 Initializing visual charts:', visualCharts);
-        
-        const drawStrokes = (ctx, strokes) => {
-            for (const s of (strokes || [])) {
-                if (!s?.points?.length) continue;
-                ctx.save();
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                ctx.lineWidth = Number(s.size) || 2;
-                if (s.tool === 'eraser') {
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.strokeStyle = 'rgba(0,0,0,1)';
-                } else {
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.strokeStyle = s.color || '#ff0000';
-                }
-                ctx.beginPath();
-                ctx.moveTo(s.points[0].x, s.points[0].y);
-                for (let i = 1; i < s.points.length; i++) {
-                    ctx.lineTo(s.points[i].x, s.points[i].y);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-        };
-
         visualCharts.forEach((chart, index) => {
-            console.log(`🎨 Processing chart ${index}:`, chart);
             const container = document.querySelector(`[data-chart-index="${index}"]`);
-            if (!container) {
-                console.log(`❌ Container not found for chart ${index}`);
-                return;
-            }
+            if (!container) return;
+            
             const canvas = container.querySelector('.visual-chart-canvas');
-            if (!canvas) {
-                console.log(`❌ Canvas not found for chart ${index}`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            let chartData = container.getAttribute('data-chart-data');
+            
+            // Unescape HTML entities in the chart data
+            if (chartData) {
+                chartData = chartData
+                    .replace(/&amp;/g, "&")
+                    .replace(/&lt;/g, "<")
+                    .replace(/&gt;/g, ">")
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#039;/g, "'");
+            }
+            
+            console.log('Processing visual chart data:', chartData ? chartData.substring(0, 100) + '...' : 'null');
+            
+            if (!chartData || !chartData.trim()) {
+                console.warn('Empty chart data for chart', index);
+                canvas.style.display = 'none';
                 return;
             }
-            const ctx = canvas.getContext('2d');
-            const raw = chart.visual_chart_data;
-            console.log(`📊 Chart ${index} raw data:`, raw ? raw.substring(0, 100) + '...' : 'null');
-            if (!raw || !raw.trim()) { 
-                console.log(`❌ No data for chart ${index}`);
-                canvas.style.display = 'none'; 
-                return; 
-            }
-
-            // JSON state?
-            if (raw.trim().startsWith('{')) {
-                console.log(`📊 Chart ${index} is JSON format`);
+            
+            // Handle JSON format (new format with strokes)
+            if (chartData.trim().startsWith('{')) {
                 try {
-                    const state = JSON.parse(raw);
-                    console.log(`📊 Chart ${index} parsed state:`, state);
+                    const state = JSON.parse(chartData);
                     canvas.width = state.width || 1000;
                     canvas.height = state.height || 600;
+                    
                     if (state.background) {
-                        console.log(`📊 Chart ${index} loading background:`, state.background);
                         const bg = new Image();
                         bg.onload = () => {
-                            console.log(`📊 Chart ${index} background loaded, drawing strokes`);
                             ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-                            drawStrokes(ctx, state.strokes);
+                            this.drawStrokes(ctx, state.strokes || []);
+                            console.log('Rendered visual chart with background and strokes');
                         };
                         bg.onerror = () => {
-                            console.log(`❌ Chart ${index} background failed to load, trying to draw strokes without background`);
-                            drawStrokes(ctx, state.strokes);
+                            // Try with normalized URL
+                            const normalizedUrl = this.normalizeBackgroundUrl(state.background);
+                            if (normalizedUrl && normalizedUrl !== state.background) {
+                                bg.src = normalizedUrl;
+                            } else {
+                                // Fallback: draw strokes only
+                                this.drawStrokes(ctx, state.strokes || []);
+                                console.warn('Failed to load background, showing strokes only');
+                            }
                         };
-                        // Handle relative paths by prepending base URL if needed
-                        let bgSrc = state.background;
-                        if (bgSrc.startsWith('/img/')) {
-                            bgSrc = window.location.origin + bgSrc;
-                        }
-                        // Handle absolute localhost URLs (convert to relative)
-                        else if (bgSrc.startsWith('http://localhost:8080/')) {
-                            bgSrc = bgSrc.replace('http://localhost:8080', '');
-                            bgSrc = window.location.origin + bgSrc;
-                        }
-                        console.log(`📊 Chart ${index} final background URL:`, bgSrc);
-                        bg.src = bgSrc;
+                        bg.src = this.normalizeBackgroundUrl(state.background);
                     } else {
-                        console.log(`📊 Chart ${index} no background, drawing strokes only`);
-                        drawStrokes(ctx, state.strokes);
+                        // No background, just draw strokes
+                        this.drawStrokes(ctx, state.strokes || []);
+                        console.log('Rendered visual chart with strokes only');
                     }
                 } catch (e) {
-                    console.warn(`❌ Chart ${index} Invalid visual_chart_data JSON:`, e);
+                    console.warn('Invalid visual chart JSON data:', e, chartData);
                     canvas.style.display = 'none';
                 }
                 return;
             }
-
-            // Backward compatibility: data URL images
-            if (raw.startsWith('data:image/')) {
-                console.log(`📊 Chart ${index} is data URL format`);
+            
+            // Handle legacy data URL format
+            if (chartData.startsWith('data:image/')) {
                 const chartImg = new Image();
                 chartImg.onload = () => {
-                    console.log(`📊 Chart ${index} data URL image loaded`);
                     canvas.width = chartImg.width;
                     canvas.height = chartImg.height;
                     this.renderVisualChart(ctx, chartImg, canvas);
                 };
-                chartImg.onerror = () => { 
-                    console.log(`❌ Chart ${index} data URL image failed to load`);
-                    canvas.style.display = 'none'; 
+                chartImg.onerror = () => {
+                    console.warn('Failed to load visual chart data for chart', index);
+                    canvas.style.display = 'none';
                 };
-                chartImg.src = raw;
+                chartImg.src = chartData;
                 return;
             }
-
-            // Unknown format
-            console.log(`❌ Chart ${index} unknown format:`, raw.substring(0, 50));
+            
+            console.warn('Unknown visual chart data format:', chartData.substring(0, 50));
             canvas.style.display = 'none';
         });
+    }
+    
+    // Helper method to draw strokes on canvas
+    drawStrokes(ctx, strokes) {
+        (strokes || []).forEach((stroke) => {
+            if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) return;
+            
+            ctx.save();
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = Number(stroke.size) || 2;
+            
+            if (stroke.tool === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.strokeStyle = 'rgba(0,0,0,1)';
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = stroke.color || '#ff0000';
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            ctx.stroke();
+            ctx.restore();
+        });
+    }
+    
+    // Helper method to normalize background URL
+    normalizeBackgroundUrl(bg) {
+        try {
+            if (!bg) return '';
+            // If already absolute, optionally fix port
+            if (bg.startsWith('http://') || bg.startsWith('https://')) {
+                // Port fallback: 8080 -> 8081 when current origin differs
+                const currentOrigin = window.location.origin;
+                if (bg.includes('localhost:8080') && currentOrigin.includes('localhost:8081')) {
+                    return bg.replace('localhost:8080', 'localhost:8081');
+                }
+                return bg;
+            }
+            // Ensure leading slash then prepend current origin
+            if (!bg.startsWith('/')) bg = '/' + bg;
+            return window.location.origin + bg;
+        } catch (e) { 
+            return bg; 
+        }
     }
 
     renderVisualChart(ctx, chartImg, canvas) {
@@ -451,658 +422,6 @@ class DisplayManager {
         }
     }
 
-    // ==================== PRINT FUNCTIONALITY ====================
-
-    printVisualCharts(visualCharts) {
-        console.log('🖨️ Printing visual charts:', visualCharts);
-        
-        // Create print window
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        
-        // Get patient info from current modal
-        const patientName = document.querySelector('.modal-panel h3')?.textContent || 'Patient';
-        
-        // Generate print content
-        const printContent = this.generatePrintContent(visualCharts, patientName);
-        
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        
-        // Wait for images to load then print
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 1000);
-        };
-    }
-
-    printSingleChart(chart) {
-        console.log('🖨️ Printing single chart:', chart);
-        
-        // Create print window
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        
-        // Get patient info from current modal
-        const patientName = document.querySelector('.modal-panel h3')?.textContent || 'Patient';
-        
-        // Generate print content for single chart
-        const printContent = this.generateSingleChartPrintContent(chart, patientName);
-        
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        
-        // Wait for images to load then print
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 1000);
-        };
-    }
-
-    generatePrintContent(visualCharts, patientName) {
-        const latestChart = visualCharts[0]; // Get the most recent chart
-        
-        return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Visual Dental Chart - ${patientName}</title>
-    <style>
-        @page {
-            size: A4;
-            margin: 10mm;
-        }
-        
-        * {
-            font-size: 8pt !important;
-            line-height: 1.1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: white;
-        }
-        
-        .a4-page {
-            width: 190mm;
-            height: 277mm;
-            padding: 5mm;
-            margin: 0;
-            background: white;
-            font-family: Arial, sans-serif;
-            font-size: 7pt;
-            line-height: 1.0;
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-        
-        .chart-header {
-            text-align: center;
-            margin-bottom: 3mm;
-            border-bottom: 1px solid #333;
-            padding-bottom: 1mm;
-        }
-        
-        .chart-header h1 {
-            font-size: 12pt;
-            font-weight: bold;
-            margin: 0 0 1mm 0;
-            color: #333;
-        }
-        
-        .patient-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 7pt;
-            margin-bottom: 1mm;
-        }
-        
-        .patient-info p {
-            margin: 0;
-        }
-        
-        .chart-image-container {
-            margin: 2mm 0;
-            text-align: center;
-            height: 120mm;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .print-chart-canvas {
-            max-width: 160mm;
-            max-height: 115mm;
-            border: 1px solid #ddd;
-            border-radius: 2px;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
-        }
-        
-        .treatments-section {
-            margin-top: 2mm;
-            height: 130mm;
-            overflow: hidden;
-        }
-        
-        .treatments-section h3 {
-            font-size: 9pt;
-            font-weight: bold;
-            color: #333;
-            margin: 0 0 1mm 0;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 0.5mm;
-        }
-        
-        .treatment-list {
-            margin-left: 1mm;
-            max-height: 125mm;
-            overflow: hidden;
-            column-count: 3;
-            column-gap: 2mm;
-            column-fill: auto;
-        }
-        
-        .treatment-item {
-            margin-bottom: 1mm;
-            font-size: 6pt;
-            break-inside: avoid;
-            display: block;
-            line-height: 1.1;
-        }
-        
-        .treatment-date {
-            font-weight: bold;
-            color: #007bff;
-            display: inline;
-        }
-        
-        .treatment-description {
-            color: #333;
-            display: inline;
-        }
-    </style>
-</head>
-<body>
-    <div class="a4-page">
-        <div class="chart-header">
-            <h1>Visual Dental Chart</h1>
-            <div class="patient-info">
-                <p><strong>Patient:</strong> ${patientName}</p>
-                <p><strong>Date Printed:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
-        </div>
-
-        <div class="chart-image-container">
-            <div class="visual-chart-wrapper" 
-                 data-chart-data='${JSON.stringify(latestChart.visual_chart_data)}'>
-                <canvas id="print-chart-canvas" width="800" height="600" class="print-chart-canvas"></canvas>
-            </div>
-        </div>
-
-        <div class="treatments-section">
-            <h3>Treatment History</h3>
-            <div class="treatment-list">
-                ${visualCharts.map(chart => `
-                    <div class="treatment-item">
-                        <span class="treatment-date">${new Date(chart.record_date).toLocaleDateString()}:</span>
-                        <span class="treatment-description">Visual dental examination with annotations</span>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function renderPrintChart() {
-            const canvas = document.getElementById('print-chart-canvas');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            const wrapper = document.querySelector('.visual-chart-wrapper');
-            const chartData = wrapper.getAttribute('data-chart-data');
-            
-            if (!chartData) return;
-            
-            try {
-                const data = JSON.parse(chartData);
-                
-                // Load and draw background image
-                const img = new Image();
-                img.onload = function() {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    // Draw strokes if they exist
-                    if (data.strokes && Array.isArray(data.strokes)) {
-                        drawStrokes(ctx, data.strokes);
-                    }
-                };
-                img.onerror = function() {
-                    // Try alternative URL if the first one failed
-                    const altUrl = data.background.replace('localhost:8080', 'localhost:8081');
-                    if (altUrl !== data.background) {
-                        img.src = altUrl;
-                    } else {
-                        // Draw placeholder
-                        ctx.fillStyle = '#f0f0f0';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = '#666';
-                        ctx.font = '16px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
-                    }
-                };
-                img.src = data.background;
-            } catch (error) {
-                console.error('Error rendering visual chart:', error);
-            }
-        }
-        
-        function drawStrokes(ctx, strokes) {
-            for (const stroke of strokes) {
-                if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
-                
-                ctx.save();
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                ctx.lineWidth = Number(stroke.size) || 2;
-                
-                if (stroke.tool === 'eraser') {
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.strokeStyle = 'rgba(0,0,0,1)';
-                } else {
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.strokeStyle = stroke.color || '#ff0000';
-                }
-                
-                ctx.beginPath();
-                ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-                for (let i = 1; i < stroke.points.length; i++) {
-                    ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-        }
-        
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            renderPrintChart();
-        });
-    </script>
-</body>
-</html>
-        `;
-    }
-
-    generateSingleChartPrintContent(chart, patientName) {
-        return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Visual Dental Chart - ${patientName}</title>
-    <style>
-        @page {
-            size: A4;
-            margin: 10mm;
-        }
-        
-        * {
-            font-size: 8pt !important;
-            line-height: 1.1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: white;
-        }
-        
-        .a4-page {
-            width: 190mm;
-            height: 277mm;
-            padding: 5mm;
-            margin: 0;
-            background: white;
-            font-family: Arial, sans-serif;
-            font-size: 7pt;
-            line-height: 1.0;
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-        
-        .chart-header {
-            text-align: center;
-            margin-bottom: 3mm;
-            border-bottom: 1px solid #333;
-            padding-bottom: 1mm;
-        }
-        
-        .chart-header h1 {
-            font-size: 12pt;
-            font-weight: bold;
-            margin: 0 0 1mm 0;
-            color: #333;
-        }
-        
-        .patient-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 7pt;
-            margin-bottom: 1mm;
-        }
-        
-        .patient-info p {
-            margin: 0;
-        }
-        
-        .chart-image-container {
-            margin: 2mm 0;
-            text-align: center;
-            height: 200mm;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .print-chart-canvas {
-            max-width: 180mm;
-            max-height: 195mm;
-            border: 1px solid #ddd;
-            border-radius: 2px;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
-        }
-        
-        .chart-info {
-            margin-top: 2mm;
-            text-align: center;
-            font-size: 8pt;
-            color: #666;
-        }
-    </style>
-</head>
-<body>
-    <div class="a4-page">
-        <div class="chart-header">
-            <h1>Visual Dental Chart</h1>
-            <div class="patient-info">
-                <p><strong>Patient:</strong> ${patientName}</p>
-                <p><strong>Examination Date:</strong> ${new Date(chart.record_date).toLocaleDateString()}</p>
-                <p><strong>Date Printed:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
-        </div>
-
-        <div class="chart-image-container">
-            <div class="visual-chart-wrapper" 
-                 data-chart-data='${JSON.stringify(chart.visual_chart_data)}'>
-                <canvas id="print-chart-canvas" width="800" height="600" class="print-chart-canvas"></canvas>
-            </div>
-        </div>
-
-        <div class="chart-info">
-            <p>Visual dental examination chart with dentist annotations and markings</p>
-        </div>
-    </div>
-
-    <script>
-        function renderPrintChart() {
-            const canvas = document.getElementById('print-chart-canvas');
-            if (!canvas) return;
-            
-            const ctx = canvas.getContext('2d');
-            const wrapper = document.querySelector('.visual-chart-wrapper');
-            const chartData = wrapper.getAttribute('data-chart-data');
-            
-            if (!chartData) return;
-            
-            try {
-                const data = JSON.parse(chartData);
-                
-                // Load and draw background image
-                const img = new Image();
-                img.onload = function() {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    
-                    // Draw strokes if they exist
-                    if (data.strokes && Array.isArray(data.strokes)) {
-                        drawStrokes(ctx, data.strokes);
-                    }
-                };
-                img.onerror = function() {
-                    // Try alternative URL if the first one failed
-                    const altUrl = data.background.replace('localhost:8080', 'localhost:8081');
-                    if (altUrl !== data.background) {
-                        img.src = altUrl;
-                    } else {
-                        // Draw placeholder
-                        ctx.fillStyle = '#f0f0f0';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = '#666';
-                        ctx.font = '16px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('Chart image not available', canvas.width/2, canvas.height/2);
-                    }
-                };
-                img.src = data.background;
-            } catch (error) {
-                console.error('Error rendering visual chart:', error);
-            }
-        }
-        
-        function drawStrokes(ctx, strokes) {
-            for (const stroke of strokes) {
-                if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
-                
-                ctx.save();
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                ctx.lineWidth = Number(stroke.size) || 2;
-                
-                if (stroke.tool === 'eraser') {
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.strokeStyle = 'rgba(0,0,0,1)';
-                } else {
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.strokeStyle = stroke.color || '#ff0000';
-                }
-                
-                ctx.beginPath();
-                ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-                for (let i = 1; i < stroke.points.length; i++) {
-                    ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-        }
-        
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            renderPrintChart();
-        });
-    </script>
-</body>
-</html>
-        `;
-    }
-
-    printDentalRecords(records) {
-        console.log('🖨️ Printing dental records:', records);
-        
-        // Create print window
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        
-        // Get patient info from current modal
-        const patientName = document.querySelector('.modal-panel h3')?.textContent || 'Patient';
-        
-        // Generate print content for dental records
-        const printContent = this.generateDentalRecordsPrintContent(records, patientName);
-        
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        
-        // Wait for content to load then print
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 1000);
-        };
-    }
-
-    generateDentalRecordsPrintContent(records, patientName) {
-        return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dental Records - ${patientName}</title>
-    <style>
-        @page {
-            size: A4;
-            margin: 10mm;
-        }
-        
-        * {
-            font-size: 8pt !important;
-            line-height: 1.1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background: white;
-        }
-        
-        .a4-page {
-            width: 190mm;
-            height: 277mm;
-            padding: 5mm;
-            margin: 0;
-            background: white;
-            font-family: Arial, sans-serif;
-            font-size: 7pt;
-            line-height: 1.0;
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 3mm;
-            border-bottom: 1px solid #333;
-            padding-bottom: 1mm;
-        }
-        
-        .header h1 {
-            font-size: 12pt;
-            font-weight: bold;
-            margin: 0 0 1mm 0;
-            color: #333;
-        }
-        
-        .patient-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 7pt;
-            margin-bottom: 1mm;
-        }
-        
-        .patient-info p {
-            margin: 0;
-        }
-        
-        .records-section {
-            margin-top: 2mm;
-            height: 250mm;
-            overflow: hidden;
-        }
-        
-        .records-section h3 {
-            font-size: 9pt;
-            font-weight: bold;
-            color: #333;
-            margin: 0 0 1mm 0;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 0.5mm;
-        }
-        
-        .record-item {
-            margin-bottom: 2mm;
-            padding: 1mm;
-            border: 1px solid #ddd;
-            border-radius: 1px;
-            break-inside: avoid;
-        }
-        
-        .record-date {
-            font-weight: bold;
-            color: #007bff;
-            font-size: 8pt;
-        }
-        
-        .record-dentist {
-            font-size: 6pt;
-            color: #666;
-            margin-bottom: 1mm;
-        }
-        
-        .record-content {
-            font-size: 6pt;
-            line-height: 1.1;
-        }
-        
-        .record-content p {
-            margin: 0.5mm 0;
-        }
-        
-        .record-content strong {
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <div class="a4-page">
-        <div class="header">
-            <h1>Dental Records</h1>
-            <div class="patient-info">
-                <p><strong>Patient:</strong> ${patientName}</p>
-                <p><strong>Date Printed:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
-        </div>
-
-        <div class="records-section">
-            <h3>Treatment History</h3>
-            ${records.map(record => `
-                <div class="record-item">
-                    <div class="record-date">${new Date(record.record_date).toLocaleDateString()}</div>
-                    <div class="record-dentist">Dr. ${record.dentist_name || 'Unknown'}</div>
-                    <div class="record-content">
-                        ${record.chief_complaint ? `<p><strong>Chief Complaint:</strong> ${record.chief_complaint}</p>` : ''}
-                        ${record.treatment ? `<p><strong>Treatment:</strong> ${record.treatment}</p>` : ''}
-                        ${record.notes ? `<p><strong>Notes:</strong> ${record.notes}</p>` : ''}
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    </div>
-</body>
-</html>
-        `;
-    }
-
     // ==================== OTHER DISPLAY METHODS ====================
 
     displayAppointments(appointmentData) {
@@ -1117,16 +436,6 @@ class DisplayManager {
 
     displayMedicalRecords(medicalData) {
         const content = this.generateMedicalRecordsHTML(medicalData);
-        this.setModalContent(content);
-    }
-
-    displayInvoiceHistory(invoiceData) {
-        const content = this.generateInvoiceHistoryHTML(invoiceData);
-        this.setModalContent(content);
-    }
-
-    displayPrescriptions(prescriptionData) {
-        const content = this.generatePrescriptionsHTML(prescriptionData);
         this.setModalContent(content);
     }
 
@@ -1147,6 +456,16 @@ class DisplayManager {
             console.error('Error formatting date:', error);
             return 'Invalid Date';
         }
+    }
+    
+    escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     // Placeholder methods for appointments, treatments, and medical records
@@ -1658,140 +977,6 @@ class DisplayManager {
         `;
     }
 
-    generateInvoiceHistoryHTML(invoiceData) {
-        console.log('💰 Generating invoice history HTML with data:', invoiceData);
-        
-        if (!invoiceData || !invoiceData.invoices || invoiceData.invoices.length === 0) {
-            return `
-                <div class="bg-white p-6">
-                    <h3 class="text-lg font-bold mb-4">
-                        <i class="fas fa-file-invoice text-green-600 mr-2"></i>Invoices
-                    </h3>
-                    <p class="text-gray-500">No invoices found for this patient.</p>
-                </div>
-            `;
-        }
-
-        const invoices = invoiceData.invoices || [];
-
-        return `
-            <div class="bg-white p-6">
-                <h3 class="text-lg font-bold mb-4">
-                    <i class="fas fa-file-invoice text-green-600 mr-2"></i>Invoices
-                </h3>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Amount</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Final Amount</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${invoices.map(invoice => `
-                                <tr class="border-t">
-                                    <td class="px-4 py-2 text-sm font-medium text-gray-900">${invoice.invoice_number || 'N/A'}</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">${invoice.procedure_name || 'General Service'}</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">₱${parseFloat(invoice.total_amount || 0).toFixed(2)}</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">₱${parseFloat(invoice.discount || 0).toFixed(2)}</td>
-                                    <td class="px-4 py-2 text-sm font-medium text-green-600">₱${parseFloat(invoice.final_amount || 0).toFixed(2)}</td>
-                                    <td class="px-4 py-2 text-sm text-gray-700">${this.formatDate(invoice.created_at)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-
-    generatePrescriptionsHTML(prescriptionData) {
-        console.log('💊 Generating prescriptions HTML with data:', prescriptionData);
-        
-        if (!prescriptionData || !prescriptionData.prescriptions || prescriptionData.prescriptions.length === 0) {
-            return `
-                <div class="bg-white p-6">
-                    <h3 class="text-lg font-bold mb-4">
-                        <i class="fas fa-prescription text-purple-600 mr-2"></i>Prescriptions
-                    </h3>
-                    <p class="text-gray-500">No prescriptions found for this patient.</p>
-                </div>
-            `;
-        }
-
-        const prescriptions = prescriptionData.prescriptions || [];
-
-        return `
-            <div class="bg-white p-6">
-                <h3 class="text-lg font-bold mb-4">
-                    <i class="fas fa-prescription text-purple-600 mr-2"></i>Prescriptions
-                </h3>
-                
-                <div class="space-y-4">
-                    ${prescriptions.map(prescription => `
-                        <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <h4 class="text-md font-semibold text-purple-800">
-                                        Prescription #${prescription.id}
-                                    </h4>
-                                    <p class="text-sm text-gray-600">
-                                        <i class="fas fa-user-md mr-1"></i>Dr. ${prescription.dentist_name || 'Unknown'}
-                                        ${prescription.license_no ? `(License: ${prescription.license_no})` : ''}
-                                    </p>
-                                </div>
-                                <span class="px-2 py-1 text-xs rounded-full ${prescription.status === 'active' ? 'bg-green-100 text-green-800' : 
-                                prescription.status === 'completed' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
-                                    ${prescription.status || 'Unknown'}
-                                </span>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <strong class="text-gray-700">Issue Date:</strong>
-                                    <span class="text-gray-600">${this.formatDate(prescription.issue_date)}</span>
-                                </div>
-                                ${prescription.next_appointment ? `
-                                    <div>
-                                        <strong class="text-gray-700">Next Appointment:</strong>
-                                        <span class="text-gray-600">${this.formatDate(prescription.next_appointment)}</span>
-                                    </div>
-                                ` : ''}
-                                ${prescription.ptr_no ? `
-                                    <div>
-                                        <strong class="text-gray-700">PTR No:</strong>
-                                        <span class="text-gray-600">${prescription.ptr_no}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            
-                            ${prescription.notes ? `
-                                <div class="mt-3">
-                                    <strong class="text-gray-700">Notes:</strong>
-                                    <p class="text-gray-600 mt-1">${prescription.notes}</p>
-                                </div>
-                            ` : ''}
-                            
-                            ${prescription.signature_url ? `
-                                <div class="mt-3">
-                                    <strong class="text-gray-700">Digital Signature:</strong>
-                                    <div class="mt-1">
-                                        <img src="${prescription.signature_url}" alt="Doctor's Signature" class="max-w-xs border rounded">
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
     // ==================== TOOTH DETAILS MODAL ====================
 
     showToothDetailsModal(toothNumber, toothData, toothName) {
@@ -1889,6 +1074,960 @@ class DisplayManager {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', errorModal);
+    }
+
+    // ==================== COMPREHENSIVE PRINT FUNCTIONALITY ====================
+
+    async printPatientRecord(patientId = null) {
+        const targetPatientId = patientId || this.currentPatientId;
+        
+        if (!targetPatientId) {
+            this.showErrorModal('Print Error', 'No patient selected for printing.');
+            return;
+        }
+        
+        console.log('🖨️ Starting comprehensive patient record print for ID:', targetPatientId);
+        
+        try {
+            // Show loading indicator
+            this.showPrintLoadingModal();
+            
+            console.log('🔄 Fetching patient data for print...');
+            
+            // Fetch all patient data
+            const [patientData, dentalChartData, treatmentData] = await Promise.all([
+                this.fetchPatientBasicInfo(targetPatientId),
+                this.fetchPatientDentalChart(targetPatientId),
+                this.fetchPatientTreatments(targetPatientId)
+            ]);
+            
+            console.log('📊 Print data loaded:', {
+                patientData,
+                dentalChartData,
+                treatmentData
+            });
+            
+            // Create comprehensive print document
+            const printContent = this.generateComprehensivePrintHTML(
+                patientData, 
+                dentalChartData, 
+                treatmentData
+            );
+            
+            // Create and show print window
+            this.openPrintWindow(printContent);
+            
+            // Close loading modal
+            this.closePrintLoadingModal();
+            
+        } catch (error) {
+            console.error('❌ Error generating print document:', error);
+            this.closePrintLoadingModal();
+            this.showErrorModal('Print Error', 'Failed to generate print document. Please try again.');
+        }
+    }
+
+    showPrintLoadingModal() {
+        const loadingModal = `
+            <div id="printLoadingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-8 max-w-sm w-full mx-4 text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Preparing Print Document</h3>
+                    <p class="text-gray-600 text-sm">Gathering patient records and visual charts...</p>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', loadingModal);
+    }
+
+    closePrintLoadingModal() {
+        const modal = document.getElementById('printLoadingModal');
+        if (modal) modal.remove();
+    }
+
+    async fetchPatientBasicInfo(patientId) {
+        try {
+            const response = await fetch(`${window.BASE_URL}/admin/patient-info/${patientId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('🔍 Patient info API response:', data);
+            
+            return data.patient || data; // Return patient data
+        } catch (error) {
+            console.error('❌ Error fetching patient basic info:', error);
+            throw error;
+        }
+    }
+
+    async fetchPatientDentalChart(patientId) {
+        try {
+            const response = await fetch(`${window.BASE_URL}/admin/patient-dental-records/${patientId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('🔍 Dental records API response:', data);
+            
+            // Convert records to the expected format for visual charts
+            if (data.success && data.records) {
+                return {
+                    visual_charts: data.records.map(record => ({
+                        record_date: record.record_date,
+                        treatment: record.treatment,
+                        notes: record.notes,
+                        visual_chart_data: record.visual_chart_data
+                    }))
+                };
+            }
+            return { visual_charts: [] };
+        } catch (error) {
+            console.error('❌ Error fetching dental chart:', error);
+            throw error;
+        }
+    }
+
+    async fetchPatientTreatments(patientId) {
+        try {
+            // Use dental records endpoint since treatments are part of dental records
+            const response = await fetch(`${window.BASE_URL}/admin/patient-dental-records/${patientId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('🔍 Treatment records API response:', data);
+            
+            // Convert records to treatments format
+            if (data.success && data.records) {
+                return {
+                    treatments: data.records.map(record => ({
+                        treatment_date: record.record_date,
+                        treatment_name: record.treatment,
+                        description: record.notes,
+                        dentist_name: 'Staff', // Would need to get from appointment data
+                        cost: null // Would need to get from billing data
+                    }))
+                };
+            }
+            return { treatments: [] };
+        } catch (error) {
+            console.error('❌ Error fetching treatments:', error);
+            throw error;
+        }
+    }
+
+    generateComprehensivePrintHTML(patientData, dentalChartData, treatmentData) {
+        const currentDate = new Date().toLocaleDateString();
+        
+        return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Dental Chart - ${patientData.name || 'Patient'}</title>
+            <style>
+                ${this.getSimplePrintStyles()}
+            </style>
+        </head>
+        <body>
+            <div class="simple-print-container">
+                <!-- Patient Name -->
+                <h2 class="patient-name">${patientData.name || 'Patient'}</h2>
+                
+                <!-- Visual Dental Chart -->
+                <div class="chart-container">
+                    <canvas id="printDentalChart" width="1224" height="1224"></canvas>
+                </div>
+                
+                <!-- Treatment List Below Chart -->
+                <div class="treatment-list">
+                    ${this.generateSimpleTreatmentList(dentalChartData)}
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+    }
+
+    generateSimpleTreatmentList(dentalChartData) {
+        if (!dentalChartData.visual_charts || dentalChartData.visual_charts.length === 0) {
+            return '<p class="no-treatments">No treatments recorded</p>';
+        }
+
+        const treatmentItems = dentalChartData.visual_charts.map(record => {
+            const date = this.formatDate(record.record_date);
+            const treatment = record.treatment || 'General examination';
+            return `<div class="treatment-entry">${date} - ${treatment}</div>`;
+        }).join('');
+
+        return treatmentItems;
+    }
+
+    getSimplePrintStyles() {
+        return `
+            @page {
+                size: A4;
+                margin: 20mm;
+            }
+            
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+                color: #333;
+                background: white;
+            }
+            
+            .simple-print-container {
+                width: 100%;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            
+            .patient-name {
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 30px;
+                color: #2563eb;
+            }
+            
+            .chart-container {
+                text-align: center;
+                margin: 30px 0;
+                border: 2px solid #ddd;
+                padding: 20px;
+                background: #f9f9f9;
+            }
+            
+            #printDentalChart {
+                max-width: 100%;
+                max-height: 600px;
+                width: auto;
+                height: auto;
+                border: 1px solid #ccc;
+            }
+            
+            .treatment-list {
+                margin-top: 40px;
+            }
+            
+            .treatment-entry {
+                padding: 8px 0;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+                font-weight: 500;
+            }
+            
+            .treatment-entry:last-child {
+                border-bottom: none;
+            }
+            
+            .no-treatments {
+                text-align: center;
+                color: #666;
+                font-style: italic;
+                padding: 20px;
+            }
+            
+            @media print {
+                .simple-print-container {
+                    max-width: none;
+                    padding: 0;
+                }
+                
+                .patient-name {
+                    font-size: 18px;
+                    margin-bottom: 20px;
+                }
+                
+                .chart-container {
+                    margin: 20px 0;
+                    break-inside: avoid;
+                }
+                
+                .treatment-list {
+                    margin-top: 30px;
+                }
+                
+                .treatment-entry {
+                    break-inside: avoid;
+                }
+            }
+        `;
+    }
+
+    generatePrintTreatmentsSection(treatmentData) {
+        if (!treatmentData.treatments || treatmentData.treatments.length === 0) {
+            return `
+                <section class="treatments">
+                    <h2>Treatment History</h2>
+                    <p class="no-data">No treatment history available for this patient.</p>
+                </section>
+            `;
+        }
+
+        const treatmentRows = treatmentData.treatments.map(treatment => `
+            <tr>
+                <td class="date-treatment-format"><strong>${this.formatDate(treatment.treatment_date)} - ${treatment.treatment_name || 'General Treatment'}</strong></td>
+                <td>${treatment.tooth_number || 'N/A'}</td>
+                <td>${treatment.description || 'No description'}</td>
+                <td>Dr. ${treatment.dentist_name || 'Not specified'}</td>
+                <td>${treatment.cost ? '$' + treatment.cost : 'N/A'}</td>
+            </tr>
+        `).join('');
+
+        return `
+            <section class="treatments">
+                <h2>Treatment History (Date - Treatment Format)</h2>
+                <table class="treatments-table">
+                    <thead>
+                        <tr>
+                            <th>Date - Treatment</th>
+                            <th>Tooth #</th>
+                            <th>Description</th>
+                            <th>Dentist</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${treatmentRows}
+                    </tbody>
+                </table>
+            </section>
+        `;
+    }
+
+    getPrintStyles() {
+        return `
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 12px;
+                line-height: 1.4;
+                color: #333;
+                background: white;
+            }
+
+            .print-container {
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 20mm;
+                min-height: 297mm;
+            }
+
+            .print-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid #2563eb;
+                padding-bottom: 15px;
+                margin-bottom: 25px;
+            }
+
+            .clinic-info h1 {
+                font-size: 24px;
+                color: #2563eb;
+                margin-bottom: 5px;
+            }
+
+            .clinic-info p {
+                font-size: 14px;
+                color: #666;
+            }
+
+            .print-date {
+                text-align: right;
+                font-size: 11px;
+                color: #666;
+            }
+
+            .patient-info {
+                margin-bottom: 30px;
+            }
+
+            .patient-info h2 {
+                font-size: 18px;
+                color: #2563eb;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 5px;
+            }
+
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }
+
+            .info-item {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .info-item.full-width {
+                grid-column: 1 / -1;
+            }
+
+            .info-item label {
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 3px;
+                font-size: 11px;
+            }
+
+            .info-item span {
+                color: #6b7280;
+                font-size: 12px;
+            }
+
+            .visual-charts {
+                margin-bottom: 30px;
+                page-break-inside: avoid;
+            }
+
+            .visual-charts h2 {
+                font-size: 18px;
+                color: #2563eb;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 5px;
+            }
+
+            .chart-info {
+                margin-bottom: 15px;
+                padding: 15px;
+                background: #f0f9ff;
+                border-radius: 8px;
+                border-left: 4px solid #2563eb;
+            }
+
+            .treatment-header h3 {
+                font-size: 18px;
+                color: #2563eb;
+                margin: 0;
+                font-weight: 600;
+            }
+
+            .all-treatments-summary {
+                margin-top: 25px;
+                padding: 15px;
+                background: #f9fafb;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+            }
+
+            .all-treatments-summary h3 {
+                font-size: 16px;
+                color: #374151;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #d1d5db;
+                padding-bottom: 8px;
+            }
+
+            .treatment-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .treatment-item {
+                padding: 8px 12px;
+                background: white;
+                border-radius: 6px;
+                border-left: 3px solid #10b981;
+            }
+
+            .treatment-date-format {
+                font-weight: 600;
+                color: #374151;
+                font-size: 14px;
+            }
+
+            .treatment-notes {
+                font-size: 12px;
+                color: #6b7280;
+                margin-top: 4px;
+                font-style: italic;
+            }
+
+            .chart-info p {
+                margin-bottom: 5px;
+            }
+
+            .chart-container {
+                text-align: center;
+                margin: 20px 0;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                padding: 15px;
+                background: white;
+            }
+
+            #printDentalChart {
+                max-width: 100%;
+                height: auto;
+            }
+
+            .chart-notes {
+                margin-top: 15px;
+                padding: 10px;
+                background: #f0f9ff;
+                border-left: 4px solid #2563eb;
+            }
+
+            .treatments {
+                margin-bottom: 30px;
+            }
+
+            .treatments h2 {
+                font-size: 18px;
+                color: #2563eb;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 5px;
+            }
+
+            .treatments-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+
+            .treatments-table th,
+            .treatments-table td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #e5e7eb;
+                font-size: 11px;
+            }
+
+            .treatments-table th {
+                background: #f9fafb;
+                font-weight: 600;
+                color: #374151;
+            }
+
+            .treatments-table tr:hover {
+                background: #f9fafb;
+            }
+
+            .date-treatment-format {
+                font-weight: 600 !important;
+                color: #2563eb !important;
+                min-width: 200px;
+            }
+
+            .no-data {
+                text-align: center;
+                color: #9ca3af;
+                font-style: italic;
+                padding: 20px;
+            }
+
+            .print-footer {
+                position: fixed;
+                bottom: 15mm;
+                left: 20mm;
+                right: 20mm;
+                text-align: center;
+                font-size: 10px;
+                color: #6b7280;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 10px;
+            }
+
+            .page-break {
+                page-break-after: always;
+            }
+
+            @media print {
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+                
+                .print-container {
+                    margin: 0;
+                    padding: 15mm;
+                    box-shadow: none;
+                }
+
+                .page-break {
+                    page-break-after: always;
+                }
+
+                .visual-charts {
+                    page-break-inside: avoid;
+                }
+
+                @page {
+                    size: A4;
+                    margin: 15mm;
+                }
+            }
+        `;
+    }
+
+    async openPrintWindow(htmlContent) {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        
+        // Wait for content to load
+        await new Promise(resolve => {
+            printWindow.addEventListener('load', resolve);
+            setTimeout(resolve, 1000); // Fallback timeout
+        });
+        
+        // Render the dental chart in the print window
+        await this.renderPrintDentalChart(printWindow);
+        
+        // Focus and print
+        printWindow.focus();
+        printWindow.print();
+    }
+
+    async renderPrintDentalChart(printWindow) {
+        const canvas = printWindow.document.getElementById('printDentalChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Use same dimensions as original chart to maintain exact positioning
+        canvas.width = 1224;
+        canvas.height = 1224;
+        
+        // Get the most recent visual chart data from the current modal
+        const currentChartContainer = document.querySelector('.visual-chart-container[data-chart-index="0"]');
+        if (!currentChartContainer) {
+            // If no chart data, draw a basic dental chart template
+            this.drawBasicDentalTemplate(ctx, canvas.width, canvas.height);
+            return;
+        }
+
+        const chartData = currentChartContainer.getAttribute('data-chart-data');
+        if (!chartData) {
+            this.drawBasicDentalTemplate(ctx, canvas.width, canvas.height);
+            return;
+        }
+
+        // Decode HTML entities
+        const decodedData = chartData
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'");
+
+        try {
+            const state = JSON.parse(decodedData);
+
+            if (state.background) {
+                const bg = new Image();
+                await new Promise((resolve) => {
+                    bg.onload = () => {
+                        // Draw background at original size to maintain exact positioning
+                        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+                        // Draw strokes with original coordinates
+                        this.drawStrokes(ctx, state.strokes || []);
+                        resolve();
+                    };
+                    bg.onerror = () => {
+                        this.drawBasicDentalTemplate(ctx, canvas.width, canvas.height);
+                        this.drawStrokes(ctx, state.strokes || []);
+                        resolve();
+                    };
+                    bg.src = state.background;
+                });
+            } else {
+                this.drawBasicDentalTemplate(ctx, canvas.width, canvas.height);
+                this.drawStrokes(ctx, state.strokes || []);
+            }
+        } catch (error) {
+            console.error('Error rendering print dental chart:', error);
+            this.drawBasicDentalTemplate(ctx, canvas.width, canvas.height);
+        }
+    }
+
+    drawBasicDentalTemplate(ctx, width, height) {
+        // Draw a simple background
+        ctx.fillStyle = '#f8f9fa';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Draw a border
+        ctx.strokeStyle = '#dee2e6';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, width - 20, height - 20);
+        
+        // Add "Dental Chart" text
+        ctx.fillStyle = '#6c757d';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Dental Chart', width / 2, height / 2);
+    }
+
+    // ==================== DENTAL CHART ONLY PRINT ====================
+    
+    printDentalChartOnly() {
+        console.log('🖨️ Printing dental chart only');
+        
+        // Get the most recent visual chart data from the current modal
+        const currentChartContainer = document.querySelector('.visual-chart-container[data-chart-index="0"]');
+        if (!currentChartContainer) {
+            this.showErrorModal('Print Error', 'No dental chart data available for printing.');
+            return;
+        }
+
+        const chartData = currentChartContainer.getAttribute('data-chart-data');
+        if (!chartData) {
+            this.showErrorModal('Print Error', 'No dental chart data available for printing.');
+            return;
+        }
+
+        // Get current patient info from modal header
+        const patientNameEl = document.querySelector('#patientRecordsModal h3');
+        const patientName = patientNameEl ? patientNameEl.textContent.trim() : 'Patient';
+        
+        // Try to extract treatment information from the current dental chart display
+        let treatmentDateAndText = 'Recent dental examination';
+        
+        // Look for the current chart date and treatment info in the visual charts section
+        const currentVisualChart = document.querySelector('.visual-chart-container[data-chart-index="0"]').closest('.border');
+        if (currentVisualChart) {
+            const dateElement = currentVisualChart.querySelector('h5');
+            const treatmentElement = currentVisualChart.closest('.bg-green-50');
+            
+            if (dateElement) {
+                const chartDate = dateElement.textContent.trim();
+                // Get treatment from the modal content if available
+                treatmentDateAndText = `${chartDate} - Visual dental examination with annotations`;
+            }
+        }
+        
+        const currentDate = new Date().toLocaleDateString();
+
+        // Create simple dental chart print document
+        const printContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Dental Chart - ${patientName}</title>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    font-size: 14px;
+                    line-height: 1.4;
+                    color: #333;
+                    background: white;
+                    padding: 20mm;
+                }
+
+                .print-header {
+                    text-align: center;
+                    border-bottom: 2px solid #2563eb;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }
+
+                .print-header h1 {
+                    font-size: 28px;
+                    color: #2563eb;
+                    margin-bottom: 10px;
+                }
+
+                .print-header h2 {
+                    font-size: 20px;
+                    color: #374151;
+                    margin-bottom: 5px;
+                }
+
+                .print-header p {
+                    font-size: 16px;
+                    color: #6b7280;
+                }
+
+                .treatment-info {
+                    margin-top: 15px;
+                    padding: 12px;
+                    background: #f0f9ff;
+                    border-radius: 8px;
+                    border-left: 4px solid #2563eb;
+                }
+
+                .treatment-info p {
+                    margin: 0;
+                    font-size: 14px;
+                    color: #374151;
+                }
+
+                .treatment-info span {
+                    font-weight: 600;
+                    color: #2563eb;
+                }
+
+                .chart-container {
+                    text-align: center;
+                    margin: 30px 0;
+                    border: 2px solid #d1d5db;
+                    border-radius: 12px;
+                    padding: 20px;
+                    background: white;
+                }
+
+                #printDentalChartOnly {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 8px;
+                }
+
+                .chart-info {
+                    margin-top: 20px;
+                    text-align: center;
+                    font-size: 16px;
+                    color: #6b7280;
+                }
+
+                @media print {
+                    body {
+                        margin: 0;
+                        padding: 15mm;
+                    }
+                    
+                    @page {
+                        size: A4;
+                        margin: 15mm;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <h1>Perfect Smile Dental Clinic</h1>
+                <h2>Visual Dental Chart</h2>
+                <p><strong>Patient:</strong> ${patientName}</p>
+                <p><strong>Print Date:</strong> ${currentDate}</p>
+                <div class="treatment-info">
+                    <p><strong>Record:</strong> <span id="chartTreatmentInfo">${treatmentDateAndText}</span></p>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="printDentalChartOnly" width="1224" height="1224"></canvas>
+                <div class="chart-info">
+                    <p>Most recent dental examination markings and annotations</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        // Open print window
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+
+        // Render the chart and print
+        printWindow.addEventListener('load', async () => {
+            await this.renderSimpleDentalChart(printWindow, chartData);
+            printWindow.focus();
+            printWindow.print();
+        });
+    }
+
+    async renderSimpleDentalChart(printWindow, chartData) {
+        const canvas = printWindow.document.getElementById('printDentalChartOnly');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+
+        // Decode HTML entities
+        const decodedData = chartData
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'");
+
+        try {
+            const state = JSON.parse(decodedData);
+            canvas.width = state.width || 1224;
+            canvas.height = state.height || 1224;
+
+            if (state.background) {
+                const bg = new Image();
+                await new Promise((resolve) => {
+                    bg.onload = () => {
+                        ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+                        this.drawStrokes(ctx, state.strokes || []);
+                        resolve();
+                    };
+                    bg.onerror = () => {
+                        // Try normalized URL
+                        const normalizedUrl = this.normalizeBackgroundUrl(state.background);
+                        if (normalizedUrl && normalizedUrl !== state.background) {
+                            bg.src = normalizedUrl;
+                        } else {
+                            this.drawStrokes(ctx, state.strokes || []);
+                            resolve();
+                        }
+                    };
+                    bg.src = this.normalizeBackgroundUrl(state.background);
+                });
+            } else {
+                this.drawStrokes(ctx, state.strokes || []);
+            }
+        } catch (error) {
+            console.warn('Failed to render simple chart:', error);
+        }
     }
 }
 

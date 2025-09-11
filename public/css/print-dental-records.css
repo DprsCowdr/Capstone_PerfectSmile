@@ -1,0 +1,84 @@
+/* Enhanced Print Styles for Dental Records */
+@media print {
+    /* Hide navigation and non-essential elements */
+    .sidebar, .no-print, .modal-header button {
+        display: none !important;
+    }
+    
+    /* Optimize modal for printing */
+    #patientRecordsModal {
+        position: static !important;
+        background: white !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .modal-panel {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Visual dental charts optimization */
+    .visual-chart-container canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+    
+    /* Ensure visual charts show on print */
+    .visual-chart-container div[class*="hidden"] {
+        display: block !important;
+    }
+    
+    /* Page breaks */
+    .visual-charts {
+        page-break-after: always;
+    }
+    
+    /* Typography for print */
+    body {
+        font-size: 12pt !important;
+        line-height: 1.4 !important;
+        color: black !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        color: black !important;
+    }
+    
+    /* Treatment tables */
+    .treatments-table {
+        page-break-inside: avoid;
+    }
+    
+    .treatments-table th,
+    .treatments-table td {
+        border: 1px solid #ccc !important;
+        padding: 8px !important;
+    }
+    
+    /* Print header for pages */
+    @page {
+        size: A4;
+        margin: 2cm;
+        @top-center {
+            content: "Perfect Smile Dental Clinic - Patient Record";
+        }
+    }
+}
+
+/* Print-specific classes */
+.print-only {
+    display: none;
+}
+
+@media print {
+    .print-only {
+        display: block !important;
+    }
+}
