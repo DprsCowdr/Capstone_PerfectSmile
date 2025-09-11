@@ -108,6 +108,8 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('patient-appointments/(:num)', 'AdminController::getPatientAppointmentsModal/$1');
     $routes->get('patient-treatments/(:num)', 'AdminController::getPatientTreatments/$1');
     $routes->get('patient-medical-records/(:num)', 'AdminController::getPatientMedicalRecords/$1');
+    $routes->get('patient-invoice-history/(:num)', 'AdminController::getPatientInvoiceHistory/$1');
+    $routes->get('patient-prescriptions/(:num)', 'AdminController::getPatientPrescriptions/$1');
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
@@ -116,6 +118,18 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('services/update/(:num)', 'AdminController::updateService/$1');
     $routes->delete('services/delete/(:num)', 'AdminController::deleteService/$1');
     $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
+    // Role & Permission management (RoleController)
+    $routes->get('roles', 'RoleController::index');
+    $routes->get('roles/create', 'RoleController::create');
+    $routes->post('roles/create', 'RoleController::store');
+    $routes->get('roles/edit/(:num)', 'RoleController::edit/$1');
+    $routes->post('roles/update/(:num)', 'RoleController::update/$1');
+    $routes->get('roles/show/(:num)', 'RoleController::show/$1');
+    $routes->post('roles/delete/(:num)', 'RoleController::delete/$1');
+    $routes->match(['get','post'], 'roles/assign/(:num)', 'RoleController::assign/$1');
+    $routes->post('roles/remove_user/(:num)/(:num)', 'RoleController::remove_user/$1/$2');
+    $routes->get('roles/search-users', 'RoleController::searchUsers');
+    $routes->get('roles/searchUsers', 'RoleController::searchUsers');
     // Branch management handled by BranchController
     $routes->get('branches', 'BranchController::index');
     $routes->get('branches/create', 'BranchController::create');
@@ -130,6 +144,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     
     // Procedure management routes
     $routes->get('procedures', 'Admin\ProcedureController::index');
+    $routes->get('procedures/ajax-list', 'Admin\ProcedureController::ajaxList');
     $routes->get('procedures/create', 'Admin\ProcedureController::create');
     $routes->post('procedures/store', 'Admin\ProcedureController::store');
     $routes->get('procedures/show/(:num)', 'Admin\ProcedureController::show/$1'); // Uses combined view/edit page
@@ -146,8 +161,20 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->get('users/toggle-status/(:num)', 'AdminController::toggleUserStatus/$1');
     $routes->get('users/delete/(:num)', 'AdminController::deleteUser/$1');
     
-    // Invoices placeholder route
-    $routes->get('invoices', 'AdminController::invoices');
+    // Invoice management routes
+    $routes->get('invoices', 'Admin\InvoiceController::index');
+    $routes->get('invoices/create', 'Admin\InvoiceController::create');
+    $routes->post('invoices/store', 'Admin\InvoiceController::store');
+    $routes->get('invoices/show/(:num)', 'Admin\InvoiceController::show/$1');
+    $routes->get('invoices/edit/(:num)', 'Admin\InvoiceController::edit/$1');
+    $routes->post('invoices/update/(:num)', 'Admin\InvoiceController::update/$1');
+    $routes->delete('invoices/delete/(:num)', 'Admin\InvoiceController::delete/$1');
+    $routes->get('invoices/print/(:num)', 'Admin\InvoiceController::print/$1');
+    $routes->post('invoices/add-item', 'Admin\InvoiceController::addItem');
+    $routes->post('invoices/update-item/(:num)', 'Admin\InvoiceController::updateItem/$1');
+    $routes->delete('invoices/delete-item/(:num)', 'Admin\InvoiceController::deleteItem/$1');
+    $routes->post('invoices/record-payment/(:num)', 'Admin\InvoiceController::recordPayment/$1');
+    $routes->post('invoices/send-email/(:num)', 'Admin\InvoiceController::sendEmail/$1');
     
     // Billing routes
 });
@@ -233,6 +260,7 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->post('book-appointment', 'Patient::submitAppointment');
     $routes->get('appointments', 'Patient::appointments');
     $routes->get('records', 'Patient::records');
+    $routes->get('treatment/(:num)', 'Patient::treatment/$1');
     $routes->get('profile', 'Patient::profile');
     // Patient appointment management (cancel only - edit/delete removed to avoid accidental changes)
     // $routes->get('appointments/edit/(:num)', 'Patient::editAppointment/$1');
@@ -244,10 +272,20 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->post('save-profile', 'Patient::saveProfile');
     // New patient modules
     $routes->get('billing', 'Patient::billing');
+    $routes->get('invoice/(:num)', 'Patient::invoice/$1');
+    $routes->get('invoice/(:num)/download', 'Patient::invoiceDownload/$1');
     $routes->get('messages', 'Patient::messages');
     $routes->get('forms', 'Patient::forms');
     $routes->get('prescriptions', 'Patient::prescriptions');
+    $routes->get('prescriptions/(:num)', 'Patient::prescription/$1');
+    $routes->get('prescriptions/(:num)/preview', 'Patient::previewPrescription/$1');
+    $routes->get('prescriptions/(:num)/download-file', 'Patient::downloadPrescriptionFile/$1');
     $routes->get('treatment-plan', 'Patient::treatmentPlan');
+    // Settings pages
+    $routes->get('security', 'Patient::security');
+    $routes->get('preferences', 'Patient::preferences');
+    $routes->get('privacy', 'Patient::privacy');
+    $routes->get('support', 'Patient::support');
     // Page routes for patient UI (prevent 404s from dashboard links)
     $routes->get('calendar', 'Patient::calendar');
     $routes->get('book-appointment', 'Patient::bookAppointment');
@@ -304,6 +342,7 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
+    $routes->get('records', 'Staff::records');
     $routes->get('waitlist', 'StaffController::waitlist');
     // Allow staff to approve or decline appointments (matches admin/dentist endpoints)
     $routes->post('appointments/approve/(:num)', 'StaffController::approveAppointment/$1');

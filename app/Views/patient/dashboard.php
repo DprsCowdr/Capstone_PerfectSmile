@@ -2,26 +2,7 @@
 <div class="min-h-screen bg-white flex">
     <?= view('templates/sidebar', ['user' => $user]) ?>
     <div class="flex-1 flex flex-col min-h-screen bg-white">
-        <!-- Topbar -->
-        <nav class="flex items-center justify-between bg-white shadow px-6 py-4 mb-6">
-            <button id="sidebarToggleTop" class="block lg:hidden text-gray-600 mr-3 text-2xl focus:outline-none">
-                <i class="fa fa-bars"></i>
-            </button>
-            <div class="flex items-center ml-auto">
-                <span class="mr-4 hidden lg:inline text-gray-600 font-semibold"><?= $user['name'] ?? 'Patient' ?></span>
-                <div class="relative">
-                    <button class="focus:outline-none">
-                        <img class="w-10 h-10 rounded-full border-2 border-gray-200" src="<?= base_url('img/undraw_profile.svg') ?>" alt="Profile">
-                    </button>
-                    <!-- Dropdown -->
-                    <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50" id="userDropdownMenu">
-                        <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-user mr-2 text-gray-400"></i>Profile</a>
-                        <div class="border-t my-1"></div>
-                        <a href="<?= base_url('auth/logout') ?>" class="block px-4 py-2 text-gray-700 hover:bg-gray-100"><i class="fas fa-sign-out-alt mr-2 text-gray-400"></i>Logout</a>
-                    </div>
-                </div>
-            </div>
-        </nav>
+    <?= view('templates/patient_topbar', ['user' => $user ?? null]) ?>
         <!-- End of Topbar -->
         <main class="flex-1 px-6 pb-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-6">👤 Patient Dashboards</h1>

@@ -62,7 +62,8 @@ class Debug extends BaseController
         // Check what statuses exist
         echo "<h3>All appointment statuses:</h3>";
         $statuses = $appointmentModel
-            ->select('DISTINCT status')
+            ->distinct()
+            ->select('status')
             ->findAll();
         foreach($statuses as $status) {
             echo "<p>Status: {$status['status']}</p>";

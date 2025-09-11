@@ -184,7 +184,9 @@ class BranchController extends BaseAdminController
     private function getActivePatients($branchId)
     {
         $appointmentModel = new \App\Models\AppointmentModel();
-        return $appointmentModel->select('DISTINCT user_id')
+        // Use the query builder's distinct method to avoid quoting DISTINCT as a column
+        return $appointmentModel->distinct()
+                               ->select('user_id')
                                ->where('branch_id', $branchId)
                                ->where('appointment_datetime >=', date('Y-m-d', strtotime('-6 months')))
                                ->countAllResults();

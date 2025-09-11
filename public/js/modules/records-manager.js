@@ -71,6 +71,12 @@ class RecordsManager {
             case 'medical-records':
                 this.loadMedicalRecords(patientId);
                 break;
+            case 'invoice-history':
+                this.loadInvoiceHistory(patientId);
+                break;
+            case 'prescriptions':
+                this.loadPrescriptions(patientId);
+                break;
         }
     }
 
@@ -200,6 +206,36 @@ class RecordsManager {
         } catch (error) {
             console.error('Error loading medical records:', error);
             this.utilities.showAlert('An error occurred while loading medical records', 'error');
+        }
+    }
+
+    async loadInvoiceHistory(patientId) {
+        this.modalController.setLoadingState('Loading invoices...');
+        try {
+            const data = await this.dataLoader.loadInvoiceHistory(patientId);
+            if (data.success) {
+                this.displayManager.displayInvoiceHistory(data);
+            } else {
+                this.utilities.showAlert(data.message || 'Failed to load invoices', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading invoices:', error);
+            this.utilities.showAlert('An error occurred while loading invoices', 'error');
+        }
+    }
+
+    async loadPrescriptions(patientId) {
+        this.modalController.setLoadingState('Loading prescriptions...');
+        try {
+            const data = await this.dataLoader.loadPrescriptions(patientId);
+            if (data.success) {
+                this.displayManager.displayPrescriptions(data);
+            } else {
+                this.utilities.showAlert(data.message || 'Failed to load prescriptions', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading prescriptions:', error);
+            this.utilities.showAlert('An error occurred while loading prescriptions', 'error');
         }
     }
 

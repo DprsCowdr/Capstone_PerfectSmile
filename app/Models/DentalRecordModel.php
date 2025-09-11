@@ -16,6 +16,7 @@ class DentalRecordModel extends Model
         'user_id',
         'patient_id',
         'appointment_id',
+    'branch_id',
         'record_date',
         'treatment',
         'notes',
@@ -79,6 +80,26 @@ class DentalRecordModel extends Model
             ->orderBy('dental_record.record_date', 'DESC');
 
         if ($limit) {
+            $builder->limit($limit, $offset);
+        }
+
+        return $builder->findAll();
+    }
+
+    /**
+     * Get dental records with complete patient, medical history AND branch information
+     */
+    public function getRecordsWithPatientAndBranchInfo($limit = null, $offset = 0)
+    {
+        // The schema in some environments doesn't include next_appointment_id on dental_record.
+        // Avoid joining on that missing column; return the next_appointment_date stored on the record instead.
+        // Prefer a branch_id stored on the dental_record itself; fall back to the appointment's branch_id
+        $builder = $this->select('dental_record.*, user.name as patient_name, user.email as patient_email, user.phone as patient_phone, dentist.name as dentist_name, appointments.appointment_datetime, COALESCE(dental_record.branch_id, appointments.branch_id) as branch_id, branches.name as branch_name, dental_record.next_appointment_date')
+            ->join('user', 'user.id = dental_record.user_id')
+            ->join('user as dentist', 'dentist.id = dental_record.dentist_id')
+            ->join('appointments', 'appointments.id = dental_record.appointment_id', 'left')
+            ->join('branches', 'branches.id = COALESCE(dental_record.branch_id, appointments.branch_id)', 'left')
+            ->orderBy('dental_record.record_date', 'DESC');        if ($limit) {
             $builder->limit($limit, $offset);
         }
 

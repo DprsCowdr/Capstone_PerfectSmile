@@ -167,6 +167,26 @@ class DataLoader {
         return await this.fetchWithErrorHandling(url);
     }
 
+    async loadInvoiceHistory(patientId) {
+        console.log('Loading invoice history for patient:', patientId);
+        console.log('Base URL:', this.baseUrl);
+        
+        const url = `${this.baseUrl}/admin/patient-invoice-history/${patientId}`;
+        console.log('Fetching from URL:', url);
+        
+        return await this.fetchWithErrorHandling(url);
+    }
+
+    async loadPrescriptions(patientId) {
+        console.log('Loading prescriptions for patient:', patientId);
+        console.log('Base URL:', this.baseUrl);
+        
+        const url = `${this.baseUrl}/admin/patient-prescriptions/${patientId}`;
+        console.log('Fetching from URL:', url);
+        
+        return await this.fetchWithErrorHandling(url);
+    }
+
     // ==================== RECORD MANAGEMENT ====================
 
     async deleteRecord(recordId) {

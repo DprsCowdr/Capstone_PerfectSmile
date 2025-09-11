@@ -26,6 +26,8 @@
     </style>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <?= view('templates/alert_helper') ?>
+    <?= view('templates/prompt_helper') ?>
 </head>
 <body style="background: #ffffff; color: #1e293b;"> 
 <?php
@@ -82,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function(){
             fetch('<?= base_url('admin/switch-branch') ?>', { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function(resp){ if(resp.ok) return resp.text(); throw resp; })
             .then(function(){ location.reload(); })
-            .catch(function(err){ console.error('Branch switch failed', err); alert('Failed to switch branch'); });
+            .catch(function(err){ console.error('Branch switch failed', err); if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Failed to switch branch', 'error', 4000); else alert('Failed to switch branch'); });
         });
 
     }catch(e){ console.error('adminHeaderBranchSwitcher init error', e); }
