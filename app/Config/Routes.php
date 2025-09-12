@@ -27,6 +27,9 @@ $routes->get('dashboard', 'Dashboard::index');
 // Debug route (remove in production)
 $routes->get('debug/appointments', 'Debug::checkAppointments');
 $routes->get('debug/add-test', 'Debug::addTestAppointment');
+$routes->get('test-3d-viewer', function() {
+    return view('test-3d-viewer');
+});
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard

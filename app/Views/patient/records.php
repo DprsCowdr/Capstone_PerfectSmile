@@ -1,5 +1,9 @@
 <?php echo view('templates/header', ['title' => 'My Records']); ?>
 
+<!-- Include Display Manager modules for printing functionality -->
+<script src="<?= base_url('js/modules/records-utilities.js') ?>"></script>
+<script src="<?= base_url('js/modules/display-manager.js') ?>"></script>
+
 <?php echo view('templates/sidebar', ['active' => 'records', 'user' => $user]); ?>
 
 <div class="main-content" data-sidebar-offset>
@@ -25,8 +29,17 @@
 		<!-- Tabs -->
 		<div class="bg-white rounded-lg shadow-md mb-6">
 			<div class="px-6 py-4 border-b border-gray-200">
-				<h3 class="text-lg font-semibold text-gray-900">Records</h3>
-				<p class="text-sm text-gray-600">Access your personal records</p>
+				<div class="flex items-center justify-between gap-3 flex-wrap">
+					<div>
+						<h3 class="text-lg font-semibold text-gray-900">Records</h3>
+						<p class="text-sm text-gray-600">Access your personal records</p>
+					</div>
+					<div class="flex items-center gap-2">
+						<button id="printVisualChartBtn" class="px-3 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 shadow-sm" title="Print latest visual chart with treatment list">
+							<i class="fas fa-print mr-2"></i>Print Visual Chart
+						</button>
+					</div>
+				</div>
 			</div>
 			<div class="px-6 py-4">
 				<div class="flex flex-wrap gap-2">
@@ -70,7 +83,7 @@
 	</div>
 </div>
 
-<script>
+<style>
 document.addEventListener('DOMContentLoaded', function() {
 	const tabContent = document.getElementById('tab-content');
 	const tabs = document.querySelectorAll('.records-tab');
@@ -125,8 +138,39 @@ document.addEventListener('DOMContentLoaded', function() {
 	// initial load
 	updateActiveTab();
 	loadTabContent();
+
+	// ============== Visual Chart Printing ==============
+	const printBtn = document.getElementById('printVisualChartBtn');
+	if (printBtn) {
+		// Initialize DisplayManager for printing
+		const displayManager = new DisplayManager();
+		
+		printBtn.addEventListener('click', async function() {
+			try {
+				// Get current patient ID from the user data
+				const currentPatientId = <?= $user['id'] ?? 'null' ?>;
+				
+				if (!currentPatientId) {
+					alert('Unable to identify patient for printing.');
+					return;
+				}
+				
+				// Use DisplayManager's simplified print function
+				await displayManager.printPatientRecord(currentPatientId);
+				
+			} catch (err) {
+				console.error('Print error:', err);
+				alert('Unable to print visual chart right now.');
+			}
+		});
+	}
+
 });
 </script>
+
+<style>
+/* Patient records specific styles can go here */
+</style>
 
 <?php echo view('templates/footer'); ?>
 

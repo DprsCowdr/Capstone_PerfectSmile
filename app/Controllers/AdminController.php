@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Traits\AdminAuthTrait;
 use App\Services\DashboardService;
+use App\Services\AuthService;
 
 class AdminController extends BaseAdminController
 {
@@ -1108,8 +1109,9 @@ class AdminController extends BaseAdminController
     // ==================== PATIENT MODAL API ENDPOINTS ====================
     public function getPatientInfo($id)
     {
-        $auth = $this->checkAdminAuth();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+        $auth = AuthService::checkAdminOrStaffAuthApi();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
+            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
 
@@ -1149,8 +1151,9 @@ class AdminController extends BaseAdminController
 
     public function updatePatientNotes($id)
     {
-        $auth = $this->checkAdminAuth();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+        $auth = AuthService::checkAdminOrStaffAuthApi();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
+            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'], 401);
         }
         $notes = $this->request->getPost('special_notes');
@@ -1164,8 +1167,9 @@ class AdminController extends BaseAdminController
 
     public function getPatientDentalRecords($id)
     {
-        $auth = $this->checkAdminAuth();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+        $auth = AuthService::checkAdminOrStaffAuthApi();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
+            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         $model = new \App\Models\DentalRecordModel();
@@ -1179,8 +1183,9 @@ class AdminController extends BaseAdminController
 
     public function getPatientDentalChart($id)
     {
-        $auth = $this->checkAdminAuth();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+        $auth = AuthService::checkAdminOrStaffAuthApi();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
+            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         $db = \Config\Database::connect();
@@ -1200,18 +1205,29 @@ class AdminController extends BaseAdminController
             ->orderBy('record_date', 'DESC')
             ->get()->getResultArray();
         
+        // Get visual chart data (JSON state) saved on dental_record.visual_chart_data
+        // Only include non-empty values
+        $visualChartRecords = $db->table('dental_record')
+            ->select('id, record_date, visual_chart_data')
+            ->where('user_id', $id)
+            ->where('visual_chart_data IS NOT NULL')
+            ->where('visual_chart_data !=', '')
+            ->orderBy('record_date', 'DESC')
+            ->get()->getResultArray();
+
         return $this->response->setJSON([
             'success' => true, 
             'chart' => $rows,
-            'visual_charts' => [], // Empty array since column doesn't exist
+            'visual_charts' => $visualChartRecords,
             'dental_records' => $dentalRecords
         ]);
     }
 
     public function getPatientAppointmentsModal($id)
     {
-        $auth = $this->checkAdminAuth();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
+        $auth = AuthService::checkAdminOrStaffAuthApi();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
+            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         

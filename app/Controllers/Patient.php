@@ -475,7 +475,7 @@ class Patient extends BaseController
         }
     }
 
-    // Patient records page (simple placeholder)
+    // Patient records page with dental chart data
     public function records()
     {
         $user = Auth::getCurrentUser();
