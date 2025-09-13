@@ -1,6 +1,7 @@
 <?php
-namespace App\Controllers;
+namespace App\Controllers\Medical;
 
+use App\Controllers\BaseAdminController;
 use App\Models\PrescriptionModel;
 use App\Models\PrescriptionItemModel;
 use App\Traits\AdminAuthTrait;

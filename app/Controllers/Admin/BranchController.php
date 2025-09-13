@@ -1,6 +1,7 @@
 <?php
-namespace App\Controllers;
+namespace App\Controllers\Admin;
 
+use App\Controllers\BaseAdminController;
 use App\Models\BranchModel;
 use App\Models\BranchStaffModel;
 use App\Services\BranchService;

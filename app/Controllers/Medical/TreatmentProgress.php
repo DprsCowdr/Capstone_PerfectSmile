@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Medical;
 
+use App\Controllers\BaseController;
 use App\Models\AppointmentModel;
 use App\Models\DentalRecordModel;
 use App\Models\DentalChartModel;

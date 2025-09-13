@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Staff;
 
+use App\Controllers\BaseController;
 use App\Controllers\Auth;
 
 class Staff extends BaseController

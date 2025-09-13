@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Medical;
 
+use App\Controllers\BaseController;
 use App\Models\ServiceModel;
 use App\Models\AppointmentServiceModel;
 use App\Models\AppointmentModel;

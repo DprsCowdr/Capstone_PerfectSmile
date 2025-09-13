@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Dentist;
 
+use App\Controllers\BaseController;
 use App\Controllers\Auth;
 use App\Services\DashboardService;
 use CodeIgniter\HTTP\RequestInterface;

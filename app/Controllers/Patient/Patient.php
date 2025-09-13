@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Patient;
 
+use App\Controllers\BaseController;
 use App\Controllers\Auth;
 use App\Models\PatientModel;
 use App\Models\PatientMedicalHistoryModel;

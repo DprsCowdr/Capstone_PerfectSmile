@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Staff;
 
+use App\Controllers\BaseAdminController;
 use App\Services\AuthService;
 use App\Services\DashboardService;
 

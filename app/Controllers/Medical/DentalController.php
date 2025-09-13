@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Medical;
 
+use App\Controllers\BaseAdminController;
 use App\Traits\AdminAuthTrait;
 
 class DentalController extends BaseAdminController
