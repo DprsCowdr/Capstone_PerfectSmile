@@ -513,6 +513,12 @@ class Patient extends BaseController
             $page = (int) ($this->request->getGet('treatments_page') ?? 1);
             $treatments = $dentalRecordModel->where('user_id', $user['id'])->orderBy('record_date', 'DESC')->paginate($perPage, 'treatments', $page);
             $treatmentsPager = $dentalRecordModel->pager;
+            
+            // Debug logging
+            log_message('info', 'Patient records - User ID: ' . $user['id'] . ', Treatments found: ' . count($treatments));
+            if (!empty($treatments)) {
+                log_message('info', 'First treatment: ' . json_encode($treatments[0]));
+            }
         } catch (\Exception $e) {
             log_message('error', 'Failed to load dental records for records page: ' . $e->getMessage());
             $treatments = [];
@@ -584,6 +590,85 @@ class Patient extends BaseController
     $data['invoices'] = $invoices;
     $data['invoicesPager'] = $invoicesPager ?? null;
 
+    // Load latest dental chart data for 3D chart tab (same as admin)
+    try {
+        $dentalChart = null;
+        $chartData = [];
+        
+        if (!empty($treatments)) {
+            // Get the latest treatment record
+            $latestTreatment = $treatments[0]; // First one is latest due to DESC ordering
+            $latestDate = $latestTreatment['record_date'];
+            
+            // Debug: Log the latest treatment and date
+            log_message('info', 'Patient records - Latest treatment ID: ' . $latestTreatment['id'] . ', Date: ' . $latestDate);
+            
+            // Load dental chart data from dental_chart table (same query as admin)
+            if (class_exists('\App\\Models\\DentalChartModel')) {
+                $dentalChartModel = new \App\Models\DentalChartModel();
+                
+                // Get ALL chart records for the latest date (same as admin logic)
+                $db = \Config\Database::connect();
+                
+                // First try with exact date match
+                $chartRecords = $db->table('dental_chart dc')
+                    ->select('dc.*, dr.record_date')
+                    ->join('dental_record dr', 'dr.id = dc.dental_record_id')
+                    ->where('dr.user_id', $user['id'])
+                    ->where('dr.record_date', $latestDate) // Get all records for latest date
+                    ->orderBy('dc.tooth_number', 'ASC')
+                    ->get()->getResultArray();
+                
+                // If no records found with exact date, try with date only (without time)
+                if (empty($chartRecords) && $latestDate) {
+                    $dateOnly = date('Y-m-d', strtotime($latestDate));
+                    $chartRecords = $db->table('dental_chart dc')
+                        ->select('dc.*, dr.record_date')
+                        ->join('dental_record dr', 'dr.id = dc.dental_record_id')
+                        ->where('dr.user_id', $user['id'])
+                        ->where('DATE(dr.record_date)', $dateOnly) // Match date only
+                        ->orderBy('dc.tooth_number', 'ASC')
+                        ->get()->getResultArray();
+                }
+                
+                // Debug: Log the query results
+                log_message('info', 'Patient records - Chart query returned ' . count($chartRecords) . ' records for date: ' . $latestDate);
+                
+                if (!empty($chartRecords)) {
+                    // Convert chart records to the same format as admin
+                    foreach ($chartRecords as $record) {
+                        $chartData[] = [
+                            'tooth_number' => $record['tooth_number'],
+                            'condition' => $record['condition'],
+                            'notes' => $record['notes'],
+                            'surface' => $record['surface'],
+                            'tooth_type' => $record['tooth_type'],
+                            'record_date' => $record['record_date']
+                        ];
+                    }
+                    
+                    // Create dental chart object with the same structure as admin
+                    $dentalChart = [
+                        'id' => $latestTreatment['id'],
+                        'record_date' => $latestDate,
+                        'treatment' => $latestTreatment['treatment'],
+                        'chart_data' => $chartData,
+                        'chart' => $chartData // Add 'chart' key for admin compatibility
+                    ];
+                }
+            }
+        }
+        
+        $data['dentalChart'] = $dentalChart;
+        
+        // Debug logging
+        log_message('info', 'Patient records - User ID: ' . $user['id'] . ', Latest date: ' . ($latestDate ?? 'N/A') . ', Chart records found: ' . count($chartRecords ?? []) . ', Dental chart loaded: ' . ($dentalChart ? 'Yes' : 'No'));
+        
+    } catch (\Exception $e) {
+        log_message('error', 'Failed to load dental chart data: ' . $e->getMessage());
+        $data['dentalChart'] = null;
+    }
+
         // If this is an AJAX tab request, return only the tab partial so the frontend can inject fresh content
         try {
             $isAjax = (bool) ($this->request->getGet('ajax') ?? false);
@@ -594,6 +679,10 @@ class Patient extends BaseController
         }
 
         if ($isAjax && $tab) {
+            // Debug logging for AJAX requests
+            log_message('info', 'AJAX request - Tab: ' . $tab . ', User ID: ' . $user['id']);
+            log_message('info', 'Data counts - Appointments: ' . count($data['appointments'] ?? []) . ', Treatments: ' . count($data['treatments'] ?? []) . ', Prescriptions: ' . count($data['prescriptions'] ?? []) . ', Invoices: ' . count($data['invoices'] ?? []));
+            
             // Return only the partial for the requested tab. The partial will render the correct pager and items.
             return view('patient/partials/records_tab', array_merge($data, ['tab' => $tab]));
         }
@@ -1003,6 +1092,45 @@ class Patient extends BaseController
                 'success' => false,
                 'message' => 'Database error: ' . $e->getMessage()
             ])->setStatusCode(500);
+        }
+    }
+
+    /**
+     * Debug endpoint to test records loading
+     */
+    public function debugRecords()
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return $this->response->setJSON(['error' => 'Not authenticated as patient']);
+        }
+
+        try {
+            $dentalRecordModel = new \App\Models\DentalRecordModel();
+            $treatments = $dentalRecordModel->where('user_id', $user['id'])->orderBy('record_date', 'DESC')->findAll();
+            
+            // Also test dental chart loading
+            $dentalChartData = [];
+            if (!empty($treatments) && class_exists('\App\\Models\\DentalChartModel')) {
+                $dentalChartModel = new \App\Models\DentalChartModel();
+                $latestTreatment = $treatments[0];
+                $chartRecords = $dentalChartModel->where('dental_record_id', $latestTreatment['id'])->findAll();
+                $dentalChartData = $chartRecords;
+            }
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'user_id' => $user['id'],
+                'treatments_count' => count($treatments),
+                'treatments' => $treatments,
+                'dental_chart_count' => count($dentalChartData),
+                'dental_chart_data' => $dentalChartData
+            ]);
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
