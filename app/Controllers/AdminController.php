@@ -545,6 +545,29 @@ class AdminController extends BaseAdminController
         }
     }
 
+    public function servicesAjaxList()
+    {
+        $user = $this->checkAdminAuth();
+        if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $user;
+        }
+
+        try {
+            $serviceModel = new \App\Models\ServiceModel();
+            $services = $serviceModel->findAll();
+            
+            return $this->response->setJSON([
+                'success' => true,
+                'data' => $services
+            ]);
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to fetch services: ' . $e->getMessage()
+            ]);
+        }
+    }
+
     public function procedures()
     {
         $user = $this->checkAdminAuth();
