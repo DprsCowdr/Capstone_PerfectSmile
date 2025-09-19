@@ -87,12 +87,12 @@ class InvoiceController extends BaseAdminController
         }
 
         $patients = $this->invoiceService->getPatients();
-        $services = $this->invoiceService->getServices();
+        $procedures = $this->invoiceService->getProcedures();
 
         return view('admin/invoices/create', [
             'user' => $user,
             'patients' => $patients,
-            'services' => $services
+            'procedures' => $procedures
         ]);
     }
 
@@ -108,7 +108,7 @@ class InvoiceController extends BaseAdminController
 
         $data = [
             'patient_id' => $this->request->getPost('patient_id'),
-            'service_id' => $this->request->getPost('service_id'),
+            'procedure_id' => $this->request->getPost('procedure_id'),
             'appointment_id' => $this->request->getPost('appointment_id'),
             'due_date' => $this->request->getPost('due_date'),
             'payment_terms' => $this->request->getPost('payment_terms') ?? 'Net 30',
@@ -117,9 +117,6 @@ class InvoiceController extends BaseAdminController
             'items' => $this->request->getPost('items') ?? [],
             'created_by' => $user['id']
         ];
-
-        // Debug: Log the form data
-        log_message('debug', 'InvoiceController::store - form data: ' . json_encode($data));
 
         $result = $this->invoiceService->createInvoice($data);
 

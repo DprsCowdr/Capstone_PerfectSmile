@@ -683,19 +683,9 @@ class Dental3DViewer {
         
         const mesh = this.toothMeshes[toothIndex];
         if (mesh && mesh.material) {
-            // Store the correct material to restore later
-            // Priority: conditionMaterial > originalMaterial > current material
+            // Store current material so we can restore it when closing popup
             if (!mesh.userData.prevMaterial) {
-                if (mesh.userData.conditionMaterial) {
-                    // If tooth has a condition color, store that
-                    mesh.userData.prevMaterial = mesh.userData.conditionMaterial.clone();
-                } else if (mesh.userData.originalMaterial) {
-                    // Otherwise store original material
-                    mesh.userData.prevMaterial = mesh.userData.originalMaterial.clone();
-                } else {
-                    // Fallback to current material
-                    mesh.userData.prevMaterial = mesh.material.clone();
-                }
+                mesh.userData.prevMaterial = mesh.material.clone();
             }
             
             // Check if this is a missing tooth (completely transparent)
@@ -845,14 +835,12 @@ class Dental3DViewer {
         // Reset only the highlight effects, keep condition colors
         this.toothMeshes.forEach((tooth) => {
             if (tooth.userData.prevMaterial) {
-                // Restore the material that was stored before highlighting
                 tooth.material = tooth.userData.prevMaterial.clone();
                 tooth.userData.prevMaterial = null;
                 return;
             }
-            // If no prevMaterial stored, restore based on priority
+            // If tooth has a condition color, restore it
             if (tooth.userData.conditionMaterial) {
-                // Restore condition color if it exists
                 tooth.material = tooth.userData.conditionMaterial.clone();
             } else if (tooth.userData.originalMaterial) {
                 // Otherwise restore original material
@@ -861,6 +849,32 @@ class Dental3DViewer {
         });
     }
     
+    resetAllTeethColor() {
+        // Reset all teeth to original materials (removes both highlights and condition colors)
+        this.toothMeshes.forEach((tooth) => {
+            if (tooth.userData.originalMaterial) {
+                tooth.material = tooth.userData.originalMaterial.clone();
+                tooth.userData.conditionMaterial = null;
+                tooth.userData.tempMaterial = null;
+            }
+        });
+    }
+    
+    resetHighlights() {
+        // Reset only the highlight effects, keep condition colors
+        this.toothMeshes.forEach((tooth) => {
+            if (tooth.userData.prevMaterial) {
+                tooth.material = tooth.userData.prevMaterial.clone();
+                tooth.userData.prevMaterial = null;
+                return;
+            }
+            if (tooth.userData.conditionMaterial) {
+                tooth.material = tooth.userData.conditionMaterial.clone();
+            } else if (tooth.userData.originalMaterial) {
+                tooth.material = tooth.userData.originalMaterial.clone();
+            }
+        });
+    }
 
     // Enhanced debug method with detailed analysis
     debugLogToothMapping() {
@@ -1096,53 +1110,6 @@ class Dental3DViewer {
     
     getToothName(toothNumber) {
         return this.toothNames[toothNumber] || 'Unknown';
-    }
-    
-    // Method to apply chart colors from patient records
-    applyChartColors(chartData) {
-        if (!this.isLoaded) {
-            console.warn('⚠️ 3D model not loaded yet, cannot apply colors');
-            return;
-        }
-        
-        console.log('🎨 Applying chart colors to 3D model...');
-        
-        // Reset any prior colors first
-        this.resetAllTeethColor();
-
-        // Map conditions to colors (same as admin version)
-        const colorMap = {
-            healthy: { r: 0.0, g: 0.8, b: 0.2 },
-            cavity: { r: 0.9, g: 0.0, b: 0.0 },
-            filled: { r: 0.2, g: 0.4, b: 0.9 },
-            crown: { r: 0.9, g: 0.9, b: 0.9 },
-            root_canal: { r: 1.0, g: 0.5, b: 0.0 },
-            extraction_needed: { r: 0.6, g: 0.0, b: 0.0 },
-            other: { r: 0.6, g: 0.6, b: 0.6 },
-            missing: { r: 0.0, g: 0.0, b: 0.0 } // special: invisible
-        };
-
-        // Apply chart colors only to teeth that have records
-        chartData.forEach(tooth => {
-            const condition = (tooth.condition || '').toLowerCase().replace(' ', '_') || 'healthy';
-            console.log(`🎨 Processing tooth ${tooth.tooth_number}: condition="${condition}"`);
-            
-            if (condition === 'missing') {
-                // Hide missing tooth - make it transparent/invisible
-                console.log(`👻 Setting tooth ${tooth.tooth_number} as missing (invisible)`);
-                this.setToothColor(parseInt(tooth.tooth_number), null, true);
-            } else {
-                const color = colorMap[condition] || colorMap.other;
-                if (color) {
-                    console.log(`🎨 Setting tooth ${tooth.tooth_number} color: RGB(${color.r}, ${color.g}, ${color.b})`);
-                    this.setToothColor(parseInt(tooth.tooth_number), color);
-                } else {
-                    console.log(`⚠️ No color mapping for condition: ${condition}`);
-                }
-            }
-        });
-        
-        console.log('✅ Chart colors applied successfully to teeth with records');
     }
     
     destroy() {

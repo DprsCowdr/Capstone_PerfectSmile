@@ -252,6 +252,7 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('admin/appointments'), 'fas fa-calendar-alt', 'Appointments', $currentUrl) ?>
                 <?= nav_link(base_url('admin/services'), 'fas fa-stethoscope', 'Services', $currentUrl) ?>
                 <?= nav_link(base_url('admin/waitlist'), 'fas fa-clipboard-list', 'Waitlist', $currentUrl) ?>
+                <?= nav_link(base_url('admin/procedures'), 'fas fa-file-medical', 'Procedures', $currentUrl) ?>
                 <?= nav_link(base_url('admin/records'), 'fas fa-folder-open', 'Records', $currentUrl) ?>
                 <?= nav_link(base_url('admin/invoices'), 'fas fa-file-invoice-dollar', 'Invoices', $currentUrl) ?>
             </div>
@@ -262,6 +263,16 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('checkin'), 'fas fa-sign-in-alt', 'Patient Check-In', $currentUrl) ?>
                 <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
                 <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Checkup Module', $currentUrl) ?>
+            </div>
+
+            <!-- Clinical Records Section -->
+            <div class="space-y-2 sm:space-y-3">
+                <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Clinical Records</label>
+                <?= nav_link(base_url('admin/patient-checkups'), 'fas fa-clipboard-check', 'Patient Checkups', $currentUrl) ?>
+                <?= nav_link(base_url('admin/dental-records'), 'fas fa-file-medical-alt', 'Dental Records', $currentUrl) ?>
+                <?= nav_link(base_url('admin/dental-charts'), 'fas fa-tooth', 'Dental Charts', $currentUrl) ?>
+                <?= nav_link(base_url('admin/prescriptions'), 'fas fa-file-prescription', 'Prescriptions', $currentUrl) ?>
+
             </div>
 
             <!-- Administration Section -->
@@ -278,12 +289,15 @@ $currentUrl = current_url();
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Management</label>
                 <?= nav_link(base_url('dentist/appointments'), 'fas fa-calendar-check', 'Appointments', $currentUrl) ?>
                 <?= nav_link(base_url('dentist/patients'), 'fas fa-user-injured', 'Patients', $currentUrl) ?>
+                <?= nav_link(base_url('dentist/procedures'), 'fas fa-notes-medical', 'Procedures', $currentUrl) ?>
             </div>
 
             <!-- Patient Care Section -->
             <div class="space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Care</label>
                 <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
+                <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Patient Checkups', $currentUrl) ?>
+                <?= nav_link(base_url('dentist/dashboard'), 'fas fa-tooth', 'Dental Charts', $currentUrl) ?>
                 <?= nav_link(base_url('dentist/dashboard'), 'fas fa-file-medical-alt', 'Medical Records', $currentUrl) ?>
                 <?= nav_link(base_url('dentist/availability'), 'fas fa-calendar-times', 'Availability', $currentUrl) ?>
             </div>

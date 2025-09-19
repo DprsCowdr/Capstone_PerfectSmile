@@ -15,7 +15,7 @@ class InvoiceModel extends Model
 	protected $allowedFields = [
 		'invoice_number',
 		'patient_id',
-		'service_id',
+		'procedure_id',
 		'total_amount',
 		'discount',
 		'final_amount',
@@ -30,7 +30,7 @@ class InvoiceModel extends Model
 
 	protected $validationRules = [
 		'patient_id' => 'required|integer',
-		'service_id' => 'permit_empty|integer',
+		'procedure_id' => 'required|integer',
 		'total_amount' => 'required|decimal'
 	];
 

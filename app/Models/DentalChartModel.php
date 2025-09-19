@@ -17,10 +17,11 @@ class DentalChartModel extends Model
         'tooth_number',
         'tooth_type',
         'condition',
+        'status',
         'notes',
-        'service_id',
-        'surface',
+        'recommended_service_id',
         'priority',
+        'estimated_cost',
         'created_at',
         'updated_at'
     ];
@@ -36,8 +37,7 @@ class DentalChartModel extends Model
         'dental_record_id' => 'required|integer',
         'tooth_number' => 'required|integer|greater_than[0]|less_than[33]',
         'condition' => 'permit_empty|in_list[healthy,cavity,missing,filled,crown,root_canal,extraction_needed,other]',
-        'service_id' => 'permit_empty|integer',
-        'surface' => 'permit_empty|max_length[20]'
+        'status' => 'permit_empty|in_list[none,cleaning,filling,crown,root_canal,extraction,whitening,other]'
     ];
 
     protected $validationMessages = [
@@ -90,20 +90,18 @@ class DentalChartModel extends Model
         foreach ($chartData as $toothNumber => $data) {
             // Check if there's any meaningful data for this tooth
             $hasCondition = !empty($data['condition']) && $data['condition'] !== '';
+            $hasTreatment = !empty($data['treatment']) && $data['treatment'] !== '';
             $hasNotes = !empty($data['notes']) && trim($data['notes']) !== '';
-            $hasService = isset($data['service_id']) && $data['service_id'] !== '' && $data['service_id'] !== null;
-            $hasSurface = isset($data['surface']) && trim((string)$data['surface']) !== '';
             
-            if ($hasCondition || $hasNotes || $hasService || $hasSurface) {
+            if ($hasCondition || $hasTreatment || $hasNotes) {
                 $byTooth[(int)$toothNumber] = [
                     'dental_record_id' => $recordId,
                     'tooth_number' => $toothNumber,
                     'tooth_type' => 'permanent',
                     'condition' => $data['condition'] ?? null,
+                    'status' => $data['treatment'] ?? null, // Treatment maps to status field
                     'notes' => $data['notes'] ?? null,
-                    'service_id' => isset($data['service_id']) && $data['service_id'] !== '' ? (int)$data['service_id'] : null,
-                    'surface' => $data['surface'] ?? null,
-                    'priority' => 'low',
+                    'priority' => $this->getPriorityFromTreatment($data['treatment'] ?? ''),
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
