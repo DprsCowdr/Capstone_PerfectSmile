@@ -288,7 +288,8 @@
   
   // Populate time select with available slots
   function populateAdminTimeSlots(response, timeElement) {
-    const slots = response.available_slots || response.slots || [];
+    // Prefer all_slots so admin can see unavailable/blocked slots too
+    const slots = response.all_slots || response.available_slots || response.slots || [];
     
     if (window.__psm_debug) console.log('[admin-calendar] Populating slots:', slots);
     
@@ -354,7 +355,17 @@
         }
       }
       
-      option.textContent = label;
+      // If slot object explicitly marked unavailable, disable and annotate
+      if (slot && typeof slot === 'object' && slot.available === false) {
+        option.disabled = true;
+        option.textContent = label + ' (blocked)';
+        if (slot.blocking_info) {
+          const bi = slot.blocking_info;
+          option.title = (bi.type ? bi.type + ': ' : '') + (bi.start || '') + (bi.end ? ' - ' + bi.end : '');
+        }
+      } else {
+        option.textContent = label;
+      }
       timeElement.appendChild(option);
     });
     
@@ -377,7 +388,10 @@
       }
     }
     
-    showAdminMessage(`${slots.length} available time slots loaded`, 'success');
+    // If metadata exists, prefer its counts for clarity
+    const meta = response.metadata || {};
+    const avail = meta.available_count !== undefined ? meta.available_count : slots.filter(s => s && s.available !== false).length;
+    showAdminMessage(`${avail} available / ${slots.length} total slots loaded`, 'success');
   }
   
   // Show admin message
@@ -1122,8 +1136,8 @@
           }
 
           legend.appendChild(legendItem('#bbf7d0','Available'));
-          legend.appendChild(legendItem('#fff7e6','Your appointment'));
-          legend.appendChild(legendItem('#fff7f7','Blocked'));
+          // removed patient-facing "Your appointment" label for admin dashboard
+          legend.appendChild(legendItem('#fff7f7','Blocked / Unavailable'));
 
           availableMenuContent.appendChild(legend);
           availableMenuContent.appendChild(controls);
