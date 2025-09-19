@@ -1,5 +1,16 @@
 <?php
+// Normalize $user to an array. Some environments may return non-array values from session('user')
+// (for example, a RedirectResponse accidentally passed through). Protect against that.
 $user = isset($user) ? $user : (session('user') ?? []);
+if (!is_array($user)) {
+    // If object provides toArray(), use it. Otherwise fall back to empty array.
+    if (is_object($user) && method_exists($user, 'toArray')) {
+        try { $user = $user->toArray(); } catch (\Throwable $e) { $user = []; }
+    } else {
+        $user = [];
+    }
+}
+
 $userType = $user['user_type'] ?? null;
 $currentUrl = current_url();
 ?>
@@ -274,6 +285,7 @@ $currentUrl = current_url();
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Care</label>
                 <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
                 <?= nav_link(base_url('dentist/dashboard'), 'fas fa-file-medical-alt', 'Medical Records', $currentUrl) ?>
+                <?= nav_link(base_url('dentist/availability'), 'fas fa-calendar-times', 'Availability', $currentUrl) ?>
             </div>
 
             <?php elseif ($userType === 'staff'): ?>

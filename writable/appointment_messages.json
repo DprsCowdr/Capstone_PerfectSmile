@@ -1,0 +1,11 @@
+{
+    "csrf_test_name": "9e849438d0c64df6e8428cb82aa9743f",
+    "patient": "You're all set! {when} — we allow a {grace}-minute grace period. ",
+    "staff": "A new appointment has been created. Appointment time: {when}. The patient has a grace period of {grace} minutes for late arrival. Please monitor attendance and update the status if needed.",
+    "admin": "A new appointment has been logged in the system. Appointment time: {when}. Grace period rules are active ({grace} minutes). Staff will handle status updates if the patient is late or absent.",
+    "duplicate_note": "",
+    "adjusted_note": "(Note: requested time was adjusted to {adjusted_time} to avoid a conflict.)",
+    "cancelled": "Your appointment scheduled for {when} has been cancelled. Please contact us if you’d like to rebook.",
+    "reminder": "Reminder: You have an appointment on {when}. Please arrive on time. A {grace}-minute grace period applies.",
+    "rescheduled": "Your appointment was rescheduled to {when}. Please note the {grace}-minute grace period still applies."
+}

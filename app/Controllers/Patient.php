@@ -250,9 +250,8 @@ class Patient extends BaseController
     // Accept appointment submission (simple wrapper to existing guest flow)
     public function submitAppointment()
     {
-        // For now, reuse Guest controller logic if available.
-        // If we call Guest from another controller, ensure it has request/response objects
-        // Add lightweight logging to confirm this method is hit for patient POSTs
+        // For patient-submitted appointment POSTs, prefer returning a JSON-friendly
+        // response when the client is AJAX so frontends can consume the created record.
         try {
             log_message('debug', 'Patient::submitAppointment invoked; headers: ' . json_encode($this->request->getHeaders()));
         } catch (\Exception $e) {
@@ -268,6 +267,44 @@ class Patient extends BaseController
             ]);
         }
 
+        // If this is an AJAX request, delegate to AppointmentService to create the appointment
+        // and return the service result (which includes the saved 'record' when successful).
+        if ($this->request->isAJAX() || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false) {
+            $user = \App\Controllers\Auth::getCurrentUser();
+            $post = $this->request->getPost();
+
+            $data = [
+                'user_id' => $user['id'] ?? null,
+                'appointment_date' => $post['appointment_date'] ?? $post['date'] ?? null,
+                'appointment_time' => $post['appointment_time'] ?? $post['time'] ?? null,
+                'branch_id' => $post['branch_id'] ?? null,
+                'dentist_id' => isset($post['dentist_id']) && is_numeric($post['dentist_id']) ? (int)$post['dentist_id'] : ($post['dentist_id'] ?? null),
+                'appointment_type' => $post['appointment_type'] ?? 'scheduled',
+                'remarks' => $post['remarks'] ?? null,
+                // allow callers to pass grace/lookahead if desired
+                'grace_minutes' => isset($post['grace_minutes']) ? (int)$post['grace_minutes'] : null,
+                'lookahead_minutes' => isset($post['lookahead_minutes']) ? (int)$post['lookahead_minutes'] : null,
+                // include service_id so AppointmentService can compute server-authoritative durations
+                'service_id' => isset($post['service_id']) ? ($post['service_id']) : (isset($post['service']) ? $post['service'] : null),
+            ];
+
+            $service = new \App\Services\AppointmentService();
+            // Mark origin so AppointmentService can craft a patient-facing message
+            $data['origin'] = $data['origin'] ?? 'patient';
+            $result = $service->createAppointment($data);
+
+            // Normalize older field name 'appointment' to 'record' for consistency
+            if (isset($result['appointment']) && !isset($result['record'])) {
+                $result['record'] = $result['appointment'];
+                unset($result['appointment']);
+            }
+
+            // If a record exists and the caller expects 201 for created resources, set it.
+            $status = (!empty($result['success']) && empty($result['error_code'])) ? 201 : 422;
+            return $this->response->setJSON($result)->setStatusCode($status);
+        }
+
+        // Non-AJAX fallback: reuse Guest controller logic to preserve existing redirects and service linking
         $guest = new \App\Controllers\Guest();
         if (isset($this->request)) $guest->request = $this->request;
         if (isset($this->response)) $guest->response = $this->response;

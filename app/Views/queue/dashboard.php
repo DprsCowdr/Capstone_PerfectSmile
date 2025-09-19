@@ -115,13 +115,18 @@
                                                         Waiting: <?= $patient['waiting_time'] ?? 0 ?> minutes
                                                     </p>
                                                 </div>
-                                                <div class="ml-4">
+                                                <div class="ml-4 flex items-center space-x-2">
                                                     <form method="POST" action="<?= base_url('queue/call/' . $patient['id']) ?>" class="inline treatment-call-form">
                                                         <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                                             <i class="fas fa-hand-paper mr-2"></i>
                                                             Call Patient
                                                         </button>
                                                     </form>
+
+                                                    <button type="button" onclick="reschedulePatient(<?= $patient['id'] ?>)" class="inline-flex items-center px-3 py-2 border border-purple-600 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                                        <i class="fas fa-calendar-plus mr-2"></i>
+                                                        Reschedule
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>

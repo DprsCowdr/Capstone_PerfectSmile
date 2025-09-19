@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Service Duration + Grace Period Sync</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .form-row { margin: 10px 0; }
+        label { display: inline-block; width: 120px; font-weight: bold; }
+        select, input { padding: 5px; margin-left: 10px; }
+        button { padding: 8px 16px; margin: 10px 5px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .results { background-color: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+        .debug { background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; font-size: 12px; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .success { background-color: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>Service Duration + Grace Period Sync Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Form (Simulates Patient Calendar)</h3>
+        
+        <div class="form-row">
+            <label>Branch:</label>
+            <select id="branch_id">
+                <option value="1">Main Branch</option>
+                <option value="2">Secondary Branch</option>
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <label>Date:</label>
+            <input type="date" id="date" value="">
+        </div>
+        
+        <div class="form-row">
+            <label>Service:</label>
+            <select id="service_id">
+                <option value="">Select Service</option>
+                <option value="1">Cleaning (60 min)</option>
+                <option value="2">Filling (45 min)</option>
+                <option value="3">Root Canal (90 min)</option>
+                <option value="4">Extraction (30 min)</option>
+            </select>
+        </div>
+        
+        <div class="form-row">
+            <label>Manual Duration:</label>
+            <select id="duration">
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">60 minutes</option>
+                <option value="90">90 minutes</option>
+            </select>
+            <small>(Only used if no service selected)</small>
+        </div>
+        
+        <div class="form-row">
+            <label>Dentist:</label>
+            <select id="dentist_id">
+                <option value="">Any Dentist</option>
+                <option value="1">Dr. Smith</option>
+                <option value="2">Dr. Johnson</option>
+            </select>
+        </div>
+        
+        <button onclick="testAvailableSlots()">Get Available Slots</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>API Request & Response</h3>
+        <div id="debug-info" class="debug"></div>
+        <div id="results" class="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Expected Behavior</h3>
+        <ul>
+            <li><strong>With Service Selected:</strong> Server should use service duration + 20min grace</li>
+            <li><strong>Without Service:</strong> Server should use manual duration + 20min grace</li>
+            <li><strong>No Duration/Service:</strong> Server should use 30min default + 20min grace</li>
+            <li><strong>Operating Hours:</strong> Slots should be between 8:00 AM - 8:00 PM</li>
+            <li><strong>Slot Intervals:</strong> Every 15 minutes</li>
+            <li><strong>Total Reservation:</strong> Each slot reserves (duration + grace) minutes</li>
+        </ul>
+    </div>
+
+    <script>
+        // Set tomorrow as default date
+        document.getElementById('date').value = new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0];
+        
+        // Simulate postForm function
+        async function postForm(url, data) {
+            const debugInfo = document.getElementById('debug-info');
+            debugInfo.innerHTML = `
+                <strong>Request URL:</strong> ${url}<br>
+                <strong>Request Payload:</strong> ${JSON.stringify(data, null, 2)}<br>
+                <strong>Status:</strong> Sending request...
+            `;
+            
+            try {
+                // This would normally be a real API call
+                // For demo purposes, we'll simulate the response based on our enhanced logic
+                
+                const mockResponse = generateMockResponse(data);
+                
+                debugInfo.innerHTML += `<br><strong>Status:</strong> Response received<br>`;
+                return mockResponse;
+                
+            } catch (error) {
+                debugInfo.innerHTML += `<br><strong>Error:</strong> ${error.message}<br>`;
+                throw error;
+            }
+        }
+        
+        function generateMockResponse(payload) {
+            // Simulate server logic for duration calculation
+            let duration = 0;
+            let grace = 20; // From grace_periods.json
+            
+            // Service duration lookup (simulated)
+            const serviceDurations = {
+                '1': 60,  // Cleaning
+                '2': 45,  // Filling  
+                '3': 90,  // Root Canal
+                '4': 30   // Extraction
+            };
+            
+            if (payload.service_id && serviceDurations[payload.service_id]) {
+                duration = serviceDurations[payload.service_id];
+            } else if (payload.duration) {
+                duration = parseInt(payload.duration);
+            } else {
+                duration = 30; // Default fallback
+            }
+            
+            // Generate sample slots
+            const slots = [];
+            const startHour = 8;
+            const endHour = 20;
+            const totalReservation = duration + grace;
+            
+            for (let hour = startHour; hour < endHour; hour++) {
+                for (let minute = 0; minute < 60; minute += 15) {
+                    const slotStart = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const endTime = new Date();
+                    endTime.setHours(hour, minute + totalReservation, 0, 0);
+                    
+                    // Only include slot if it doesn't go past closing time
+                    if (endTime.getHours() < endHour || (endTime.getHours() === endHour && endTime.getMinutes() === 0)) {
+                        const slotEnd = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+                        
+                        slots.push({
+                            time: formatTime(slotStart),
+                            ends_at: formatTime(slotEnd),
+                            timestamp: Date.now() + (hour * 3600 + minute * 60) * 1000,
+                            datetime: `${payload.date} ${slotStart}:00`,
+                            available: true,
+                            duration_minutes: duration,
+                            grace_minutes: grace
+                        });
+                    }
+                    
+                    // Limit to first 10 slots for demo
+                    if (slots.length >= 10) break;
+                }
+                if (slots.length >= 10) break;
+            }
+            
+            return {
+                success: true,
+                slots: slots,
+                available_slots: slots,
+                unavailable_slots: [],
+                metadata: {
+                    total_slots_checked: slots.length,
+                    available_count: slots.length,
+                    unavailable_count: 0,
+                    duration_minutes: duration,
+                    grace_minutes: grace,
+                    day_start: "8:00 AM",
+                    day_end: "8:00 PM"
+                }
+            };
+        }
+        
+        function formatTime(time24) {
+            const [hours, minutes] = time24.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+            return `${hour12}:${minutes} ${ampm}`;
+        }
+        
+        async function testAvailableSlots() {
+            const branch = document.getElementById('branch_id').value;
+            const date = document.getElementById('date').value;
+            const serviceId = document.getElementById('service_id').value;
+            const duration = document.getElementById('duration').value;
+            const dentist = document.getElementById('dentist_id').value;
+            
+            // Simulate frontend logic
+            const payload = {branch_id: branch, date: date, dentist_id: dentist};
+            
+            if (serviceId) {
+                payload.service_id = serviceId;
+                // Don't send duration when service_id is present (server authoritative)
+            } else {
+                payload.duration = parseInt(duration);
+            }
+            
+            try {
+                const response = await postForm('/appointments/available-slots', payload);
+                displayResults(response, payload);
+            } catch (error) {
+                document.getElementById('results').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        function displayResults(response, originalPayload) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!response.success) {
+                resultsDiv.innerHTML = '<div class="error">API returned error</div>';
+                return;
+            }
+            
+            const metadata = response.metadata || {};
+            
+            let html = `
+                <div class="success">
+                    <h4>✓ API Response Successful</h4>
+                    <p><strong>Service Duration:</strong> ${metadata.duration_minutes || 'N/A'} minutes</p>
+                    <p><strong>Grace Period:</strong> ${metadata.grace_minutes || 'N/A'} minutes</p>
+                    <p><strong>Total Reservation:</strong> ${(metadata.duration_minutes || 0) + (metadata.grace_minutes || 0)} minutes</p>
+                    <p><strong>Operating Hours:</strong> ${metadata.day_start || 'N/A'} - ${metadata.day_end || 'N/A'}</p>
+                    <p><strong>Available Slots:</strong> ${metadata.available_count || 0}</p>
+                </div>
+                
+                <h4>Sample Available Slots:</h4>
+                <ul>
+            `;
+            
+            const slots = response.slots || response.available_slots || [];
+            slots.slice(0, 5).forEach(slot => {
+                html += `
+                    <li>
+                        <strong>${slot.time}</strong> - ${slot.ends_at} 
+                        <small>(${slot.duration_minutes}min + ${slot.grace_minutes}min grace)</small>
+                    </li>
+                `;
+            });
+            
+            html += '</ul>';
+            
+            if (originalPayload.service_id) {
+                html += '<p><em>✓ Used service-based duration (server authoritative)</em></p>';
+            } else if (originalPayload.duration) {
+                html += '<p><em>✓ Used manual duration fallback</em></p>';
+            } else {
+                html += '<p><em>✓ Used 30-minute default fallback</em></p>';
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('debug-info').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

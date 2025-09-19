@@ -31,7 +31,7 @@ class Database extends Config
         'password'     => '',
 
 
-        'database'     => 'perfectsmile_db',
+        'database'     => 'perfectsmile_db-v1',
 
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',

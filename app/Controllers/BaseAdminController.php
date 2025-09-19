@@ -272,12 +272,20 @@ abstract class BaseAdminController extends BaseController
             return $user;
         }
 
+        // Accept either legacy or explicit field names so both patient and admin forms work.
         $data = [
-            'branch_id' => $this->request->getPost('branch'),
-            'user_id' => $this->request->getPost('patient'),
-            'dentist_id' => $this->request->getPost('dentist') ?: null,
-            'appointment_date' => $this->request->getPost('date'),
-            'appointment_time' => $this->request->getPost('time'),
+            // branch may be posted as 'branch' (admin form) or 'branch_id' elsewhere
+            'branch_id' => $this->request->getPost('branch') ?: $this->request->getPost('branch_id'),
+            // user/patient field may be named 'patient' or 'user_id'
+            'user_id' => $this->request->getPost('patient') ?: $this->request->getPost('user_id'),
+            // dentist may be named 'dentist' or 'dentist_id'
+            'dentist_id' => $this->request->getPost('dentist') ?: $this->request->getPost('dentist_id') ?: null,
+            // Date/time may come as 'date'/'time' (admin) or as 'appointment_date'/'appointment_time' (patient)
+            'appointment_date' => $this->request->getPost('appointment_date') ?: $this->request->getPost('date'),
+            'appointment_time' => $this->request->getPost('appointment_time') ?: $this->request->getPost('time'),
+            // Pass service_id and procedure_duration when present so server can compute duration correctly
+            'service_id' => $this->request->getPost('service_id') ?: null,
+            'procedure_duration' => $this->request->getPost('procedure_duration') ?: null,
             'appointment_type' => $this->request->getPost('appointment_type') ?? 'scheduled',
             'remarks' => $this->request->getPost('remarks')
         ];
@@ -298,10 +306,18 @@ abstract class BaseAdminController extends BaseController
             }
         }
 
-        $result = $this->appointmentService->createAppointment($data);
-        
+    // Annotate who created this appointment so AppointmentService can select message template
+    $data['created_by_role'] = $userType === 'admin' ? 'admin' : 'staff';
+    $result = $this->appointmentService->createAppointment($data);
+
+        // If the request is AJAX (fetch/XHR), return JSON so client can update UI immediately
+        if ($this->request->isAJAX()) {
+            // Ensure response includes the saved record when available
+            return $this->response->setJSON($result);
+        }
+
+        // Otherwise use flash messages and redirect as before
         session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
-        
         return redirect()->to($redirectPath);
     }
     

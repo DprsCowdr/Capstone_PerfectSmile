@@ -41,24 +41,145 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
   }
 
   function initPatientHandlers(){
-    // guard: only run patient handlers on patient pages
-    if (typeof window !== 'undefined' && window.userType && window.userType !== 'patient') return;
+    // Run handlers on pages that use the appointment panel (patients, admin, staff, guests).
+    // Previously this returned early and blocked admin/staff from getting available slots.
+    if (typeof window !== 'undefined' && window.userType && !['patient','admin','staff','guest'].includes(window.userType)) return;
 
-  const dateEl = qs('input[name="appointment_date"]') || qs('#appointmentDate') || qs('#appointmentDate');
+  // Accept either name="appointment_date" (patient) or name="date" (admin), fallback to #appointmentDate
+  const dateEl = qs('input[name="appointment_date"]') || qs('input[name="date"]') || qs('#appointmentDate');
     if(!dateEl) return;
 
-    const branchEl = qs('select[name="branch_id"]') || qs('#branchSelect');
-    const durationEl = qs('select[name="procedure_duration"]') || qs('input[name="procedure_duration"]');
-    const dentistEl = qs('select[name="dentist_id"]') || qs('#dentistSelect');
+  const branchEl = qs('select[name="branch_id"]') || qs('#branchSelect');
+  const durationEl = qs('select[name="procedure_duration"]') || qs('input[name="procedure_duration"]');
+  const dentistEl = qs('select[name="dentist_id"]') || qs('#dentistSelect');
+  // helper to locate service select on pages that use either name="service_id" or name="service"
+  const getServiceEl = () => document.querySelector('select[name="service_id"]') || document.querySelector('select[name="service"]') || document.getElementById('service_id');
     const timeSelect = qs('select[name="appointment_time"]') || qs('#timeSelect') || qs('input[name="appointment_time"]');
 
-    // populate slots on date change using core helper
-    dateEl.addEventListener('change', () => {
-      const selected = dateEl.value;
-      if(timeSelect && typeof window.calendarCore.populateAvailableTimeSlots === 'function'){
-        window.calendarCore.populateAvailableTimeSlots(selected, timeSelect);
+    // helper: fetch available slots from server and populate timeSelect.
+    async function fetchAndPopulateSlots(selectedDate){
+      if(!timeSelect) return;
+      const branch = branchEl ? branchEl.value : '';
+      const dentist = dentistEl ? dentistEl.value : '';
+      const serviceSel = getServiceEl();
+      const serviceId = serviceSel ? serviceSel.value : '';
+
+      // Server requires a duration (via service_id) otherwise it will return no slots.
+      if (!serviceId) {
+        timeSelect.innerHTML = '<option value="">Select service first</option>';
+        return;
       }
-    });
+
+      if (!selectedDate) {
+        // try to derive from selectedDateDisplay or today
+        const sel = document.getElementById('selectedDateDisplay');
+        selectedDate = selectedDate || (sel && sel.value) || new Date().toISOString().slice(0,10);
+      }
+
+      try {
+        timeSelect.innerHTML = '<option value="">Loading...</option>';
+        const payload = Object.assign({ branch_id: branch, date: selectedDate, dentist_id: dentist, granularity: 3 }, serviceId ? { service_id: serviceId } : {});
+        const res = await postForm('/appointments/available-slots', payload);
+
+        if (res && res.success) {
+          // Prefer complete slot list (all_slots includes unavailable metadata) for caching
+          let slots = res.all_slots || res.slots || res.available_slots || [];
+          // For populating the select show only available slots
+          let displaySlots = res.slots || res.available_slots || [];
+          if (!Array.isArray(slots)) slots = [];
+          if (!Array.isArray(displaySlots)) displaySlots = [];
+
+          // Cache the complete slot data (includes available and unavailable) so calendar-core can disable unavailable options
+          try{ window.__available_slots_cache = window.__available_slots_cache || {}; if(selectedDate) window.__available_slots_cache[selectedDate] = slots; }catch(e){}
+
+          timeSelect.innerHTML = '<option value="">Select Time</option>';
+          // Populate only available slots; show unavailable separately via message if needed
+          displaySlots.forEach(slot => {
+            const timeStrRaw = (typeof slot === 'string') ? slot : (slot.time || slot.datetime || slot);
+            let timeVal = timeStrRaw;
+            try { if(typeof timeStrRaw === 'string' && timeStrRaw.indexOf(' ')>=0) timeVal = timeStrRaw.split(' ')[1].slice(0,5); else if(typeof timeStrRaw === 'string') timeVal = timeStrRaw.slice(0,5); }catch(e){}
+            const opt = document.createElement('option');
+            opt.value = timeVal;
+            let label = window.calendarCore?.formatTime(timeVal) || timeVal;
+            try{ if (slot && typeof slot === 'object'){
+                if (slot.ends_at) label += ' — ends ' + (slot.ends_at.slice(0,5));
+                else if (slot.end) label += ' — ends ' + (slot.end.slice(0,5));
+                else if (slot.duration) {
+                  const parts = timeVal.split(':'); const hh = parseInt(parts[0],10); const mm = parseInt(parts[1],10); const dur = parseInt(slot.duration,10);
+                  if(!isNaN(hh) && !isNaN(mm) && !isNaN(dur)){
+                    const dt = new Date(2000,0,1,hh,mm + dur);
+                    const end = ('0'+dt.getHours()).slice(-2) + ':' + ('0'+dt.getMinutes()).slice(-2);
+                    label += ' — ends ' + end;
+                  }
+                }
+              }}catch(e){}
+            opt.textContent = label;
+            timeSelect.appendChild(opt);
+          });
+
+          // Prefill with first_available if provided
+          try{
+            if(res && res.metadata && res.metadata.first_available && !timeSelect.value){
+              const fa = res.metadata.first_available;
+              const pref = fa.time || (fa.datetime ? fa.datetime.split(' ')[1].slice(0,5) : null) || (fa.timestamp ? new Date(fa.timestamp*1000).toTimeString().slice(0,5) : null);
+              if(pref) timeSelect.value = pref;
+              if(fa.dentist_id){ const dentistSelect = document.querySelector('select[name="dentist_id"]') || document.getElementById('dentistSelect'); if(dentistSelect) dentistSelect.value = fa.dentist_id; }
+            }
+          }catch(e){ }
+          return;
+        }
+      } catch (e) {
+        console.warn('[calendar-patient] Server slot fetch failed, using fallback:', e);
+      }
+
+      // Fallback
+      if (typeof window.calendarCore?.populateAvailableTimeSlots === 'function') {
+        window.calendarCore.populateAvailableTimeSlots(selectedDate, timeSelect);
+      }
+    }
+
+    // populate slots on date change using server API (works for admin too)
+    dateEl.addEventListener('change', () => { fetchAndPopulateSlots(dateEl.value); });
+
+    // Also refresh slots when branch or dentist changes
+    if (branchEl) {
+      branchEl.addEventListener('change', () => {
+        // Clear operating hours cache when branch changes
+        if (window.calendarCore && typeof window.calendarCore.clearOperatingHoursCache === 'function') {
+          window.calendarCore.clearOperatingHoursCache();
+        }
+        
+        const selected = dateEl ? dateEl.value : '';
+        if (selected) fetchAndPopulateSlots(selected);
+        else fetchAndPopulateSlots(null);
+        
+        // Also refresh week view if visible
+        if (typeof updateWeekView === 'function') {
+          updateWeekView();
+        }
+      });
+    }
+
+    if (dentistEl) {
+      dentistEl.addEventListener('change', () => {
+        const selected = dateEl.value;
+        if (selected && timeSelect) {
+          // Trigger the same slot loading logic
+          fetchAndPopulateSlots(selected);
+        }
+      });
+    }
+
+    // also update when the service selection changes (service defines duration)
+    try{
+      const svcEl = getServiceEl();
+      if(svcEl){
+        svcEl.addEventListener('change', () => {
+          const selected = dateEl ? dateEl.value : '';
+          fetchAndPopulateSlots(selected);
+        });
+      }
+    }catch(e){ console.error('service change hook failed', e); }
 
     // quick header buttons handled in patient-calendar.js previously — keep basic behavior
   const availableBtn = qs('#availableSlotsBtn');
@@ -75,30 +196,43 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
             if (sel && sel.value) date = sel.value;
             else date = new Date().toISOString().slice(0,10);
           }
-          // duration may be an input or select; coerce to Number safely
-          let duration = 30;
-          if (durationEl) {
-            const v = (durationEl.value !== undefined) ? durationEl.value : durationEl.getAttribute && durationEl.getAttribute('value');
-            const n = Number(v);
-            duration = Number.isFinite(n) && n > 0 ? n : 30;
-          }
           const dentist = dentistEl ? dentistEl.value : '';
           console.log('[calendar-patient] availableBtn clicked', { branch, date, duration, dentist });
           availableMenuContent.textContent = 'Loading...';
-          const res = await postForm('/appointments/available-slots', {branch_id:branch, date, duration, dentist_id: dentist});
+          // include service_id when present for fallback as well
+          const svcSel_f = getServiceEl();
+          const svcId_f = svcSel_f ? svcSel_f.value : '';
+          const res = await postForm('/appointments/available-slots', Object.assign({branch_id:branch, date, dentist_id: dentist, granularity: 3}, svcId_f ? {service_id: svcId_f} : {}));
           if(res && res.success){
-            const slots = res.slots || [];
-            if(slots.length === 0){
+            // Enhanced API compatibility: try different slot sources
+            // For UI to work correctly, prefer all_slots (available + unavailable) over just available_slots
+            let slots = res.all_slots || res.slots || res.available_slots || [];
+            // Cache the complete slot data (includes available and unavailable) so calendar-core can disable unavailable options
+            try{ window.__available_slots_cache = window.__available_slots_cache || {}; if(date) window.__available_slots_cache[date] = slots; }catch(e){}
+            
+            // For the dropdown display, show only available slots
+            let displaySlots = res.slots || res.available_slots || [];
+            if (!Array.isArray(displaySlots)) displaySlots = [];
+            
+            // Ensure slots is an array
+            if (!Array.isArray(slots)) {
+              console.warn('[calendar-patient] availableBtn - slots is not an array:', typeof slots, slots);
+              slots = [];
+            }
+            
+            if(displaySlots.length === 0){
               availableMenuContent.textContent = 'No slots';
             } else {
               availableMenuContent.innerHTML = '';
               const ul = document.createElement('ul');
               ul.style.listStyle = 'none'; ul.style.margin='0'; ul.style.padding='0'; ul.style.maxHeight='220px'; ul.style.overflowY='auto';
-              slots.slice(0,50).forEach(s=>{
+                  displaySlots.slice(0,50).forEach(s=>{
                 const li = document.createElement('li');
                 const b = document.createElement('button'); b.type='button'; b.className='w-full text-left px-2 py-1 hover:bg-gray-100';
-                const timeStr = (typeof s === 'string') ? s : (s.time || s.slot || '');
-                b.textContent = timeStr;
+                const raw = (typeof s === 'string') ? s : (s.time || s.datetime || s.slot || '');
+                let timeStr = raw;
+                try { if(typeof raw === 'string' && raw.indexOf(' ')>=0) timeStr = raw.split(' ')[1].slice(0,5); else if(typeof raw === 'string') timeStr = raw.slice(0,5); }catch(e){}
+                b.textContent = window.calendarCore?.formatTime(timeStr) || timeStr;
                 if (s && typeof s === 'object' && s.dentist_id) b.dataset.dentist = s.dentist_id;
                 b.onclick = ()=>{
                   if(timeSelect) timeSelect.value = timeStr;
@@ -106,12 +240,24 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
                   const dt = b.dataset && b.dataset.dentist ? b.dataset.dentist : null;
                   const dentistSelect = document.querySelector('select[name="dentist_id"]') || document.getElementById('dentistSelect');
                   if(dt && dentistSelect) dentistSelect.value = dt;
+                  // ensure preferred time is synced and conflicts are checked
                   if(typeof window.calendarCore.populateAvailableTimeSlots === 'function') window.calendarCore.populateAvailableTimeSlots(date, timeSelect);
+                  if(typeof window.checkConflictFor === 'function') window.checkConflictFor(timeStr);
                 };
                 li.appendChild(b);
                 ul.appendChild(li);
               });
               availableMenuContent.appendChild(ul);
+
+              // Prefill timeSelect with server first_available if present
+              try{
+                if(res && res.metadata && res.metadata.first_available && timeSelect && !timeSelect.value){
+                  const fa = res.metadata.first_available;
+                  const pref = fa.time || (fa.datetime ? fa.datetime.split(' ')[1].slice(0,5) : null);
+                  if(pref) timeSelect.value = pref;
+                  if(fa.dentist_id){ const dentistSelect = document.querySelector('select[name="dentist_id"]') || document.getElementById('dentistSelect'); if(dentistSelect) dentistSelect.value = fa.dentist_id; }
+                }
+              } catch(e){console.error('prefill from metadata failed', e)}
             }
           } else availableMenuContent.textContent='No slots';
         } catch(err) {
@@ -126,16 +272,20 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
                 if (sel && sel.value) date = sel.value;
                 else date = new Date().toISOString().slice(0,10);
               }
-              let duration = 30;
-              if (durationEl) {
-                const v = (durationEl.value !== undefined) ? durationEl.value : durationEl.getAttribute && durationEl.getAttribute('value');
-                const n = Number(v);
-                duration = Number.isFinite(n) && n > 0 ? n : 30;
-              }
               const dentist = dentistEl ? dentistEl.value : '';
-              const res2 = await postForm('/appointments/available-slots', {branch_id:branch, date, duration, dentist_id: dentist});
+              const svcSel_f2 = getServiceEl();
+              const svcId_f2 = svcSel_f2 ? svcSel_f2.value : '';
+              const res2 = await postForm('/appointments/available-slots', Object.assign({branch_id:branch, date, dentist_id: dentist}, svcId_f2 ? {service_id: svcId_f2} : {}));
               if (res2 && res2.success) {
-                  const slots = res2.slots || [];
+                  // Enhanced API compatibility: try different slot sources
+                  let slots = res2.slots || res2.available_slots || [];
+                  
+                  // Ensure slots is an array
+                  if (!Array.isArray(slots)) {
+                    console.warn('[calendar-patient] quickPickBtn - slots is not an array:', typeof slots, slots);
+                    slots = [];
+                  }
+                  
                   availableMenuContent.innerHTML = '';
                   const ul = document.createElement('ul'); ul.style.listStyle='none'; ul.style.margin='0'; ul.style.padding='0'; ul.style.maxHeight='220px'; ul.style.overflowY='auto';
                   (slots || []).slice(0,50).forEach(s=>{
@@ -184,10 +334,12 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
       const branch = branchEl ? branchEl.value : '';
       const date = dateEl ? dateEl.value : '';
       const time = timeField ? (timeField.value || '') : '';
-      const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
       if(!date || !time) return;
       try{
-        const res = await postJson('/api/patient/check-conflicts', {branch_id:branch, date, time, duration});
+  // Do not send a client-side duration. Include service_id when present so server can compute authoritative conflicts.
+  const svcSel = getServiceEl();
+  const svcId = svcSel ? svcSel.value : '';
+        const res = await postJson('/api/patient/check-conflicts', Object.assign({branch_id:branch, date, time}, svcId ? { service_id: svcId } : {}));
         const c = ensureConflictContainer();
         if(res && res.success && res.hasConflicts && Array.isArray(res.messages) && res.messages.length){
           c.innerHTML = '';
@@ -200,7 +352,10 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
         // If unauthorized (no patient session), try the generic appointments endpoint as a fallback
         if (e && e.status === 401) {
             try {
-            const res2 = await postForm('/appointments/check-conflicts', {branch_id:branch, date, time, duration});
+            // include service_id when present so server can compute duration/conflicts
+            const svcSel_cf = getServiceEl();
+            const svcId_cf = svcSel_cf ? svcSel_cf.value : '';
+            const res2 = await postForm('/appointments/check-conflicts', Object.assign({branch_id:branch, date, time}, svcId_cf ? {service_id: svcId_cf} : {}));
             const c = ensureConflictContainer();
             if (res2 && res2.success && res2.hasConflicts && Array.isArray(res2.conflicts) && res2.conflicts.length) {
               // build friendly messages from conflicts
@@ -295,25 +450,21 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
         // build JSON payload
         const payload = {};
         fd.forEach((v,k)=>{ payload[k]=v; });
-        // Ensure procedure_duration is present and numeric in the payload
-        if(!payload.procedure_duration){
-          const pdEl = document.querySelector('select[name="procedure_duration"]') || document.querySelector('input[name="procedure_duration"]');
-          if(pdEl){
-            const pdv = pdEl.value || pdEl.getAttribute('value') || '';
-            const pn = Number(pdv);
-            payload.procedure_duration = (Number.isFinite(pn) && pn > 0) ? pn : 30;
-          } else {
-            payload.procedure_duration = 30;
-          }
-        } else {
-          const pn = Number(payload.procedure_duration);
-          payload.procedure_duration = (Number.isFinite(pn) && pn > 0) ? pn : 30;
-        }
+          // Normalize service field: some forms use name="service" instead of "service_id" - ensure server gets service_id
+          if (!payload.service_id && payload.service) payload.service_id = payload.service;
+          // Do NOT allow patient page to set procedure_duration - remove any client-side duration entirely.
+          if (payload.procedure_duration) delete payload.procedure_duration;
         try{
           const isPatientPage = (window.userType === 'patient') || (window.CURRENT_USER_TYPE === 'patient') || window.location.pathname.startsWith('/patient');
-          const bookingEndpoint = isPatientPage ? '/patient/book-appointment' : '/guest/book-appointment';
+          // Use admin/staff endpoint when on admin dashboard or staff pages
+          const bookingEndpoint = (window.userType === 'admin' || window.userType === 'staff' || window.location.pathname.startsWith('/admin')) ? '/admin/appointments/create' : (isPatientPage ? '/patient/book-appointment' : '/guest/book-appointment');
           // ensure branch id when present on the page
           if(!payload.branch_id && branchEl) payload.branch_id = branchEl.value || '';
+          // If the user is admin and set procedure_duration, ensure it's included; patient pages must not send it (handled earlier)
+          if (window.userType === 'admin') {
+            const pd = document.querySelector('input[name="procedure_duration"]') || document.getElementById('procedureDuration');
+            if (pd && pd.value) payload.procedure_duration = pd.value;
+          }
           const res = await postForm(bookingEndpoint, payload);
           if(res && res.success){
             // update client-side appointments array
@@ -375,7 +526,14 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
         card.className = 'bg-white rounded-lg shadow-lg p-4 mb-4';
         const date = apt.appointment_datetime ? new Date(apt.appointment_datetime) : (apt.appointment_date ? new Date(apt.appointment_date + ' ' + (apt.appointment_time || '00:00')) : null);
         const dateText = date ? date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : (apt.appointment_date || '');
-        const timeText = (apt.appointment_time) ? apt.appointment_time : (apt.appointment_datetime ? new Date(apt.appointment_datetime).toLocaleTimeString('en-US',{hour: 'numeric', minute: '2-digit'}) : 'TBD');
+        // Prefer appointment_time (HH:MM raw) but display in 12-hour friendly form when possible
+        let timeText = 'TBD';
+        if (apt.appointment_time) {
+          if (window.calendarCore && typeof window.calendarCore.formatTime === 'function') timeText = window.calendarCore.formatTime(apt.appointment_time);
+          else timeText = apt.appointment_time;
+        } else if (apt.appointment_datetime) {
+          timeText = new Date(apt.appointment_datetime).toLocaleTimeString('en-US',{hour: 'numeric', minute: '2-digit'});
+        }
         card.innerHTML = `
           <div class="flex justify-between items-start">
             <div class="flex-1">
@@ -404,7 +562,7 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
     try{
       const apt = e && e.detail ? e.detail : null;
       if(apt){
-        const time = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11,16) : null) || apt.start || null;
+  const time = apt.appointment_time || (apt.appointment_datetime ? (new Date(apt.appointment_datetime).toTimeString().substr(0,5)) : null) || apt.start || null;
         if(time){
           // try to disable matching options and remove menu entries
           const sel = document.querySelector('select[name="appointment_time"]') || document.getElementById('timeSelect');

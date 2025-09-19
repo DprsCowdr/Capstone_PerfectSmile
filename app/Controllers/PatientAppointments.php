@@ -94,7 +94,9 @@ class PatientAppointments extends BaseController
     log_message('info', 'API checkConflicts called with: ' . json_encode($data));
         $date = $data['date'] ?? null;
         $time = $data['time'] ?? null;
-        $duration = isset($data['duration']) ? (int)$data['duration'] : 30;
+    // Prevent patients from supplying custom durations - do not enforce a magic default here.
+    // The API will treat duration as 0 unless services define durations; server-side conflict logic computes conservative end times from linked services.
+    $duration = 0;
         $branch = $data['branch_id'] ?? null;
 
         if (!$date || !$time) return $this->response->setStatusCode(400)->setJSON(['success'=>false,'message'=>'date and time required']);
@@ -109,8 +111,8 @@ class PatientAppointments extends BaseController
     foreach($dayAppts as $a){
             if ($branch && $a['branch_id'] != $branch) continue;
             $aStart = strtotime($a['appointment_datetime']);
-            $aDuration = isset($a['procedure_duration']) ? (int)$a['procedure_duration'] : 30;
-            $aEnd = $aStart + ($aDuration * 60);
+                $aDuration = isset($a['procedure_duration']) ? (int)$a['procedure_duration'] : 0;
+                $aEnd = $aStart + ($aDuration * 60);
             if ($start < $aEnd && $end > $aStart) {
         $conflicts[] = $a;
         // build a friendly message for the conflict
@@ -118,7 +120,7 @@ class PatientAppointments extends BaseController
         $dentist = '';
         if (isset($a['dentist_name'])) $dentist = ' (Dr. ' . $a['dentist_name'] . ')';
         elseif (isset($a['dentist_id'])) $dentist = ' (Dentist #' . $a['dentist_id'] . ')';
-        $messages[] = sprintf('Time conflicts with %s at %s–%s%s', $pname, date('H:i', $aStart), date('H:i', $aEnd), $dentist);
+    $messages[] = sprintf('Time conflicts with %s at %s–%s%s', $pname, date('g:i A', $aStart), date('g:i A', $aEnd), $dentist);
             }
     }
     // log conflicts computed

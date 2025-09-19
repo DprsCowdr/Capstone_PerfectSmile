@@ -7,6 +7,18 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', to: 'Home::index');
 
+// Debug routes for availability testing (development-only)
+if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
+    $routes->get('debug/availability', 'DebugAvailability::index');
+    $routes->get('debug/availability/test', 'DebugAvailability::testCreate');
+    $routes->get('debug/availability/manual', 'DebugAvailability::manualTest');
+    $routes->get('debug/availability/direct', 'DebugAvailability::directDbTest');
+    $routes->get('debug/availability/monday', 'DebugAvailability::mondayDebug');
+    $routes->get('debug/availability/calendar-events', 'DebugAvailability::calendarEvents');
+
+    // NOTE: debug/session route removed - debug controllers should not be present in production
+}
+
 // Guest routes (no authentication required)
 $routes->get('guest/book-appointment', 'Guest::bookAppointment');
 $routes->post('guest/book-appointment', 'Guest::submitAppointment');
@@ -24,12 +36,18 @@ $routes->get('auth/logout', 'Auth::logout');
 $routes->get('dashboard', 'Dashboard::index');
 
 // Admin routes (protected)
-// Debug route (remove in production)
-$routes->get('debug/appointments', 'Debug::checkAppointments');
-$routes->get('debug/add-test', 'Debug::addTestAppointment');
-$routes->get('test-3d-viewer', function() {
-    return view('test-3d-viewer');
-});
+
+// Debug-only admin helpers (register only in development)
+if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
+    $routes->get('debug/appointments', 'Debug::checkAppointments');
+    $routes->get('debug/add-test', 'Debug::addTestAppointment');
+    // Debug approve endpoint (dev-only)
+    $routes->get('debug/approve-test/(:num)', 'Debug::approveTestAppointment/$1');
+    // Debug list branch notifications
+    $routes->get('debug/branch-notifications', 'Debug::listBranchNotifications');
+    $routes->get('debug/smoke-run', 'Debug::smokeRun');
+}
+
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard
@@ -145,6 +163,13 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Keep legacy save-hours endpoint (if used elsewhere)
     $routes->post('branches/(:num)/save-hours', 'AdminController::saveBranchHours/$1');
     $routes->get('settings', 'AdminController::settings'); // → management/settings.php
+    // Message templates editor (writable JSON)
+    $routes->get('message-templates', 'Admin\MessageTemplates::index');
+    // AJAX endpoint to fetch templates as JSON (for admin UI)
+    $routes->get('message-templates/ajax', 'Admin\MessageTemplates::fetch');
+    $routes->post('message-templates/save', 'Admin\MessageTemplates::save');
+    // Grace periods save endpoint
+    $routes->post('grace-periods/save', 'Admin\GracePeriods::save');
     
     // Procedure management routes
     $routes->get('procedures', 'Admin\ProcedureController::index');
@@ -186,6 +211,9 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
 // Staff notification handling (mark branch notification handled)
 $routes->post('staff/notifications/handle/(:num)', 'Staff::markNotificationHandled/$1');
 
+// Availability events (calendar-wide) - authenticated check is performed in controller
+$routes->match(['get','post'], 'calendar/availability-events', 'Availability::events');
+
 // Checkup routes (accessible by admin and doctor)
 $routes->group('checkup', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'Checkup::index');
@@ -196,8 +224,10 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
     $routes->post('cancel/(:num)', 'Checkup::cancelAppointment/$1');
     $routes->get('record/(:num)', 'Checkup::viewRecord/$1');
     $routes->get('patient-history/(:num)', 'Checkup::getPatientHistory/$1');
-    $routes->get('debug/(:num)', 'Checkup::debug/$1'); // Debug specific appointment
-    $routes->get('debug', 'Checkup::debug'); // Debug today's appointments
+    if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
+        $routes->get('debug/(:num)', 'Checkup::debug/$1'); // Debug specific appointment
+        $routes->get('debug', 'Checkup::debug'); // Debug today's appointments
+    }
     
     // Services management for checkups
     $routes->get('(:num)/services', 'CheckupServices::getAppointmentServices/$1');
@@ -215,7 +245,18 @@ $routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Dentist::dashboard');
     $routes->get('stats', 'Dentist::stats');
     $routes->get('appointments', 'Dentist::appointments');
+    // Dentist availability management page (full-page UI)
+    $routes->get('availability', 'DentistAvailability::index');
     $routes->post('availability/set', 'Dentist::setAvailability');
+    // Availability endpoints (events can be consumed by any authenticated calendar view)
+    $routes->match(['get','post'], 'calendar/availability-events', 'Availability::events');
+    $routes->post('availability/create', 'Availability::create');
+    $routes->post('availability/createRecurring', 'Availability::createRecurring');
+    $routes->get('availability/list', 'Availability::list');
+    $routes->post('availability/update', 'Availability::update');
+    // Allow listing availability for a specific user (dentist) within dentist-scoped routes
+    $routes->match(['get','post'], 'availability/listForUser', 'Availability::listForUser');
+    $routes->post('availability/delete', 'Availability::delete');
     $routes->post('appointments/approve/(:num)', 'Dentist::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'Dentist::declineAppointment/$1');
     
@@ -327,6 +368,8 @@ $routes->group('checkin', ['filter' => 'auth'], function($routes) {
 $routes->group('queue', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'TreatmentQueue::index');
     $routes->post('call/(:num)', 'TreatmentQueue::callNext/$1');
+        $routes->post('call-auto', 'TreatmentQueue::callNextAuto');
+        $routes->post('reschedule', 'TreatmentQueue::rescheduleAppointment');
     $routes->post('complete/(:num)', 'TreatmentQueue::completeTreatment/$1');
     $routes->get('status', 'TreatmentQueue::getQueueStatus'); // AJAX
 });

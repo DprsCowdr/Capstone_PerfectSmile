@@ -27,6 +27,7 @@ $content = '
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -38,7 +39,7 @@ $content = '
 if (empty($services)) {
     $content .= '
                 <tr>
-                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
                         No services found. Click "Add New Service" to get started.
                     </td>
                 </tr>';
@@ -51,6 +52,24 @@ if (empty($services)) {
                     </td>
                     <td class="px-6 py-4">
                         <div class="text-sm text-gray-900">' . htmlspecialchars($service['description'] ?? '') . '</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-600">';
+        $durationDisplay = 'Not set';
+        if (!empty($service['duration_minutes'])) {
+            $m = intval($service['duration_minutes']);
+            $hours = intdiv($m, 60);
+            $rem = $m % 60;
+            $durationDisplay = $hours > 0 ? $hours . 'h' . ($rem ? ' ' . $rem . 'm' : '') : $rem . 'm';
+        }
+        if (!empty($service['duration_max_minutes'])) {
+            $m2 = intval($service['duration_max_minutes']);
+            $h2 = intdiv($m2, 60);
+            $r2 = $m2 % 60;
+            $maxDisp = $h2 > 0 ? $h2 . 'h' . ($r2 ? ' ' . $r2 . 'm' : '') : $r2 . 'm';
+            if ($durationDisplay === 'Not set') $durationDisplay = $maxDisp; else $durationDisplay .= ' - ' . $maxDisp;
+        }
+        $content .= $durationDisplay . '</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="text-sm font-medium text-green-600">$' . number_format($service['price'], 2) . '</span>
@@ -102,6 +121,20 @@ $content .= '
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                 </div>
                 
+                <div class="mb-4">
+                    <label for="serviceDuration" class="block text-sm font-medium text-gray-700 mb-2">Duration (minutes or hours, e.g. "2h")</label>
+                    <input type="text" id="serviceDuration" name="duration_minutes" placeholder="30 or 2h"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-sm text-gray-500 mt-1">You can enter minutes (e.g. 90) or hours (e.g. 1.5h or 2h). Leave empty for default.</p>
+                </div>
+
+                <div class="mb-4">
+                    <label for="serviceDurationMax" class="block text-sm font-medium text-gray-700 mb-2">Max Duration (optional)</label>
+                    <input type="text" id="serviceDurationMax" name="duration_max_minutes" placeholder="120 or 2h"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-sm text-gray-500 mt-1">Optional maximum duration. Accepts minutes or hours format.</p>
+                </div>
+                
                 <div class="mb-6">
                     <label for="servicePrice" class="block text-sm font-medium text-gray-700 mb-2">Price *</label>
                     <input type="number" id="servicePrice" name="price" step="0.01" min="0" required
@@ -149,6 +182,8 @@ function editService(id) {
                 document.getElementById("serviceId").value = id;
                 document.getElementById("serviceName").value = data.service.name;
                 document.getElementById("serviceDescription").value = data.service.description || "";
+                document.getElementById("serviceDuration").value = data.service.duration_minutes || "";
+                document.getElementById("serviceDurationMax").value = data.service.duration_max_minutes || "";
                 document.getElementById("servicePrice").value = data.service.price;
                 document.getElementById("serviceModal").classList.remove("hidden");
             } else {
