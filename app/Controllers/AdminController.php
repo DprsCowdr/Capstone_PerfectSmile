@@ -442,6 +442,8 @@ class AdminController extends BaseAdminController
         $data = [
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
+            'duration_minutes' => $this->parseDurationInput($this->request->getPost('duration_minutes')),
+            'duration_max_minutes' => $this->parseDurationInput($this->request->getPost('duration_max_minutes')),
             'price' => $this->request->getPost('price')
         ];
 
@@ -470,6 +472,10 @@ class AdminController extends BaseAdminController
         $service = $serviceModel->find($id);
 
         if ($service) {
+            // ensure duration fields are present for the front-end
+            if (!isset($service['duration_minutes'])) $service['duration_minutes'] = null;
+            if (!isset($service['duration_max_minutes'])) $service['duration_max_minutes'] = null;
+
             return $this->response->setJSON([
                 'success' => true,
                 'service' => $service
@@ -494,6 +500,8 @@ class AdminController extends BaseAdminController
         $data = [
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
+            'duration_minutes' => $this->parseDurationInput($this->request->getPost('duration_minutes')),
+            'duration_max_minutes' => $this->parseDurationInput($this->request->getPost('duration_max_minutes')),
             'price' => $this->request->getPost('price')
         ];
 
@@ -542,6 +550,55 @@ class AdminController extends BaseAdminController
                 'message' => 'Failed to delete service'
             ]);
         }
+    }
+
+    /**
+     * Parse duration input that may contain hours (e.g., '2h') or plain minutes (e.g., '120')
+     * Returns integer minutes or null for empty input.
+     */
+    protected function parseDurationInput($input)
+    {
+        if ($input === null) return null;
+        $input = trim((string)$input);
+        if ($input === '') return null;
+
+        // Accept formats like '2h', '2.5h', '150', '120m'
+        // Normalize
+        $lower = strtolower($input);
+
+        // If contains 'h' treat as hours
+        if (strpos($lower, 'h') !== false) {
+            // extract numeric part
+            $num = floatval(str_replace('h', '', $lower));
+            if ($num <= 0) return null;
+            return (int) round($num * 60);
+        }
+
+        // If contains 'm' remove it
+        if (strpos($lower, 'm') !== false) {
+            $lower = str_replace('m', '', $lower);
+        }
+
+        // fallback to integer minutes
+        $minutes = intval($lower);
+        if ($minutes <= 0) return null;
+        return $minutes;
+    }
+
+    /**
+     * Format minutes to readable string, e.g., 150 -> '2h 30m' or '30m'
+     */
+    protected function formatMinutesReadable($minutes)
+    {
+        if ($minutes === null) return 'Not set';
+        $m = intval($minutes);
+        if ($m <= 0) return 'Not set';
+        $hours = intdiv($m, 60);
+        $rem = $m % 60;
+        if ($hours > 0) {
+            return $hours . 'h' . ($rem ? ' ' . $rem . 'm' : '');
+        }
+        return $rem . 'm';
     }
 
     public function procedures()
@@ -708,7 +765,7 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-        return view('admin/management/settings', ['user' => $user]);
+    return view('admin/settings/settings', ['user' => $user]);
     }
 
     // ==================== USERS MANAGEMENT ====================

@@ -39,7 +39,7 @@
 							</thead>
 							<tbody class="bg-white divide-y divide-gray-100">
 								<?php foreach ($prescriptions as $i => $p): ?>
-									<tr class="hover:bg-gray-50">
+									<tr class="hover:bg-gray-50" <?= !empty($p['dentist_id']) ? 'data-dentist-id="' . esc($p['dentist_id']) . '"' : '' ?> >
 										<td class="px-4 py-3 align-middle text-sm text-gray-700"><?= esc($p['id']) ?></td>
 										<td class="px-4 py-3 align-middle text-sm text-gray-800"><?= esc($p['patient_name'] ?? 'Unknown') ?></td>
 										<td class="px-4 py-3 align-middle text-sm text-gray-800"><?= esc($p['dentist_name'] ?? 'Unknown') ?></td>

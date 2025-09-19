@@ -14,7 +14,7 @@
             <?php if (!empty($appointments)): ?>
                 <div id="myAppointmentsList" class="grid grid-cols-1 gap-6">
                     <?php foreach ($appointments as $appointment): ?>
-                        <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="bg-white rounded-lg shadow-lg p-6" <?= !empty($appointment['dentist_id']) ? 'data-dentist-id="' . esc($appointment['dentist_id']) . '"' : '' ?> >
                             <div class="flex flex-col md:flex-row md:justify-between md:items-start">
                                 <div class="flex-1 mb-4 md:mb-0">
                                     <div class="flex items-center mb-2">

@@ -167,7 +167,8 @@
             </div>
         <?php endif; ?>
         
-        <form class="booking-form" method="POST" action="<?= base_url('guest/book-appointment') ?>">
+        <form id="appointmentForm" class="booking-form" method="POST" action="<?= base_url('guest/book-appointment') ?>">
+            <?= csrf_field() ?>
             <!-- Personal Information -->
             <div class="service-info">
                 <h4>Personal Information</h4>
@@ -208,8 +209,10 @@
                     <select id="service_id" name="service_id" required>
                         <option value="">Select a service</option>
                         <?php foreach ($services as $service): ?>
-                            <option value="<?= $service['id'] ?>" <?= old('service_id') == $service['id'] ? 'selected' : '' ?>>
-                                <?= $service['name'] ?> - $<?= number_format($service['price'], 2) ?>
+                            <?php $dataDur = isset($service['duration_minutes']) ? 'data-duration="'.(int)$service['duration_minutes'].'"' : ''; ?>
+                            <?php $dataDurMax = isset($service['duration_max_minutes']) ? 'data-duration-max="'.(int)$service['duration_max_minutes'].'"' : ''; ?>
+                            <option value="<?= $service['id'] ?>" <?= old('service_id') == $service['id'] ? 'selected' : '' ?> <?= $dataDur ?> <?= $dataDurMax ?> >
+                                <?= $service['name'] ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -275,6 +278,7 @@ dateInput.min = new Date().toISOString().split('T')[0];
 // Dynamic available times
 const branchInput = document.getElementById('branch_id');
 const timeSelect = document.getElementById('appointment_time');
+const serviceSelect = document.getElementById('service_id');
 
 function formatTimeLabel(time) {
     const [h, m] = time.split(':');
@@ -288,8 +292,12 @@ function formatTimeLabel(time) {
 function updateAvailableTimes() {
     const date = dateInput.value;
     const branchId = branchInput.value;
+    const serviceId = serviceSelect ? serviceSelect.value : '';
     if (!date || !branchId) return;
-    fetch(`/guest/available-times?date=${date}&branch_id=${branchId}`)
+    // prefer server endpoint that supports duration by POST; fallback to simple GET if not available
+    let url = `/guest/available-times?date=${date}&branch_id=${branchId}`;
+    if (serviceId) url += `&service_id=${serviceId}`;
+    fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(res => res.json())
         .then(times => {
             timeSelect.innerHTML = '<option value="">Select time</option>';

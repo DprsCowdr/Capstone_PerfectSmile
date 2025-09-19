@@ -138,6 +138,14 @@
         <!-- Alert Messages -->
         <div id="alert-container" class="mb-6"></div>
 
+        <div class="mb-6">
+            <button onclick="callNextAuto()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">
+                <i class="fas fa-bullhorn mr-2"></i>
+                Auto Call Next
+            </button>
+            <span class="ml-3 text-sm text-gray-500">Auto selects checked-in patients first; expires no-shows after 15m grace.</span>
+        </div>
+
         <!-- Waiting Patients -->
         <div class="bg-white rounded-lg shadow mb-8">
             <div class="px-6 py-4 border-b border-gray-200">
@@ -228,6 +236,12 @@
                                                 class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                             <i class="fas fa-clock mr-2"></i>
                                             Postpone
+                                        </button>
+                                        
+                                        <button onclick="reschedulePatient(<?= $patient['id'] ?>)"
+                                                class="inline-flex items-center px-3 py-2 border border-purple-600 text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                            <i class="fas fa-calendar-plus mr-2"></i>
+                                            Reschedule
                                         </button>
                                     </div>
                                 </div>
@@ -378,6 +392,47 @@
                     setTimeout(() => refreshQueue(), 1000);
                 } else {
                     showAlert(result.message || 'Failed to start treatment', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('An error occurred', 'error');
+            }
+        }
+
+        // Local wrapper delegates to the global footer helper (keeps two-arg signature for old callers)
+        async function reschedulePatient(appointmentId, currentDatetime) {
+            if (window && typeof window.reschedulePatient === 'function' && window !== window.top) {
+                // prefer global helper attached to window
+                return window.reschedulePatient(appointmentId);
+            }
+            // In same window, call the global helper if present
+            if (typeof window.reschedulePatient === 'function') return window.reschedulePatient(appointmentId);
+            // Fallback: make a direct POST then reload
+            try {
+                if (!confirm('Reschedule appointment?')) return;
+                await fetch('/queue/reschedule', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: JSON.stringify({ appointmentId, confirm: true }) });
+                window.location.reload();
+            } catch (err) { console.error('Reschedule error', err); alert('An error occurred while rescheduling'); }
+        }
+
+        // Auto call next (FCFS) - picks checked-in first, expires overdue scheduled
+        async function callNextAuto() {
+            try {
+                const response = await fetch(`/queue/call-auto`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Patient called for treatment', 'success');
+                    setTimeout(() => refreshQueue(), 1000);
+                } else {
+                    showAlert(result.message || 'No patients in queue', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);

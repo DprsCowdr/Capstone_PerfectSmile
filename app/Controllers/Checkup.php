@@ -343,12 +343,25 @@ class Checkup extends BaseController
                     'remarks' => 'Follow-up appointment from checkup on ' . date('M j, Y') . ' - ' . $this->request->getPost('treatment')
                 ];
                 
-                $newAppointmentId = $this->appointmentModel->insert($nextAppointmentData);
-                
+                // Use AppointmentService to create the follow-up appointment so FCFS and approval
+                // logic is applied consistently and we obtain the saved record.
+                $appointmentService = new \App\Services\AppointmentService();
+                // Split appointment_datetime into date/time if present
+                if (!empty($nextAppointmentData['appointment_datetime'])) {
+                    $dt = $nextAppointmentData['appointment_datetime'];
+                    $nextDate = substr($dt, 0, 10);
+                    $nextTime = substr($dt, 11, 5);
+                    $nextAppointmentData['appointment_date'] = $nextDate;
+                    $nextAppointmentData['appointment_time'] = $nextTime;
+                }
+                // Mark as created by staff/dentist so message template is appropriate
+                $nextAppointmentData['created_by_role'] = 'staff';
+                $createResult = $appointmentService->createAppointment($nextAppointmentData);
+                $newAppointmentId = $createResult['record']['id'] ?? null;
+
                 if ($newAppointmentId) {
                     // Update the dental record with the new appointment ID
                     log_message('info', "Attempting to update record {$recordId} with next_appointment_id: {$newAppointmentId}");
-                    
                     $updateResult = $this->dentalRecordModel->update($recordId, [
                         'next_appointment_id' => $newAppointmentId
                     ]);

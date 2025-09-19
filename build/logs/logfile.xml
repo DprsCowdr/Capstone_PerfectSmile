@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="BranchValidationTest" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\BranchValidationTest.php" tests="5" assertions="28" errors="0" failures="0" skipped="0" time="0.026677">
-    <testcase name="test_operating_hours_validation_regex" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\BranchValidationTest.php" line="11" class="BranchValidationTest" classname="BranchValidationTest" assertions="10" time="0.005548"/>
-    <testcase name="test_time_comparison_logic" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\BranchValidationTest.php" line="28" class="BranchValidationTest" classname="BranchValidationTest" assertions="5" time="0.000162"/>
-    <testcase name="test_data_confirm_attribute_conversion" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\BranchValidationTest.php" line="49" class="BranchValidationTest" classname="BranchValidationTest" assertions="8" time="0.002246"/>
-    <testcase name="test_delegated_confirm_handler_exists" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\BranchValidationTest.php" line="74" class="BranchValidationTest" classname="BranchValidationTest" assertions="4" time="0.000267"/>
-    <testcase name="test_no_remaining_inline_confirm_handlers" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\BranchValidationTest.php" line="85" class="BranchValidationTest" classname="BranchValidationTest" assertions="1" time="0.018454"/>
+  <testsuite name="AvailabilityModelTest" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AvailabilityModelTest.php" tests="2" assertions="0" errors="0" failures="0" skipped="2" time="0.000000">
+    <testcase name="test_createBlock_throws_on_missing_fields" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AvailabilityModelTest.php" line="31" class="AvailabilityModelTest" classname="AvailabilityModelTest" assertions="0" time="0.000000">
+      <skipped/>
+    </testcase>
+    <testcase name="test_create_and_query_block_and_isBlocked" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AvailabilityModelTest.php" line="37" class="AvailabilityModelTest" classname="AvailabilityModelTest" assertions="0" time="0.000000">
+      <skipped/>
+    </testcase>
   </testsuite>
 </testsuites>

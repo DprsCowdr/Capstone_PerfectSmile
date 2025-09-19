@@ -1,7 +1,20 @@
 <!-- Tailwind Procedures Table -->
+<?php
+// Normalize $user to an array to avoid errors when session('user') may return a Response/object.
+$user = isset($user) ? $user : (session('user') ?? []);
+if (!is_array($user)) {
+    if (is_object($user) && method_exists($user, 'toArray')) {
+        try { $user = $user->toArray(); } catch (\Throwable $e) { $user = []; }
+    } else {
+        $user = [];
+    }
+}
+// Extract user_type safely to prevent "Undefined array key" errors
+$userType = $user['user_type'] ?? null;
+?>
 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
     <h1 class="font-bold text-2xl md:text-3xl text-black tracking-tight">Lists of Procedures</h1>
-    <?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
+    <?php if (in_array($userType, ['admin', 'staff'])): ?>
         <a href="<?= base_url('admin/procedures/create') ?>" class="bg-[#c7aefc] hover:bg-[#a47be5] text-white font-bold text-base rounded-xl shadow px-7 py-2.5 transition">+ Add New Procedure</a>
     <?php endif; ?>
 </div>
@@ -79,7 +92,7 @@
                     </td>
                     <td class="px-6 py-5">
                         <div class="flex justify-end gap-2">
-                            <?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
+                            <?php if (in_array($userType, ['admin', 'staff'])): ?>
                             <button onclick="openProcedureModal(<?= $procedure['id'] ?>, 'view')" title="View" class="p-2 text-blue-400 hover:bg-blue-50 rounded-lg transition">
                                 <i class="fas fa-eye"></i>
                             </button>

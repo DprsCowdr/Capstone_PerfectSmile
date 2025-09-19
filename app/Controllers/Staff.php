@@ -49,7 +49,7 @@ class Staff extends BaseController
         // Get user counts
         $userModel = new \App\Models\UserModel();
         $totalPatients = $userModel->where('user_type', 'patient')->countAllResults();
-        $totalDentists = $userModel->where('user_type', 'doctor')->countAllResults();
+        $totalDentists = $userModel->where('user_type', 'dentist')->countAllResults();
         
         // Get branch count
         $branchModel = new \App\Models\BranchModel();
@@ -325,7 +325,7 @@ class Staff extends BaseController
             return redirect()->to('/dashboard');
         }
         
-        // Get appointments with details
+        // Get appointments with details (now includes pending and other relevant statuses)
         $appointmentModel = new \App\Models\AppointmentModel();
         $appointments = $appointmentModel->getAppointmentsWithDetails();
         
@@ -335,7 +335,7 @@ class Staff extends BaseController
         
         $patients = $userModel->where('user_type', 'patient')->findAll();
         $branches = $branchModel->findAll();
-        $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
+        $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
         
         return view('staff/appointments', [
             'user' => $user,
@@ -433,46 +433,51 @@ class Staff extends BaseController
         if ($user['user_type'] !== 'staff') {
             return redirect()->to('/dashboard');
         }
+        // Delegate to AppointmentService for consistency and FCFS behavior
+        $appointmentService = new \App\Services\AppointmentService();
 
-        $appointmentModel = new \App\Models\AppointmentModel();
-        
-        // Get form data
         $appointmentType = $this->request->getPost('appointment_type') ?? 'scheduled';
-        $dentistId = $this->request->getPost('doctor') ?: null;
-        
+        $date = $this->request->getPost('date');
+        $time = $this->request->getPost('time');
+        $appointment_datetime = $this->request->getPost('appointment_datetime');
+        if (empty($appointment_datetime) && $date && $time) {
+            $appointment_datetime = $date . ' ' . $time . ':00';
+        }
+
         $data = [
             'branch_id' => $this->request->getPost('branch'),
             'user_id' => $this->request->getPost('patient'),
-            'dentist_id' => $dentistId,
-            'appointment_date' => $this->request->getPost('date'),
-            'appointment_time' => $this->request->getPost('time'),
+            'dentist_id' => $this->request->getPost('doctor') ?: null,
+            'appointment_datetime' => $appointment_datetime,
             'appointment_type' => $appointmentType,
             'remarks' => $this->request->getPost('remarks')
         ];
 
-        // Validate required fields
-        if (empty($data['user_id']) || empty($data['appointment_date']) || empty($data['appointment_time'])) {
+        // Basic validation
+        if (empty($data['user_id']) || empty($data['appointment_datetime'])) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Required fields missing (Staff:459)']);
+            }
             session()->setFlashdata('error', 'Required fields missing');
             return redirect()->back();
         }
 
         try {
-            if ($appointmentType === 'walkin') {
-                // For walk-in appointments, auto-approve
-                $appointmentModel->createWalkInAppointment($data);
-                session()->setFlashdata('success', 'Walk-in appointment created successfully');
-            } else {
-                // For scheduled appointments, always leave as pending for approval
-                $data['approval_status'] = 'pending';
-                $data['status'] = 'pending';
-                
-                $appointmentModel->insert($data);
-                session()->setFlashdata('success', 'Scheduled appointment created successfully. Waiting for admin/dentist approval.');
+            // annotate role so AppointmentService returns staff-facing message
+            $data['created_by_role'] = 'staff';
+            $result = $appointmentService->createAppointment($data);
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON($result);
             }
-            
+
+            session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
             return redirect()->to('/staff/appointments');
-            
+
         } catch (\Exception $e) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to create appointment: ' . $e->getMessage()]);
+            }
             session()->setFlashdata('error', 'Failed to create appointment: ' . $e->getMessage());
             return redirect()->back();
         }

@@ -1,0 +1,48 @@
+{
+    "mon": {
+        "enabled": false,
+        "start": "09:00",
+        "end": "17:00",
+        "breaks": []
+    },
+    "tue": {
+        "enabled": false,
+        "start": "08:00",
+        "end": "20:00",
+        "breaks": [
+            "10:00 - 10:30"
+        ]
+    },
+    "wed": {
+        "enabled": false,
+        "start": "09:00",
+        "end": "17:00",
+        "breaks": []
+    },
+    "thu": {
+        "enabled": false,
+        "start": "09:00",
+        "end": "17:00",
+        "breaks": [
+            "12:00 - 2:00"
+        ]
+    },
+    "fri": {
+        "enabled": false,
+        "start": "09:00",
+        "end": "17:00",
+        "breaks": []
+    },
+    "sat": {
+        "enabled": false,
+        "start": "09:00",
+        "end": "17:00",
+        "breaks": []
+    },
+    "sun": {
+        "enabled": false,
+        "start": "09:00",
+        "end": "17:00",
+        "breaks": []
+    }
+}
