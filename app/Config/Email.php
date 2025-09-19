@@ -48,7 +48,7 @@ class Email extends BaseConfig
     /**
      * SMTP Timeout (in seconds)
      */
-    public int $SMTPTimeout = 5;
+    public int $SMTPTimeout = 60;
 
     /**
      * Enable persistent SMTP connections
@@ -63,6 +63,22 @@ class Email extends BaseConfig
      *             465 should set this to ''.
      */
     public string $SMTPCrypto = 'tls';
+
+    public function __construct()
+    {
+        parent::__construct();
+        
+        // Load from environment variables
+        $this->protocol = env('SMTP_PROTOCOL', 'smtp');
+        $this->SMTPHost = env('SMTP_HOST', '');
+        $this->SMTPUser = env('SMTP_USER', '');
+        $this->SMTPPass = env('SMTP_PASS', '');
+        $this->SMTPPort = (int) env('SMTP_PORT', 587);
+        $this->SMTPCrypto = env('SMTP_CRYPTO', 'tls');
+        $this->fromEmail = env('FROM_EMAIL', '');
+        $this->fromName = env('FROM_NAME', '');
+        $this->mailType = 'html'; // Set to HTML for better email formatting
+    }
 
     /**
      * Enable word-wrap

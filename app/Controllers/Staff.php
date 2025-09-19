@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Controllers\Auth;
+use App\Services\PatientRegistrationService;
 
 class Staff extends BaseController
 {
@@ -435,14 +436,46 @@ class Staff extends BaseController
         }
 
         $appointmentModel = new \App\Models\AppointmentModel();
+        $patientService = new \App\Services\PatientRegistrationService();
         
         // Get form data
         $appointmentType = $this->request->getPost('appointment_type') ?? 'scheduled';
         $dentistId = $this->request->getPost('doctor') ?: null;
         
+        // Handle patient creation for walk-ins or new patients
+        $patientId = $this->request->getPost('patient');
+        $patientName = $this->request->getPost('patient_name');
+        $patientEmail = $this->request->getPost('patient_email');
+        $patientPhone = $this->request->getPost('patient_phone');
+        
+        // If no existing patient selected but we have patient details, create new patient
+        if (empty($patientId) && !empty($patientName)) {
+            $patientData = [
+                'patient_name' => $patientName,
+                'patient_email' => $patientEmail,
+                'patient_phone' => $patientPhone
+            ];
+            
+            $source = $appointmentType === 'walkin' ? 'walkin' : 'staff_booking';
+            $patientResult = $patientService->getOrCreatePatient($patientData, $source);
+            
+            if (!$patientResult['success']) {
+                session()->setFlashdata('error', 'Failed to register patient: ' . $patientResult['message']);
+                return redirect()->back();
+            }
+            
+            $patientId = $patientResult['patient']['id'];
+            
+            // Show success message for new patient creation
+            if ($patientResult['created']) {
+                session()->setFlashdata('info', 'New patient registered: ' . $patientName . 
+                    ($patientEmail ? ' (Welcome email sent to: ' . $patientEmail . ')' : ''));
+            }
+        }
+        
         $data = [
             'branch_id' => $this->request->getPost('branch'),
-            'user_id' => $this->request->getPost('patient'),
+            'user_id' => $patientId,
             'dentist_id' => $dentistId,
             'appointment_date' => $this->request->getPost('date'),
             'appointment_time' => $this->request->getPost('time'),
@@ -452,7 +485,7 @@ class Staff extends BaseController
 
         // Validate required fields
         if (empty($data['user_id']) || empty($data['appointment_date']) || empty($data['appointment_time'])) {
-            session()->setFlashdata('error', 'Required fields missing');
+            session()->setFlashdata('error', 'Patient selection and appointment time are required');
             return redirect()->back();
         }
 

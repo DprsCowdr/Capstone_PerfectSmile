@@ -194,7 +194,16 @@ abstract class BaseAdminController extends BaseController
         $result = $this->userService->activatePatientAccount($id);
         
         if ($result && is_array($result)) {
-            $message = "Patient account activated successfully! Temporary password: " . $result['password'];
+            // Build success message based on email status
+            $message = "Patient account activated successfully!";
+            
+            if (isset($result['email_sent']) && $result['email_sent']) {
+                $message .= " An email with the temporary password has been sent to the patient's email address.";
+            } else {
+                $message .= " Temporary password: " . $result['password'];
+                $message .= " (Note: Email could not be sent. Please share this password with the patient manually.)";
+            }
+            
             return redirect()->to($redirectPath)->with('success', $message);
         }
         
