@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Sep 18, 2025 at 02:04 PM
+-- Generation Time: Sep 20, 2025 at 12:47 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -31,7 +31,10 @@ CREATE TABLE `appointments` (
   `id` int(11) NOT NULL,
   `branch_id` int(11) NOT NULL,
   `dentist_id` int(11) DEFAULT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL COMMENT 'User ID (NULL for guest bookings)',
+  `patient_email` varchar(255) DEFAULT NULL COMMENT 'Email for guest bookings',
+  `patient_phone` varchar(20) DEFAULT NULL COMMENT 'Phone for guest bookings',
+  `patient_name` varchar(255) DEFAULT NULL COMMENT 'Name for guest bookings',
   `appointment_datetime` datetime DEFAULT NULL,
   `status` varchar(50) DEFAULT NULL,
   `appointment_type` enum('scheduled','walkin') DEFAULT 'scheduled',
@@ -49,93 +52,103 @@ CREATE TABLE `appointments` (
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`id`, `branch_id`, `dentist_id`, `user_id`, `appointment_datetime`, `status`, `appointment_type`, `approval_status`, `decline_reason`, `remarks`, `created_at`, `updated_at`, `procedure_duration`, `time_taken`, `pending_change`) VALUES
-(87, 2, 18, 15, '2025-08-23 08:30:00', 'completed', 'scheduled', 'approved', NULL, 'ooooooooooo', '2025-08-22 19:22:46', '2025-08-23 00:51:02', NULL, NULL, 0),
-(88, 1, 16, 5, '2025-08-23 08:40:00', 'ongoing', 'scheduled', 'approved', NULL, 'kkkk', '2025-08-22 19:40:41', '2025-08-23 00:51:08', NULL, NULL, 0),
-(89, 1, 16, 22, '2025-08-23 09:00:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-08-22 19:52:42', '2025-08-22 19:52:42', NULL, NULL, 0),
-(92, 2, 18, 15, '2025-08-23 09:30:00', 'confirmed', 'scheduled', 'approved', NULL, '2\r\n18\r\n15\r\n2025-08-23 09:00:00\r\npending\r\nscheduled\r\npending\r\nNULL\r\nbook po ako\r\n2025-08-23 00:26:53\r\n2025-08-23 00:26:53\r\n', '2025-08-23 00:30:17', '2025-08-23 00:30:37', NULL, NULL, 0),
-(94, 1, 16, 5, '2025-08-24 15:40:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-24 07:40:28', '2025-08-24 12:56:55', NULL, NULL, 0),
-(95, 1, 16, 3, '2025-08-24 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-24 13:44:18', '2025-08-24 16:39:45', NULL, NULL, 0),
-(96, 1, 16, 15, '2025-08-25 17:55:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-08-24 19:37:29', '2025-08-24 19:37:33', NULL, NULL, 0),
-(97, 1, 16, 15, '2025-09-03 15:13:00', 'completed', 'scheduled', 'approved', NULL, 'k', '2025-09-03 07:13:56', '2025-09-03 07:34:34', NULL, NULL, 0),
-(98, 1, 16, 15, '2025-09-03 15:34:00', 'completed', 'scheduled', 'approved', NULL, 'k', '2025-09-03 07:34:58', '2025-09-03 20:46:53', NULL, NULL, 0),
-(99, 1, 16, 15, '2025-09-04 08:50:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-04 00:48:29', '2025-09-04 01:14:18', NULL, NULL, 0),
-(101, 1, 16, 15, '2025-09-05 08:40:00', 'completed', 'scheduled', 'approved', NULL, 'k\r\n\r\n', '2025-09-05 00:39:34', '2025-09-05 00:41:43', NULL, NULL, 0),
-(102, 1, 16, 15, '2025-09-05 08:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-05 00:47:56', '2025-09-05 10:10:49', NULL, NULL, 0),
-(103, 1, 16, 15, '2025-09-05 11:47:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-05 01:47:14', '2025-09-05 01:48:48', NULL, NULL, 0),
-(104, 2, 18, 15, '2025-09-05 10:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-05 02:04:20', '2025-09-05 13:47:38', NULL, NULL, 0),
-(105, 1, 16, 15, '2025-09-06 08:40:00', 'ongoing', 'scheduled', 'approved', NULL, '99\r\n', '2025-09-06 00:04:14', '2025-09-06 00:04:33', NULL, NULL, 0),
-(106, 1, 16, 15, '2025-09-07 08:08:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 00:21:47', '2025-09-07 16:44:32', NULL, NULL, 0),
-(107, 1, 16, 3, '2025-09-08 13:50:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 05:45:58', '2025-09-08 01:51:43', NULL, NULL, 0),
-(108, 2, 18, 15, '2025-09-07 13:50:00', 'completed', 'scheduled', 'approved', NULL, 'kkkkk', '2025-09-07 05:46:35', '2025-09-07 06:18:27', NULL, NULL, 0),
-(110, 1, 16, 15, '2025-09-07 15:03:00', 'completed', 'scheduled', 'approved', NULL, 'kkkkk\r\n\r\n', '2025-09-07 07:10:32', '2025-09-07 07:30:57', NULL, NULL, 0),
-(111, 2, 16, 15, '2025-09-07 15:36:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:35:39', '2025-09-07 07:36:25', NULL, NULL, 0),
-(112, 1, 16, 15, '2025-09-07 15:33:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:37:10', '2025-09-07 07:39:03', NULL, NULL, 0),
-(113, 1, 16, 15, '2025-09-07 15:44:00', 'completed', 'scheduled', 'approved', NULL, 'klklklkl', '2025-09-07 07:39:39', '2025-09-07 07:40:58', NULL, NULL, 0),
-(114, 1, 16, 15, '2025-09-07 16:04:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:41:19', '2025-09-07 07:50:38', NULL, NULL, 0),
-(115, 1, 16, 15, '2025-09-07 15:55:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:51:38', '2025-09-07 07:54:31', NULL, NULL, 0),
-(116, 1, 16, 15, '2025-09-07 15:55:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:54:53', '2025-09-07 08:06:43', NULL, NULL, 0),
-(117, 1, 16, 15, '2025-09-07 16:10:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:11:59', '2025-09-07 08:13:19', NULL, NULL, 0),
-(118, 1, 16, 15, '2025-09-07 16:16:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:12:22', '2025-09-07 08:13:59', NULL, NULL, 0),
-(119, 1, 16, 15, '2025-09-07 16:21:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:16:22', '2025-09-07 08:19:07', NULL, NULL, 0),
-(121, 1, 16, 15, '2025-09-07 16:23:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:24:02', '2025-09-07 08:24:35', NULL, NULL, 0),
-(122, 1, 16, 5, '2025-09-07 15:03:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:05:08', '2025-09-07 08:08:49', NULL, NULL, 0),
-(123, 1, 16, 5, '2025-09-07 16:44:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:17:09', '2025-09-07 08:33:18', NULL, NULL, 0),
-(124, 2, 18, 3, '2025-09-07 09:09:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 13:09:01', '2025-09-07 15:18:48', NULL, NULL, 0),
-(125, 1, 16, 15, '2025-09-07 09:09:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 13:11:10', '2025-09-07 15:18:48', NULL, NULL, 0),
-(126, 1, 16, 15, '2025-09-07 11:11:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 15:19:22', '2025-09-07 15:32:22', NULL, NULL, 0),
-(127, 1, 16, 15, '2025-09-07 11:32:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 15:32:49', '2025-09-07 20:58:14', NULL, NULL, 0),
-(128, 1, 10, 15, '2025-09-08 14:22:00', 'confirmed', 'scheduled', 'approved', NULL, 'Follow-up appointment from checkup on Sep 7, 2025 - sdfsddsfsddssdfsdfsdfdsfsdsdfsdfsdfdfssdfsd', '2025-09-07 20:58:14', '2025-09-07 20:58:20', NULL, NULL, 0),
-(129, 1, 16, 3, '2025-09-09 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-09 11:05:22', '2025-09-09 11:07:05', NULL, NULL, 0),
-(130, 1, 16, 3, '2025-09-09 17:00:00', 'completed', 'scheduled', 'approved', NULL, 'kkk', '2025-09-09 11:14:10', '2025-09-09 11:14:38', NULL, NULL, 0),
-(131, 1, 16, 15, '2025-09-09 17:00:00', 'completed', 'scheduled', 'approved', NULL, 'lklklkl', '2025-09-09 11:20:26', '2025-09-09 11:20:54', NULL, NULL, 0),
-(132, 1, 16, 15, '2025-09-10 08:08:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-09 17:17:39', '2025-09-10 13:37:03', NULL, NULL, 0),
-(133, 1, 16, 15, '2025-09-10 14:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 06:37:43', '2025-09-10 09:29:11', NULL, NULL, 0),
-(134, 1, 16, 15, '2025-09-10 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 09:31:17', '2025-09-10 09:32:15', NULL, NULL, 0),
-(135, 1, 16, 15, '2025-09-10 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 09:34:10', '2025-09-10 09:34:50', NULL, NULL, 0),
-(137, 1, 16, 15, '2025-09-10 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 09:35:50', '2025-09-10 09:36:19', NULL, NULL, 0),
-(138, 1, 16, 15, '2025-09-10 18:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 10:51:53', '2025-09-10 11:17:32', NULL, NULL, 0),
-(139, 1, 16, 15, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 11:22:47', '2025-09-10 11:23:06', NULL, NULL, 0),
-(140, 1, 16, 5, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, 'mmmm', '2025-09-10 11:37:50', '2025-09-10 11:42:32', NULL, NULL, 0),
-(141, 1, 16, 5, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 11:43:49', '2025-09-10 11:46:28', NULL, NULL, 0),
-(142, 1, 16, 5, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 11:59:04', '2025-09-10 11:59:32', NULL, NULL, 0),
-(143, 1, 16, 5, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 12:00:07', '2025-09-10 13:48:57', NULL, NULL, 0),
-(144, 1, 16, 3, '2025-09-10 20:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 13:53:30', '2025-09-10 13:54:25', NULL, NULL, 0),
-(145, 1, 16, 3, '2025-09-11 16:04:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 08:41:14', '2025-09-11 08:41:49', NULL, NULL, 0),
-(146, 1, 16, 15, '2025-09-11 16:51:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 08:51:32', '2025-09-11 08:51:46', NULL, NULL, 0),
-(147, 1, 16, 15, '2025-09-11 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 08:54:50', '2025-09-11 09:30:59', NULL, NULL, 0),
-(148, 1, 16, 15, '2025-09-11 18:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 10:03:32', '2025-09-11 10:05:07', NULL, NULL, 0),
-(149, 1, 16, 28, '2025-09-12 15:50:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-12 07:40:44', '2025-09-12 07:42:45', NULL, NULL, 0),
-(150, 2, 18, 28, '2025-09-12 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-12 08:53:58', '2025-09-12 08:54:30', NULL, NULL, 0),
-(151, 2, 30, 28, '2025-09-16 10:20:00', 'completed', 'scheduled', 'approved', NULL, 'test', '2025-09-16 02:21:23', '2025-09-16 02:53:39', NULL, NULL, 0),
-(153, 1, 30, 3, '2025-09-17 10:00:00', 'no_show', 'scheduled', 'approved', NULL, NULL, '2025-09-16 19:52:30', '2025-09-17 11:34:56', 30, NULL, 0),
-(154, 2, 30, 3, '2025-09-17 08:00:00', 'no_show', 'scheduled', 'approved', NULL, 'test', '2025-09-17 08:40:09', '2025-09-17 11:34:56', NULL, NULL, 0),
-(155, 2, 30, 28, '2025-09-17 08:20:00', 'no_show', 'scheduled', 'approved', NULL, 'test 2', '2025-09-17 08:40:52', '2025-09-17 11:34:56', NULL, NULL, 0),
-(156, 2, 30, 17, '2025-09-17 08:40:00', 'no_show', 'scheduled', 'approved', NULL, 'testing 3', '2025-09-17 08:46:07', '2025-09-17 11:34:56', NULL, NULL, 0),
-(162, 2, 30, 28, '2025-09-17 08:00:00', 'completed', 'scheduled', 'approved', NULL, 'test via patient side', '2025-09-17 09:06:42', '2025-09-17 11:35:44', NULL, NULL, 0),
-(164, 2, 30, 19, '2025-09-17 09:00:00', 'no_show', 'scheduled', 'approved', NULL, 'testing 4', '2025-09-17 09:58:34', '2025-09-17 11:34:56', NULL, NULL, 0),
-(169, 2, 30, 22, '2025-09-17 09:19:00', 'no_show', 'scheduled', 'approved', NULL, 'testing 5', '2025-09-17 10:42:21', '2025-09-17 11:34:56', NULL, NULL, 0),
-(170, 2, 30, 28, '2025-09-17 09:35:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient', '2025-09-17 10:43:29', '2025-09-17 11:34:56', NULL, NULL, 0),
-(171, 2, 30, 28, '2025-09-17 09:35:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient', '2025-09-17 10:43:30', '2025-09-17 11:34:56', NULL, NULL, 0),
-(178, 2, 30, 28, '2025-09-17 10:20:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient 2', '2025-09-17 10:53:38', '2025-09-17 11:34:56', NULL, NULL, 0),
-(179, 2, 30, 28, '2025-09-17 10:20:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient 2', '2025-09-17 10:53:38', '2025-09-17 11:34:56', NULL, NULL, 0),
-(183, 2, 30, 28, '2025-09-17 10:40:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient 6', '2025-09-17 11:05:18', '2025-09-17 11:34:56', NULL, NULL, 0),
-(184, 2, 30, 38, '2025-09-17 11:00:00', 'no_show', 'scheduled', 'approved', NULL, 'testing', '2025-09-17 11:18:04', '2025-09-17 11:34:56', NULL, NULL, 0),
-(186, 2, 30, 38, '2025-09-17 11:20:00', 'checked_in', 'scheduled', 'approved', NULL, 'test', '2025-09-17 11:28:16', '2025-09-17 11:50:35', NULL, NULL, 0),
-(187, 2, 30, 38, '2025-09-17 10:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'test', '2025-09-17 11:59:31', '2025-09-17 15:30:40', NULL, NULL, 0),
-(188, 2, 30, 28, '2025-09-17 12:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'test', '2025-09-17 15:02:28', '2025-09-17 15:30:29', NULL, NULL, 0),
-(189, 2, 30, 28, '2025-09-17 11:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-09-17 15:14:30', '2025-09-17 15:30:33', NULL, NULL, 0),
-(190, 2, 30, 28, '2025-09-17 11:00:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-09-17 15:25:17', '2025-09-17 15:30:36', NULL, NULL, 0),
-(209, 1, 30, 40, '2025-09-18 09:00:00', 'scheduled', 'scheduled', 'approved', NULL, NULL, '2025-09-18 09:43:53', NULL, 30, NULL, 0),
-(210, 1, 30, 41, '2025-09-18 09:00:00', 'ongoing', 'walkin', 'auto_approved', NULL, NULL, '2025-09-18 09:43:53', '2025-09-18 01:46:19', 30, NULL, 0),
-(211, 2, 30, 28, '2025-09-18 12:00:00', 'scheduled', 'scheduled', 'approved', NULL, 'test', '2025-09-18 01:45:13', '2025-09-18 04:00:37', NULL, NULL, 0),
-(212, 1, 30, 43, '2025-09-18 09:00:00', 'ongoing', 'walkin', 'auto_approved', NULL, NULL, '2025-09-18 09:52:07', '2025-09-18 03:00:48', 30, NULL, 0),
-(213, 1, 30, 44, '2025-09-18 09:20:00', 'scheduled', 'scheduled', 'approved', NULL, NULL, '2025-09-18 09:52:07', '2025-09-18 09:52:07', 30, NULL, 0),
-(214, 2, 30, 31, '2025-09-18 13:00:00', 'scheduled', 'scheduled', 'approved', NULL, 'test', '2025-09-18 03:24:02', '2025-09-18 04:01:35', NULL, NULL, 0),
-(215, 2, 30, 28, '2025-09-19 08:00:00', 'scheduled', 'scheduled', 'approved', NULL, '', '2025-09-18 06:20:08', '2025-09-18 07:22:19', NULL, NULL, 0),
-(216, 2, 30, 28, '2025-09-18 08:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'test', '2025-09-18 09:28:57', '2025-09-18 09:29:33', NULL, NULL, 0),
-(217, 2, 30, 28, '2025-09-18 08:30:00', 'pending_approval', 'scheduled', 'pending', NULL, 'test', '2025-09-18 11:20:51', '2025-09-18 11:20:51', NULL, NULL, 0),
-(218, 2, 30, 28, '2025-09-18 09:40:00', 'confirmed', 'scheduled', 'approved', NULL, '240+ 20 minutes = 260 + 540 = 800(1:30 pm)', '2025-09-18 11:58:28', '2025-09-18 11:59:28', NULL, NULL, 0);
+INSERT INTO `appointments` (`id`, `branch_id`, `dentist_id`, `user_id`, `patient_email`, `patient_phone`, `patient_name`, `appointment_datetime`, `status`, `appointment_type`, `approval_status`, `decline_reason`, `remarks`, `created_at`, `updated_at`, `procedure_duration`, `time_taken`, `pending_change`) VALUES
+(87, 2, 18, 15, NULL, NULL, NULL, '2025-08-23 08:30:00', 'completed', 'scheduled', 'approved', NULL, 'ooooooooooo', '2025-08-22 19:22:46', '2025-08-23 00:51:02', NULL, NULL, 0),
+(88, 1, 16, 5, NULL, NULL, NULL, '2025-08-23 08:40:00', 'ongoing', 'scheduled', 'approved', NULL, 'kkkk', '2025-08-22 19:40:41', '2025-08-23 00:51:08', NULL, NULL, 0),
+(89, 1, 16, 22, NULL, NULL, NULL, '2025-08-23 09:00:00', 'confirmed', 'walkin', 'auto_approved', NULL, '', '2025-08-22 19:52:42', '2025-08-22 19:52:42', NULL, NULL, 0),
+(92, 2, 18, 15, NULL, NULL, NULL, '2025-08-23 09:30:00', 'confirmed', 'scheduled', 'approved', NULL, '2\r\n18\r\n15\r\n2025-08-23 09:00:00\r\npending\r\nscheduled\r\npending\r\nNULL\r\nbook po ako\r\n2025-08-23 00:26:53\r\n2025-08-23 00:26:53\r\n', '2025-08-23 00:30:17', '2025-08-23 00:30:37', NULL, NULL, 0),
+(94, 1, 16, 5, NULL, NULL, NULL, '2025-08-24 15:40:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-24 07:40:28', '2025-08-24 12:56:55', NULL, NULL, 0),
+(95, 1, 16, 3, NULL, NULL, NULL, '2025-08-24 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-08-24 13:44:18', '2025-08-24 16:39:45', NULL, NULL, 0),
+(96, 1, 16, 15, NULL, NULL, NULL, '2025-08-25 17:55:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-08-24 19:37:29', '2025-08-24 19:37:33', NULL, NULL, 0),
+(97, 1, 16, 15, NULL, NULL, NULL, '2025-09-03 15:13:00', 'completed', 'scheduled', 'approved', NULL, 'k', '2025-09-03 07:13:56', '2025-09-03 07:34:34', NULL, NULL, 0),
+(98, 1, 16, 15, NULL, NULL, NULL, '2025-09-03 15:34:00', 'completed', 'scheduled', 'approved', NULL, 'k', '2025-09-03 07:34:58', '2025-09-03 20:46:53', NULL, NULL, 0),
+(99, 1, 16, 15, NULL, NULL, NULL, '2025-09-04 08:50:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-04 00:48:29', '2025-09-04 01:14:18', NULL, NULL, 0),
+(101, 1, 16, 15, NULL, NULL, NULL, '2025-09-05 08:40:00', 'completed', 'scheduled', 'approved', NULL, 'k\r\n\r\n', '2025-09-05 00:39:34', '2025-09-05 00:41:43', NULL, NULL, 0),
+(102, 1, 16, 15, NULL, NULL, NULL, '2025-09-05 08:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-05 00:47:56', '2025-09-05 10:10:49', NULL, NULL, 0),
+(103, 1, 16, 15, NULL, NULL, NULL, '2025-09-05 11:47:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-05 01:47:14', '2025-09-05 01:48:48', NULL, NULL, 0),
+(104, 2, 18, 15, NULL, NULL, NULL, '2025-09-05 10:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-05 02:04:20', '2025-09-05 13:47:38', NULL, NULL, 0),
+(105, 1, 16, 15, NULL, NULL, NULL, '2025-09-06 08:40:00', 'ongoing', 'scheduled', 'approved', NULL, '99\r\n', '2025-09-06 00:04:14', '2025-09-06 00:04:33', NULL, NULL, 0),
+(106, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 08:08:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 00:21:47', '2025-09-07 16:44:32', NULL, NULL, 0),
+(107, 1, 16, 3, NULL, NULL, NULL, '2025-09-08 13:50:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 05:45:58', '2025-09-08 01:51:43', NULL, NULL, 0),
+(108, 2, 18, 15, NULL, NULL, NULL, '2025-09-07 13:50:00', 'completed', 'scheduled', 'approved', NULL, 'kkkkk', '2025-09-07 05:46:35', '2025-09-07 06:18:27', NULL, NULL, 0),
+(110, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 15:03:00', 'completed', 'scheduled', 'approved', NULL, 'kkkkk\r\n\r\n', '2025-09-07 07:10:32', '2025-09-07 07:30:57', NULL, NULL, 0),
+(111, 2, 16, 15, NULL, NULL, NULL, '2025-09-07 15:36:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:35:39', '2025-09-07 07:36:25', NULL, NULL, 0),
+(112, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 15:33:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:37:10', '2025-09-07 07:39:03', NULL, NULL, 0),
+(113, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 15:44:00', 'completed', 'scheduled', 'approved', NULL, 'klklklkl', '2025-09-07 07:39:39', '2025-09-07 07:40:58', NULL, NULL, 0),
+(114, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 16:04:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:41:19', '2025-09-07 07:50:38', NULL, NULL, 0),
+(115, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 15:55:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:51:38', '2025-09-07 07:54:31', NULL, NULL, 0),
+(116, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 15:55:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:54:53', '2025-09-07 08:06:43', NULL, NULL, 0),
+(117, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 16:10:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:11:59', '2025-09-07 08:13:19', NULL, NULL, 0),
+(118, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 16:16:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:12:22', '2025-09-07 08:13:59', NULL, NULL, 0),
+(119, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 16:21:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:16:22', '2025-09-07 08:19:07', NULL, NULL, 0),
+(121, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 16:23:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:24:02', '2025-09-07 08:24:35', NULL, NULL, 0),
+(122, 1, 16, 5, NULL, NULL, NULL, '2025-09-07 15:03:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 07:05:08', '2025-09-07 08:08:49', NULL, NULL, 0),
+(123, 1, 16, 5, NULL, NULL, NULL, '2025-09-07 16:44:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 08:17:09', '2025-09-07 08:33:18', NULL, NULL, 0),
+(124, 2, 18, 3, NULL, NULL, NULL, '2025-09-07 09:09:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 13:09:01', '2025-09-07 15:18:48', NULL, NULL, 0),
+(125, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 09:09:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 13:11:10', '2025-09-07 15:18:48', NULL, NULL, 0),
+(126, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 11:11:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 15:19:22', '2025-09-07 15:32:22', NULL, NULL, 0),
+(127, 1, 16, 15, NULL, NULL, NULL, '2025-09-07 11:32:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-07 15:32:49', '2025-09-07 20:58:14', NULL, NULL, 0),
+(128, 1, 10, 15, NULL, NULL, NULL, '2025-09-08 14:22:00', 'confirmed', 'scheduled', 'approved', NULL, 'Follow-up appointment from checkup on Sep 7, 2025 - sdfsddsfsddssdfsdfsdfdsfsdsdfsdfsdfdfssdfsd', '2025-09-07 20:58:14', '2025-09-07 20:58:20', NULL, NULL, 0),
+(129, 1, 16, 3, NULL, NULL, NULL, '2025-09-09 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-09 11:05:22', '2025-09-09 11:07:05', NULL, NULL, 0),
+(130, 1, 16, 3, NULL, NULL, NULL, '2025-09-09 17:00:00', 'completed', 'scheduled', 'approved', NULL, 'kkk', '2025-09-09 11:14:10', '2025-09-09 11:14:38', NULL, NULL, 0),
+(131, 1, 16, 15, NULL, NULL, NULL, '2025-09-09 17:00:00', 'completed', 'scheduled', 'approved', NULL, 'lklklkl', '2025-09-09 11:20:26', '2025-09-09 11:20:54', NULL, NULL, 0),
+(132, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 08:08:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-09 17:17:39', '2025-09-10 13:37:03', NULL, NULL, 0),
+(133, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 14:30:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 06:37:43', '2025-09-10 09:29:11', NULL, NULL, 0),
+(134, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 09:31:17', '2025-09-10 09:32:15', NULL, NULL, 0),
+(135, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 09:34:10', '2025-09-10 09:34:50', NULL, NULL, 0),
+(137, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 09:35:50', '2025-09-10 09:36:19', NULL, NULL, 0),
+(138, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 18:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 10:51:53', '2025-09-10 11:17:32', NULL, NULL, 0),
+(139, 1, 16, 15, NULL, NULL, NULL, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 11:22:47', '2025-09-10 11:23:06', NULL, NULL, 0),
+(140, 1, 16, 5, NULL, NULL, NULL, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, 'mmmm', '2025-09-10 11:37:50', '2025-09-10 11:42:32', NULL, NULL, 0),
+(141, 1, 16, 5, NULL, NULL, NULL, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 11:43:49', '2025-09-10 11:46:28', NULL, NULL, 0),
+(142, 1, 16, 5, NULL, NULL, NULL, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 11:59:04', '2025-09-10 11:59:32', NULL, NULL, 0),
+(143, 1, 16, 5, NULL, NULL, NULL, '2025-09-10 19:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 12:00:07', '2025-09-10 13:48:57', NULL, NULL, 0),
+(144, 1, 16, 3, NULL, NULL, NULL, '2025-09-10 20:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-10 13:53:30', '2025-09-10 13:54:25', NULL, NULL, 0),
+(145, 1, 16, 3, NULL, NULL, NULL, '2025-09-11 16:04:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 08:41:14', '2025-09-11 08:41:49', NULL, NULL, 0),
+(146, 1, 16, 15, NULL, NULL, NULL, '2025-09-11 16:51:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 08:51:32', '2025-09-11 08:51:46', NULL, NULL, 0),
+(147, 1, 16, 15, NULL, NULL, NULL, '2025-09-11 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 08:54:50', '2025-09-11 09:30:59', NULL, NULL, 0),
+(148, 1, 16, 15, NULL, NULL, NULL, '2025-09-11 18:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-11 10:03:32', '2025-09-11 10:05:07', NULL, NULL, 0),
+(149, 1, 16, 28, NULL, NULL, NULL, '2025-09-12 15:50:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-12 07:40:44', '2025-09-12 07:42:45', NULL, NULL, 0),
+(150, 2, 18, 28, NULL, NULL, NULL, '2025-09-12 17:00:00', 'completed', 'scheduled', 'approved', NULL, '', '2025-09-12 08:53:58', '2025-09-12 08:54:30', NULL, NULL, 0),
+(151, 2, 30, 28, NULL, NULL, NULL, '2025-09-16 10:20:00', 'completed', 'scheduled', 'approved', NULL, 'test', '2025-09-16 02:21:23', '2025-09-16 02:53:39', NULL, NULL, 0),
+(153, 1, 30, 3, NULL, NULL, NULL, '2025-09-17 10:00:00', 'no_show', 'scheduled', 'approved', NULL, NULL, '2025-09-16 19:52:30', '2025-09-17 11:34:56', 30, NULL, 0),
+(154, 2, 30, 3, NULL, NULL, NULL, '2025-09-17 08:00:00', 'no_show', 'scheduled', 'approved', NULL, 'test', '2025-09-17 08:40:09', '2025-09-17 11:34:56', NULL, NULL, 0),
+(155, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 08:20:00', 'no_show', 'scheduled', 'approved', NULL, 'test 2', '2025-09-17 08:40:52', '2025-09-17 11:34:56', NULL, NULL, 0),
+(156, 2, 30, 17, NULL, NULL, NULL, '2025-09-17 08:40:00', 'no_show', 'scheduled', 'approved', NULL, 'testing 3', '2025-09-17 08:46:07', '2025-09-17 11:34:56', NULL, NULL, 0),
+(162, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 08:00:00', 'completed', 'scheduled', 'approved', NULL, 'test via patient side', '2025-09-17 09:06:42', '2025-09-17 11:35:44', NULL, NULL, 0),
+(164, 2, 30, 19, NULL, NULL, NULL, '2025-09-17 09:00:00', 'no_show', 'scheduled', 'approved', NULL, 'testing 4', '2025-09-17 09:58:34', '2025-09-17 11:34:56', NULL, NULL, 0),
+(169, 2, 30, 22, NULL, NULL, NULL, '2025-09-17 09:19:00', 'no_show', 'scheduled', 'approved', NULL, 'testing 5', '2025-09-17 10:42:21', '2025-09-17 11:34:56', NULL, NULL, 0),
+(170, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 09:35:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient', '2025-09-17 10:43:29', '2025-09-17 11:34:56', NULL, NULL, 0),
+(171, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 09:35:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient', '2025-09-17 10:43:30', '2025-09-17 11:34:56', NULL, NULL, 0),
+(178, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 10:20:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient 2', '2025-09-17 10:53:38', '2025-09-17 11:34:56', NULL, NULL, 0),
+(179, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 10:20:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient 2', '2025-09-17 10:53:38', '2025-09-17 11:34:56', NULL, NULL, 0),
+(183, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 10:40:00', 'no_show', 'scheduled', 'approved', NULL, 'testing via patient 6', '2025-09-17 11:05:18', '2025-09-17 11:34:56', NULL, NULL, 0),
+(184, 2, 30, 38, NULL, NULL, NULL, '2025-09-17 11:00:00', 'no_show', 'scheduled', 'approved', NULL, 'testing', '2025-09-17 11:18:04', '2025-09-17 11:34:56', NULL, NULL, 0),
+(186, 2, 30, 38, NULL, NULL, NULL, '2025-09-17 11:20:00', 'checked_in', 'scheduled', 'approved', NULL, 'test', '2025-09-17 11:28:16', '2025-09-17 11:50:35', NULL, NULL, 0),
+(187, 2, 30, 38, NULL, NULL, NULL, '2025-09-17 10:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'test', '2025-09-17 11:59:31', '2025-09-17 15:30:40', NULL, NULL, 0),
+(188, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 12:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'test', '2025-09-17 15:02:28', '2025-09-17 15:30:29', NULL, NULL, 0),
+(189, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 11:30:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-09-17 15:14:30', '2025-09-17 15:30:33', NULL, NULL, 0),
+(190, 2, 30, 28, NULL, NULL, NULL, '2025-09-17 11:00:00', 'confirmed', 'scheduled', 'approved', NULL, '', '2025-09-17 15:25:17', '2025-09-17 15:30:36', NULL, NULL, 0),
+(209, 1, 30, 40, NULL, NULL, NULL, '2025-09-18 09:00:00', 'scheduled', 'scheduled', 'approved', NULL, NULL, '2025-09-18 09:43:53', NULL, 30, NULL, 0),
+(210, 1, 30, 41, NULL, NULL, NULL, '2025-09-18 09:00:00', 'ongoing', 'walkin', 'auto_approved', NULL, NULL, '2025-09-18 09:43:53', '2025-09-18 01:46:19', 30, NULL, 0),
+(212, 1, 30, 43, NULL, NULL, NULL, '2025-09-18 09:00:00', 'ongoing', 'walkin', 'auto_approved', NULL, NULL, '2025-09-18 09:52:07', '2025-09-18 03:00:48', 30, NULL, 0),
+(213, 1, 30, 44, NULL, NULL, NULL, '2025-09-18 09:20:00', 'scheduled', 'scheduled', 'approved', NULL, NULL, '2025-09-18 09:52:07', '2025-09-18 09:52:07', 30, NULL, 0),
+(214, 2, 30, 31, NULL, NULL, NULL, '2025-09-18 13:00:00', 'scheduled', 'scheduled', 'approved', NULL, 'test', '2025-09-18 03:24:02', '2025-09-18 04:01:35', NULL, NULL, 0),
+(232, 2, 30, 28, NULL, NULL, NULL, '2025-09-18 08:00:00', 'cancelled', 'scheduled', 'declined', 's', 'dddd', '2025-09-18 15:21:25', '2025-09-19 06:48:19', 15, NULL, 0),
+(233, 2, 30, 28, NULL, NULL, NULL, '2025-09-18 08:30:00', 'cancelled', 'scheduled', 'declined', 's', '', '2025-09-18 15:45:44', '2025-09-19 06:48:23', 15, NULL, 0),
+(234, 2, 30, 28, NULL, NULL, NULL, '2025-09-19 08:00:00', 'cancelled', 'scheduled', 'declined', 's', 'dddd', '2025-09-18 16:12:29', '2025-09-19 06:48:26', 15, NULL, 0),
+(235, 2, 30, 28, NULL, NULL, NULL, '2025-09-19 08:30:00', 'cancelled', 'scheduled', 'declined', 's', 'xxx', '2025-09-18 16:13:26', '2025-09-19 06:48:29', 240, NULL, 0),
+(236, 2, 30, 28, NULL, NULL, NULL, '2025-09-19 09:00:00', 'cancelled', 'scheduled', 'declined', 's', '', '2025-09-18 16:24:17', '2025-09-19 06:48:32', 240, NULL, 0),
+(239, 2, 30, 28, NULL, NULL, NULL, '2025-09-20 10:50:00', 'cancelled', 'scheduled', 'declined', 's', 'ssss', '2025-09-19 06:33:06', '2025-09-19 06:48:13', 180, NULL, 0),
+(240, 2, 30, 28, NULL, NULL, NULL, '2025-09-20 09:00:00', 'cancelled', 'scheduled', 'declined', 's', 'dd', '2025-09-19 06:45:42', '2025-09-19 06:48:35', 15, NULL, 0),
+(241, 1, 30, 3, NULL, NULL, NULL, '2025-09-26 09:00:00', 'confirmed', 'scheduled', 'approved', NULL, NULL, '2025-09-19 17:48:08', NULL, 120, NULL, 0),
+(242, 2, 30, 38, NULL, NULL, NULL, '2025-09-19 13:00:00', 'cancelled', 'scheduled', 'declined', 's', 'dddd', '2025-09-19 11:18:54', '2025-09-19 13:44:24', 240, NULL, 0),
+(243, 2, NULL, 38, NULL, NULL, NULL, '2025-09-21 09:00:00', 'cancelled', 'scheduled', 'declined', 's', 'testy', '2025-09-19 13:43:16', '2025-09-19 13:44:20', 15, NULL, 0),
+(244, 2, 30, 28, NULL, NULL, NULL, '2025-09-21 09:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'sss', '2025-09-19 13:45:26', '2025-09-19 13:45:49', 180, NULL, 0),
+(245, 2, 30, 28, NULL, NULL, NULL, '2025-09-20 08:00:00', 'confirmed', 'scheduled', 'approved', NULL, 'ggg', '2025-09-19 16:07:42', '2025-09-19 16:09:17', 15, NULL, 0),
+(252, 2, 30, 35, NULL, NULL, NULL, '2025-09-20 08:35:00', 'confirmed', 'scheduled', 'approved', NULL, 'ggggg', '2025-09-19 16:37:39', '2025-09-19 16:38:09', 180, NULL, 0),
+(263, 2, 30, 15, NULL, NULL, NULL, '2025-09-20 11:55:00', 'confirmed', 'scheduled', 'approved', NULL, 'gegegeege', '2025-09-19 17:08:03', '2025-09-19 17:08:19', 180, NULL, 0),
+(269, 2, 30, 15, NULL, NULL, NULL, '2025-09-22 08:00:00', 'pending_approval', 'scheduled', 'pending', NULL, 'fff', '2025-09-19 22:38:27', '2025-09-19 22:38:27', 15, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -172,7 +185,21 @@ INSERT INTO `appointment_service` (`id`, `service_id`, `tooth_number`, `surface`
 (25, 6, '3', NULL, NULL, 119),
 (26, 1, '8', NULL, NULL, 121),
 (27, 1, '32', NULL, 'Service added for tooth #32 (FDI: 48)', 122),
-(28, 1, NULL, NULL, NULL, 162);
+(38, 1, NULL, NULL, NULL, 232),
+(39, 1, NULL, NULL, NULL, 233),
+(40, 1, NULL, NULL, NULL, 234),
+(41, 2, NULL, NULL, NULL, 235),
+(42, 2, NULL, NULL, NULL, 236),
+(44, 4, NULL, NULL, NULL, 239),
+(45, 1, NULL, NULL, NULL, 240),
+(46, 2, NULL, NULL, NULL, 241),
+(47, 2, NULL, NULL, NULL, 242),
+(48, 1, NULL, NULL, NULL, 243),
+(49, 4, NULL, NULL, NULL, 244),
+(50, 1, NULL, NULL, NULL, 245),
+(51, 4, NULL, NULL, NULL, 252),
+(52, 4, NULL, NULL, NULL, 263),
+(53, 1, NULL, NULL, NULL, 269);
 
 -- --------------------------------------------------------
 
@@ -227,7 +254,6 @@ CREATE TABLE `availability` (
 
 INSERT INTO `availability` (`id`, `user_id`, `type`, `day_of_week`, `start_time`, `end_time`, `start_datetime`, `end_datetime`, `is_recurring`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
 (24, 30, 'urgent', NULL, '13:00:00', '15:00:00', '2025-09-18 13:00:00', '2025-09-18 15:00:00', 0, 'testing', 30, '2025-09-17 03:47:27', '2025-09-17 07:36:41'),
-(25, 30, 'sick_leave', NULL, '08:00:00', '20:00:00', '2025-09-18 08:00:00', '2025-09-19 20:00:00', 0, 'may lagnat si doc', 30, '2025-09-17 06:08:27', '2025-09-17 07:36:36'),
 (27, 30, 'kumakain kayo', NULL, '16:30:00', '20:00:00', '2025-09-17 16:30:00', '2025-09-17 20:00:00', 0, 'pwde pumunta pero maghintay muna kupal', 30, '2025-09-17 06:48:59', '2025-09-17 07:36:33'),
 (28, 30, 'testing kung may start and end time', 'Wednesday', '14:28:00', '17:30:00', '2025-09-17 14:28:00', '2025-09-17 17:30:00', 0, 'tumisting ka', 30, '2025-09-17 07:29:01', '2025-09-17 07:42:56'),
 (29, 30, 'testing part 2', 'Wednesday', '16:32:00', '17:33:00', '2025-09-17 16:32:00', '2025-09-17 17:33:00', 0, 'testing', 30, '2025-09-17 07:33:18', '2025-09-17 07:42:29');
@@ -256,8 +282,9 @@ CREATE TABLE `branches` (
 --
 
 INSERT INTO `branches` (`id`, `name`, `address`, `contact_number`, `email`, `status`, `created_at`, `updated_at`, `deleted_at`, `operating_hours`) VALUES
-(1, 'Perfect Smile - Nabua Branch', 'Nabua,Camarines Sur', '+1 (555) 123-4567', NULL, 'active', NULL, NULL, NULL, NULL),
-(2, 'Perfect Smile - Iriga Branch', 'Iriga City,Camarines Sur', '+1 (555) 234-5678', '', 'active', NULL, '2025-09-16 01:28:06', NULL, '{\"monday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"},\"tuesday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"},\"wednesday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"},\"thursday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"},\"friday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"},\"saturday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"},\"sunday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"21:00\"}}');
+(1, 'Perfect Smile - Nabua Branch', 'Nabua,Camarines Sur', '+1 (555) 123-4567', NULL, 'active', NULL, NULL, NULL, '{\"monday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"tuesday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"wednesday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"thursday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"friday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"saturday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"sunday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"}}'),
+(2, 'Perfect Smile - Iriga Branch', 'Iriga City,Camarines Sur', '+1 (555) 234-5678', '', 'active', NULL, '2025-09-18 14:49:30', NULL, '{\"monday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"tuesday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"wednesday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"thursday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"friday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"saturday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"},\"sunday\":{\"enabled\":true,\"open\":\"08:00\",\"close\":\"20:00\"}}'),
+(5, 'Test OH Branch', 'Test Address', '123-456-7890', 'test@example.com', 'active', '2025-09-19 18:04:49', '2025-09-19 18:04:49', NULL, '{\"saturday\":{\"enabled\":true,\"open\":\"09:00\",\"close\":\"17:00\"}}');
 
 -- --------------------------------------------------------
 
@@ -308,7 +335,25 @@ INSERT INTO `branch_notifications` (`id`, `branch_id`, `appointment_id`, `payloa
 (25, 2, 215, '{\"type\":\"appointment_approved\",\"appointment_id\":215,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 14:00 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana\"}', 0, NULL, '2025-09-18 06:20:30', '2025-09-18 06:20:30'),
 (26, 2, 215, '{\"type\":\"reschedule\",\"appointment_id\":215,\"old_time\":\"2025-09-18 14:00:00\",\"new_time\":\"2025-09-19 08:00:00\",\"actor\":\"Admin User\"}', 0, NULL, '2025-09-18 07:22:19', '2025-09-18 07:22:19'),
 (27, 2, 216, '{\"type\":\"appointment_approved\",\"appointment_id\":216,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 08:00 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana\"}', 0, NULL, '2025-09-18 09:29:33', '2025-09-18 09:29:33'),
-(28, 2, 218, '{\"type\":\"appointment_approved\",\"appointment_id\":218,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 09:40 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana\"}', 0, NULL, '2025-09-18 11:59:28', '2025-09-18 11:59:28');
+(28, 2, 218, '{\"type\":\"appointment_approved\",\"appointment_id\":218,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 09:40 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana\"}', 0, NULL, '2025-09-18 11:59:28', '2025-09-18 11:59:28'),
+(29, 2, 217, '{\"type\":\"appointment_declined\",\"appointment_id\":217,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 08:30 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana Reason: d\"}', 0, NULL, '2025-09-18 12:57:34', '2025-09-18 12:57:34'),
+(30, 2, 219, '{\"type\":\"appointment_declined\",\"appointment_id\":219,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 10:00 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana Reason: d\"}', 0, NULL, '2025-09-18 12:57:38', '2025-09-18 12:57:38'),
+(31, 2, 220, '{\"type\":\"appointment_declined\",\"appointment_id\":220,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 10:30 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana Reason: d\"}', 0, NULL, '2025-09-18 12:57:44', '2025-09-18 12:57:44'),
+(32, 2, 221, '{\"type\":\"appointment_declined\",\"appointment_id\":221,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 08:30 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana Reason: d\"}', 0, NULL, '2025-09-18 13:30:45', '2025-09-18 13:30:45'),
+(33, 2, 222, '{\"type\":\"appointment_declined\",\"appointment_id\":222,\"patient_id\":28,\"message\":\"You\'re all set! on September 18, 2025 at 13:00 \\u2014 we allow a 15-minute grace period. pag dika dumating ngayong out kana Reason: d\"}', 0, NULL, '2025-09-18 13:30:49', '2025-09-18 13:30:49'),
+(34, 2, 239, '{\"type\":\"appointment_declined\",\"appointment_id\":239,\"patient_id\":28,\"message\":\"You\'re all set! September 20, 2025 at 10:50 AM \\u2014 2:05 PM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:13', '2025-09-19 06:48:13'),
+(35, 2, 232, '{\"type\":\"appointment_declined\",\"appointment_id\":232,\"patient_id\":28,\"message\":\"You\'re all set! September 18, 2025 at 8:00 AM \\u2014 8:30 AM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:19', '2025-09-19 06:48:19'),
+(36, 2, 233, '{\"type\":\"appointment_declined\",\"appointment_id\":233,\"patient_id\":28,\"message\":\"You\'re all set! September 18, 2025 at 8:30 AM \\u2014 9:00 AM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:23', '2025-09-19 06:48:23'),
+(37, 2, 234, '{\"type\":\"appointment_declined\",\"appointment_id\":234,\"patient_id\":28,\"message\":\"You\'re all set! September 19, 2025 at 8:00 AM \\u2014 8:30 AM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:26', '2025-09-19 06:48:26'),
+(38, 2, 235, '{\"type\":\"appointment_declined\",\"appointment_id\":235,\"patient_id\":28,\"message\":\"You\'re all set! September 19, 2025 at 8:30 AM \\u2014 12:45 PM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:29', '2025-09-19 06:48:29'),
+(39, 2, 236, '{\"type\":\"appointment_declined\",\"appointment_id\":236,\"patient_id\":28,\"message\":\"You\'re all set! September 19, 2025 at 9:00 AM \\u2014 1:15 PM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:32', '2025-09-19 06:48:32'),
+(40, 2, 240, '{\"type\":\"appointment_declined\",\"appointment_id\":240,\"patient_id\":28,\"message\":\"You\'re all set! September 20, 2025 at 9:00 AM \\u2014 9:30 AM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 06:48:35', '2025-09-19 06:48:35'),
+(41, 2, 243, '{\"type\":\"appointment_declined\",\"appointment_id\":243,\"patient_id\":38,\"message\":\"You\'re all set! September 21, 2025 at 9:00 AM \\u2014 9:30 AM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 13:44:21', '2025-09-19 13:44:21'),
+(42, 2, 242, '{\"type\":\"appointment_declined\",\"appointment_id\":242,\"patient_id\":38,\"message\":\"You\'re all set! September 19, 2025 at 1:00 PM \\u2014 5:15 PM \\u2014 we allow a 15-minute grace period.  Reason: s\"}', 0, NULL, '2025-09-19 13:44:24', '2025-09-19 13:44:24'),
+(43, 2, 244, '{\"type\":\"appointment_approved\",\"appointment_id\":244,\"patient_id\":28,\"message\":\"You\'re all set! September 21, 2025 at 9:00 AM \\u2014 12:15 PM \\u2014 we allow a 15-minute grace period. \"}', 0, NULL, '2025-09-19 13:45:49', '2025-09-19 13:45:49'),
+(44, 2, 245, '{\"type\":\"appointment_approved\",\"appointment_id\":245,\"patient_id\":28,\"message\":\"You\'re all set! September 20, 2025 at 8:00 AM \\u2014 8:30 AM \\u2014 we allow a 15-minute grace period. \"}', 0, NULL, '2025-09-19 16:09:17', '2025-09-19 16:09:17'),
+(45, 2, 252, '{\"type\":\"appointment_approved\",\"appointment_id\":252,\"patient_id\":35,\"message\":\"You\'re all set! September 20, 2025 at 8:35 AM \\u2014 11:50 AM \\u2014 we allow a 15-minute grace period. \"}', 0, NULL, '2025-09-19 16:38:09', '2025-09-19 16:38:09'),
+(46, 2, 263, '{\"type\":\"appointment_approved\",\"appointment_id\":263,\"patient_id\":15,\"message\":\"You\'re all set! September 20, 2025 at 11:55 AM \\u2014 3:10 PM \\u2014 we allow a 15-minute grace period. \"}', 0, NULL, '2025-09-19 17:08:19', '2025-09-19 17:08:19');
 
 -- --------------------------------------------------------
 
@@ -506,6 +551,24 @@ INSERT INTO `invoices` (`id`, `user_id`, `service_id`, `dental_chart_id`, `appoi
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `invoice_items`
+--
+
+CREATE TABLE `invoice_items` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `invoice_id` int(11) UNSIGNED NOT NULL,
+  `procedure_id` int(11) UNSIGNED DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 1,
+  `unit_price` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `total` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `migrations`
 --
 
@@ -542,7 +605,11 @@ INSERT INTO `migrations` (`id`, `version`, `class`, `group`, `namespace`, `time`
 (16, '2025-08-17-070200', 'App\\Database\\Migrations\\CreatePaymentsTable', 'default', 'App', 1755414334, 13),
 (17, '2025-08-17-070300', 'App\\Database\\Migrations\\MigrateAppointmentDataToNewTables', 'default', 'App', 1755414334, 13),
 (18, '2025-08-17-070400', 'App\\Database\\Migrations\\CleanupAppointmentsTable', 'default', 'App', 1755414335, 13),
-(19, '2025-01-15-000000', 'App\\Database\\Migrations\\EnhanceProceduresTable', 'default', 'App', 1755719537, 14);
+(19, '2025-01-15-000000', 'App\\Database\\Migrations\\EnhanceProceduresTable', 'default', 'App', 1755719537, 14),
+(20, '2025_09_10_000001', 'App\\Database\\Migrations\\CreateInvoiceItemsTable', 'default', 'App', 1758199649, 15),
+(21, '20250911000100', 'App\\Database\\Migrations\\CreateRoles', 'default', 'App', 1758199649, 15),
+(22, '20250911000200', 'App\\Database\\Migrations\\CreatePermissions', 'default', 'App', 1758199649, 15),
+(23, '20250911000300', 'App\\Database\\Migrations\\CreateUserRoles', 'default', 'App', 1758199649, 15);
 
 -- --------------------------------------------------------
 
@@ -639,8 +706,7 @@ INSERT INTO `patient_checkins` (`id`, `appointment_id`, `checked_in_at`, `checke
 (58, 162, '2025-09-17 11:34:50', 1, 0, 'staff', 'Patient checked in via admin interface', '2025-09-17 11:34:50', '2025-09-17 11:34:50', NULL, NULL, NULL),
 (59, 186, '2025-09-17 11:50:35', 29, 0, 'staff', 'Patient checked in via admin interface', '2025-09-17 11:50:35', '2025-09-17 11:50:35', NULL, NULL, NULL),
 (65, 210, '2025-09-18 08:55:00', NULL, 0, 'staff', NULL, '2025-09-18 09:43:53', NULL, NULL, NULL, NULL),
-(66, 212, '2025-09-18 08:55:00', NULL, 0, 'staff', NULL, '2025-09-18 09:52:07', NULL, NULL, NULL, NULL),
-(69, 215, '2025-09-18 06:20:41', 1, 0, 'staff', 'Patient checked in via admin interface', '2025-09-18 06:20:41', '2025-09-18 06:20:41', '2025-09-18 07:22:19', 1, 'rescheduled by staff');
+(66, 212, '2025-09-18 08:55:00', NULL, 0, 'staff', NULL, '2025-09-18 09:52:07', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -727,6 +793,20 @@ CREATE TABLE `payments` (
   `discount_reason` varchar(255) DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `permissions`
+--
+
+CREATE TABLE `permissions` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `role_id` int(10) UNSIGNED NOT NULL,
+  `module` varchar(150) NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `created_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -819,6 +899,20 @@ CREATE TABLE `procedure_service` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `services`
 --
 
@@ -838,14 +932,14 @@ CREATE TABLE `services` (
 --
 
 INSERT INTO `services` (`id`, `name`, `description`, `price`, `duration_minutes`, `created_at`, `updated_at`, `duration_max_minutes`) VALUES
-(1, 'Dental Checkup', 'Comprehensive dental examination and cleanings', 75.00, NULL, '2025-09-05 09:58:03', '2025-09-18 00:41:37', NULL),
+(1, 'Dental Checkup', 'Comprehensive dental examination and cleanings', 75.00, 15, '2025-09-05 09:58:03', '2025-09-18 06:18:32', NULL),
 (2, 'Teeth Whitening', 'Professional teeth whitening treatment', 150.00, 120, '2025-09-05 09:58:03', '2025-09-18 00:57:25', 240),
 (3, 'Cavity Filling', 'Dental filling for cavities', 120.00, NULL, '2025-09-05 09:58:03', '2025-09-05 09:58:03', NULL),
-(4, 'Root Canal', 'Root canal treatment', 800.00, NULL, '2025-09-05 09:58:03', '2025-09-05 09:58:03', NULL),
-(5, 'Dental Crown', 'Dental crown placement', 600.00, NULL, '2025-09-05 09:58:03', '2025-09-05 09:58:03', NULL),
+(4, 'Orthodontic Treatment (Braces)', 'Orthodontic treatment using brackets/wires to align teeth.', 50000.00, 120, '2025-09-05 09:58:03', '2025-09-18 17:56:33', 180),
+(5, 'Cleaning Max', 'Professional deep cleaning of teeth and gums.', 2500.00, 30, '2025-09-05 09:58:03', '2025-09-18 17:55:23', NULL),
 (6, 'Tooth Extraction', 'Simple tooth extraction', 200.00, NULL, '2025-09-05 09:58:03', '2025-09-05 09:58:03', NULL),
-(7, 'fdfsdsfdfs', 'dsfdfssdf', 1111.00, NULL, '2025-09-06 16:29:23', '2025-09-06 16:29:23', NULL),
-(8, 'don', 'don', 500.00, NULL, '2025-09-11 23:28:07', '2025-09-11 23:28:07', NULL);
+(7, 'Surgery Impacted', 'Surgical removal of an impacted tooth, often a wisdom tooth.', 1000.00, 120, '2025-09-06 16:29:23', '2025-09-18 17:56:12', NULL),
+(8, 'Dental Filling(Pasta)', 'Repair tooth decay or damage using filling material.', 1000.00, 30, '2025-09-11 23:28:07', '2025-09-18 17:54:13', NULL);
 
 -- --------------------------------------------------------
 
@@ -983,6 +1077,19 @@ INSERT INTO `user` (`id`, `user_type`, `name`, `address`, `email`, `gender`, `pa
 (43, 'patient', 'Walkin A', NULL, 'walkin_a@example.local', NULL, '$2y$10$iubYqLjSg4R.sxboFABmGuqI9t2VKSxqN/5.4FGJTcRZMsRdDaqsC', NULL, '2025-09-18 03:52:06', NULL, NULL, NULL, NULL, NULL, 'active'),
 (44, 'patient', 'Online B', NULL, 'online_b@example.local', NULL, '$2y$10$uUQnCDisTv/utmPSD/HWh.c7Rjqwl3dyzjWC1z30KwZvb7OzROlQq', NULL, '2025-09-18 03:52:06', NULL, NULL, NULL, NULL, NULL, 'active');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_roles`
+--
+
+CREATE TABLE `user_roles` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `user_id` int(10) UNSIGNED NOT NULL,
+  `role_id` int(10) UNSIGNED NOT NULL,
+  `assigned_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -994,7 +1101,9 @@ ALTER TABLE `appointments`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `branch_id` (`branch_id`),
-  ADD KEY `fk_appointments_dentist` (`dentist_id`);
+  ADD KEY `fk_appointments_dentist` (`dentist_id`),
+  ADD KEY `idx_appointments_guest_email` (`patient_email`),
+  ADD KEY `idx_appointments_guest_phone` (`patient_phone`);
 
 --
 -- Indexes for table `appointment_service`
@@ -1072,6 +1181,13 @@ ALTER TABLE `invoices`
   ADD KEY `fk_inv_chart_id` (`dental_chart_id`);
 
 --
+-- Indexes for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `invoice_id` (`invoice_id`);
+
+--
 -- Indexes for table `migrations`
 --
 ALTER TABLE `migrations`
@@ -1119,6 +1235,13 @@ ALTER TABLE `payments`
   ADD KEY `invoice_number` (`invoice_number`);
 
 --
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `role_id` (`role_id`);
+
+--
 -- Indexes for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
@@ -1153,6 +1276,13 @@ ALTER TABLE `procedure_service`
   ADD KEY `service_id` (`service_id`);
 
 --
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `name` (`name`);
+
+--
 -- Indexes for table `services`
 --
 ALTER TABLE `services`
@@ -1175,6 +1305,14 @@ ALTER TABLE `user`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_roles_role_id_foreign` (`role_id`),
+  ADD KEY `user_id_role_id` (`user_id`,`role_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -1182,13 +1320,13 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=219;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=270;
 
 --
 -- AUTO_INCREMENT for table `appointment_service`
 --
 ALTER TABLE `appointment_service`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
@@ -1206,13 +1344,13 @@ ALTER TABLE `availability`
 -- AUTO_INCREMENT for table `branches`
 --
 ALTER TABLE `branches`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `branch_notifications`
 --
 ALTER TABLE `branch_notifications`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- AUTO_INCREMENT for table `branch_user`
@@ -1239,10 +1377,16 @@ ALTER TABLE `invoices`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `patients`
@@ -1275,6 +1419,12 @@ ALTER TABLE `payments`
   MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
@@ -1299,6 +1449,12 @@ ALTER TABLE `procedure_service`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
@@ -1315,6 +1471,12 @@ ALTER TABLE `treatment_sessions`
 --
 ALTER TABLE `user`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+
+--
+-- AUTO_INCREMENT for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -1404,6 +1566,12 @@ ALTER TABLE `payments`
   ADD CONSTRAINT `payments_payment_received_by_foreign` FOREIGN KEY (`payment_received_by`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL;
 
 --
+-- Constraints for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD CONSTRAINT `permissions_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
@@ -1437,6 +1605,12 @@ ALTER TABLE `treatment_sessions`
   ADD CONSTRAINT `treatment_sessions_appointment_id_foreign` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `treatment_sessions_called_by_foreign` FOREIGN KEY (`called_by`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL,
   ADD CONSTRAINT `treatment_sessions_dentist_id_foreign` FOREIGN KEY (`dentist_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE SET NULL;
+
+--
+-- Constraints for table `user_roles`
+--
+ALTER TABLE `user_roles`
+  ADD CONSTRAINT `user_roles_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
