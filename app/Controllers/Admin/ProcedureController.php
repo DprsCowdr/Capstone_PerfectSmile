@@ -96,38 +96,16 @@ class ProcedureController extends BaseAdminController
     $user = $this->checkAdminAuth();
         if (!$user) return redirect()->to('/login');
 
-        // Collect fields from the new form schema
-        $serviceId = $this->request->getPost('service_id');
-
         $data = [
-            'user_id' => $this->request->getPost('user_id'),
-            'procedure_name' => $this->request->getPost('procedure_name'),
-            'title' => $this->request->getPost('title'),
+            'name' => $this->request->getPost('name'),
+            'price' => $this->request->getPost('price') ?: 0,
             'description' => $this->request->getPost('description'),
-            // 'category' left blank - we're using service_id instead
-            'fee' => $this->request->getPost('fee') ?: 0,
-            'treatment_area' => $this->request->getPost('treatment_area') ?: null,
-            'procedure_date' => $this->request->getPost('procedure_date'),
-            'status' => $this->request->getPost('status') ?? 'scheduled'
+            'status' => $this->request->getPost('status') ?? 'active'
         ];
 
-        try {
-            // Use scheduleProcedure so the procedure -> service link is created
-            $serviceIds = $serviceId ? [$serviceId] : [];
-            $result = $this->procedureModel->scheduleProcedure($data, $serviceIds);
-
-            if ($result === false) {
-                session()->setFlashdata('error', 'Failed to create procedure');
-                return redirect()->to('/admin/procedures/create')->withInput();
-            }
-
-            session()->setFlashdata('success', 'Procedure created');
-            return redirect()->to('/admin/procedures');
-        } catch (\Exception $e) {
-            log_message('error', 'ProcedureController::store failed: ' . $e->getMessage());
-            session()->setFlashdata('error', 'An error occurred while creating the procedure');
-            return redirect()->to('/admin/procedures/create')->withInput();
-        }
+        $this->procedureModel->insert($data);
+        session()->setFlashdata('success', 'Procedure created');
+        return redirect()->to('/admin/procedures');
     }
 
     public function show($id)
@@ -153,41 +131,30 @@ class ProcedureController extends BaseAdminController
     {
     $user = $this->checkAdminAuth();
         if (!$user) return redirect()->to('/login');
+
         $data = [
             'title' => $this->request->getPost('title'),
             'procedure_date' => $this->request->getPost('procedure_date'),
-            // keep category for backward compatibility but prefer service_id
-            'category' => $this->request->getPost('category') ?: null,
+            'category' => $this->request->getPost('category'),
             'fee' => $this->request->getPost('fee') ?: 0,
-            'treatment_area' => $this->request->getPost('treatment_area') ?: null,
+            'treatment_area' => $this->request->getPost('treatment_area'),
             'status' => $this->request->getPost('status') ?? 'scheduled'
         ];
 
-        $serviceId = $this->request->getPost('service_id');
-
         try {
-            // Update procedure record
-            $ok = $this->procedureModel->updateProcedure($id, $data);
-
-            // Update linked services: remove existing and link the new one if provided
-            $procServiceModel = new \App\Models\ProcedureServiceModel();
-            $procServiceModel->removeServicesFromProcedure($id);
-            if ($serviceId) {
-                $procServiceModel->linkServices($id, [$serviceId]);
-            }
-
+            $this->procedureModel->update($id, $data);
+            
             if ($this->request->isAJAX()) {
                 return $this->response->setJSON(['success' => true, 'message' => 'Procedure updated successfully']);
             }
-
+            
             session()->setFlashdata('success', 'Procedure updated');
             return redirect()->to('/admin/procedures');
         } catch (\Exception $e) {
-            log_message('error', 'ProcedureController::update failed: ' . $e->getMessage());
             if ($this->request->isAJAX()) {
                 return $this->response->setJSON(['success' => false, 'message' => 'Failed to update procedure: ' . $e->getMessage()]);
             }
-
+            
             session()->setFlashdata('error', 'Failed to update procedure');
             return redirect()->to('/admin/procedures');
         }

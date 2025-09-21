@@ -1,0 +1,7 @@
+Branch Validation
+ [x] Operating hours validation regex
+ [x] Time comparison logic
+ [x] Data confirm attribute conversion
+ [x] Delegated confirm handler exists
+ [x] No remaining inline confirm handlers
+

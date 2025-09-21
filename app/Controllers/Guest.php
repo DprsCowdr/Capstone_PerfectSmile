@@ -86,11 +86,10 @@ class Guest extends BaseController
     // Normalize dentist_id: convert empty strings to null, otherwise keep the posted value
     $dentistNormalized = ($dentistRaw === '' || $dentistRaw === null) ? null : $dentistRaw;
 
-    // Accept both 'patient_*' and 'guest_*' fields (guest form uses guest_name/email/phone)
     $formData = [
-        'patient_name' => $request->getPost('patient_name') ?: $request->getPost('guest_name') ?: ($currentUser['name'] ?? null),
-        'patient_email' => $request->getPost('patient_email') ?: $request->getPost('guest_email') ?: ($currentUser['email'] ?? null),
-        'patient_phone' => $request->getPost('patient_phone') ?: $request->getPost('guest_phone') ?: ($currentUser['phone'] ?? null),
+            'patient_name' => $request->getPost('patient_name') ?: ($currentUser['name'] ?? null),
+            'patient_email' => $request->getPost('patient_email') ?: ($currentUser['email'] ?? null),
+            'patient_phone' => $request->getPost('patient_phone') ?: ($currentUser['phone'] ?? null),
             'appointment_date' => $request->getPost('appointment_date'),
             'appointment_time' => $request->getPost('appointment_time'),
             // prefer service_id (used to link to appointment services); fall back to 'service' if provided or default
@@ -134,9 +133,7 @@ class Guest extends BaseController
             'appointment_date' => $request->getPost('appointment_date'), // model will handle conversion
             'appointment_time' => $request->getPost('appointment_time'), // model will handle conversion
             'branch_id' => $request->getPost('branch_id'),
-            // Ignore patient-supplied duration when the requester is a patient or origin is 'patient'.
-            // Use null here; controllers for staff/dentist will set duration explicitly when needed.
-            'procedure_duration' => null,
+            'procedure_duration' => $request->getPost('procedure_duration') ?? $request->getPost('duration') ?? null,
             // persist dentist_id if provided and validated above (store as int)
             'dentist_id' => is_numeric($formData['dentist_id']) ? (int)$formData['dentist_id'] : null,
             // do not store service on appointment table; services are linked in appointment_services
@@ -153,25 +150,27 @@ class Guest extends BaseController
             // ignore
         }
 
-        // Use AppointmentService to create the appointment so behavior (FCFS, lookahead, approvals)
-        // is centralized and JSON-friendly for AJAX clients.
-        $service = new \App\Services\AppointmentService();
-        $createPayload = array_merge($appointmentData, [
-            'service_id' => $formData['service_id'] ?? null,
-            // mark origin to allow AppointmentService or controllers to tailor behavior
-            'origin' => 'guest'
-        ]);
+        $appointmentId = $this->appointmentModel->insert($appointmentData);
 
-        $result = $service->createAppointment($createPayload);
+        // Link service to appointment using resolved service_id from $formData
+        if ($appointmentId) {
+            $appointmentServiceModel = new \App\Models\AppointmentServiceModel();
+            if (!empty($formData['service_id'])) {
+                $appointmentServiceModel->insert([
+                    'appointment_id' => $appointmentId,
+                    'service_id' => $formData['service_id']
+                ]);
+            }
+        }
 
-        // Attempt to notify branch staff: non-blocking (preserve existing behavior)
+        // Attempt to notify branch staff: non-blocking
         try {
             $branchId = $appointmentData['branch_id'] ?? null;
             if ($branchId) {
                 $branch = $this->branchModel->find($branchId);
                 $notificationPayload = [
                     'branch_id' => $branchId,
-                    'appointment_id' => $result['record']['id'] ?? null,
+                    'appointment_id' => $appointmentId,
                     'payload' => json_encode($appointmentData),
                     'sent' => 0,
                 ];
@@ -202,24 +201,39 @@ class Guest extends BaseController
             log_message('error', 'Branch notification error: ' . $e->getMessage());
         }
 
-        // Prepare flash message for non-AJAX flows (use message from service result when present)
-        $successMsg = $result['message'] ?? 'Appointment booked successfully! We will contact you soon to confirm.';
+        // Prepare success flash
+        $successMsg = 'Appointment booked successfully! We will contact you soon to confirm.';
         session()->setFlashdata('success', $successMsg);
 
-        // Robust AJAX detection: CI's isAJAX plus header checks and Accept: application/json
-        $isXhr = $request->isAJAX() || strtolower($request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest' || stripos($request->getHeaderLine('Accept'), 'application/json') !== false;
-
-        if ($isXhr) {
-            // Ensure legacy frontends still receive 'appointment' while new frontends expect 'record'
-            if (!empty($result['record']) && empty($result['appointment'])) {
-                $result['appointment'] = $result['record'];
+    // Robust AJAX detection: CI's isAJAX plus header checks and Accept: application/json
+    $isXhr = $request->isAJAX() || strtolower($request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest' || stripos($request->getHeaderLine('Accept'), 'application/json') !== false;
+    // If AJAX request (or JSON-accepting client), return JSON with created appointment info so client can update UI without redirect
+    if ($isXhr) {
+            try {
+                $created = $this->appointmentModel->find($appointmentId);
+                // If requester is a patient session or origin flagged as 'patient', strip identifying fields
+                $session = session();
+                $userType = $session->get('user_type') ?? null;
+                $origin = $request->getPost('origin') ?? null;
+                if ($userType === 'patient' || $origin === 'patient') {
+                    unset($created['patient_name']);
+                    unset($created['patient_email']);
+                    unset($created['patient_phone']);
+                }
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => $successMsg,
+                    'appointment' => $created
+                ])->setStatusCode(201);
+            } catch (\Exception $e) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Appointment created but failed to retrieve record.'
+                ])->setStatusCode(500);
             }
-            // If the result has success=true and a record, return 201
-            $status = (!empty($result['success'])) ? (isset($result['record']) ? 201 : 200) : 422;
-            return $this->response->setJSON($result)->setStatusCode($status);
         }
 
-        // Non-AJAX: redirect back to the appropriate page
+        // If the form came from the patient dashboard, redirect back to patient booking
         $origin = $request->getPost('origin');
         if ($origin === 'patient') {
             return redirect()->to('/patient/book-appointment');

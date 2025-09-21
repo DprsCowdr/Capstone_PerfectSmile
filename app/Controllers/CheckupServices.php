@@ -224,12 +224,7 @@ class CheckupServices extends BaseController
         }
 
         try {
-            // Use the safer selection that includes optional metadata when available
-            if (method_exists($this->serviceModel, 'getServicesForSelectionWithMeta')) {
-                $services = $this->serviceModel->getServicesForSelectionWithMeta();
-            } else {
-                $services = $this->serviceModel->getServicesForSelection();
-            }
+            $services = $this->serviceModel->getServicesForSelection();
             
             return $this->response->setJSON([
                 'success' => true,

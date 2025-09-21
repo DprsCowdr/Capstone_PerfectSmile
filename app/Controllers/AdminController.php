@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Traits\AdminAuthTrait;
 use App\Services\DashboardService;
-use App\Services\AuthService;
 
 class AdminController extends BaseAdminController
 {
@@ -443,8 +442,6 @@ class AdminController extends BaseAdminController
         $data = [
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
-            'duration_minutes' => $this->parseDurationInput($this->request->getPost('duration_minutes')),
-            'duration_max_minutes' => $this->parseDurationInput($this->request->getPost('duration_max_minutes')),
             'price' => $this->request->getPost('price')
         ];
 
@@ -473,10 +470,6 @@ class AdminController extends BaseAdminController
         $service = $serviceModel->find($id);
 
         if ($service) {
-            // ensure duration fields are present for the front-end
-            if (!isset($service['duration_minutes'])) $service['duration_minutes'] = null;
-            if (!isset($service['duration_max_minutes'])) $service['duration_max_minutes'] = null;
-
             return $this->response->setJSON([
                 'success' => true,
                 'service' => $service
@@ -501,8 +494,6 @@ class AdminController extends BaseAdminController
         $data = [
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
-            'duration_minutes' => $this->parseDurationInput($this->request->getPost('duration_minutes')),
-            'duration_max_minutes' => $this->parseDurationInput($this->request->getPost('duration_max_minutes')),
             'price' => $this->request->getPost('price')
         ];
 
@@ -551,57 +542,6 @@ class AdminController extends BaseAdminController
                 'message' => 'Failed to delete service'
             ]);
         }
-    }
-
-
-    /**
-     * Parse duration input that may contain hours (e.g., '2h') or plain minutes (e.g., '120')
-     * Returns integer minutes or null for empty input.
-     */
-    protected function parseDurationInput($input)
-    {
-        if ($input === null) return null;
-        $input = trim((string)$input);
-        if ($input === '') return null;
-
-        // Accept formats like '2h', '2.5h', '150', '120m'
-        // Normalize
-        $lower = strtolower($input);
-
-        // If contains 'h' treat as hours
-        if (strpos($lower, 'h') !== false) {
-            // extract numeric part
-            $num = floatval(str_replace('h', '', $lower));
-            if ($num <= 0) return null;
-            return (int) round($num * 60);
-        }
-
-        // If contains 'm' remove it
-        if (strpos($lower, 'm') !== false) {
-            $lower = str_replace('m', '', $lower);
-        }
-
-        // fallback to integer minutes
-        $minutes = intval($lower);
-        if ($minutes <= 0) return null;
-        return $minutes;
-    }
-
-    /**
-     * Format minutes to readable string, e.g., 150 -> '2h 30m' or '30m'
-     */
-    protected function formatMinutesReadable($minutes)
-    {
-        if ($minutes === null) return 'Not set';
-        $m = intval($minutes);
-        if ($m <= 0) return 'Not set';
-        $hours = intdiv($m, 60);
-        $rem = $m % 60;
-        if ($hours > 0) {
-            return $hours . 'h' . ($rem ? ' ' . $rem . 'm' : '');
-        }
-        return $rem . 'm';
-
     }
 
     public function procedures()
@@ -768,7 +708,7 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-    return view('admin/settings/settings', ['user' => $user]);
+        return view('admin/management/settings', ['user' => $user]);
     }
 
     // ==================== USERS MANAGEMENT ====================
@@ -1168,9 +1108,8 @@ class AdminController extends BaseAdminController
     // ==================== PATIENT MODAL API ENDPOINTS ====================
     public function getPatientInfo($id)
     {
-        $auth = AuthService::checkAdminOrStaffAuthApi();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
-            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
 
@@ -1210,9 +1149,8 @@ class AdminController extends BaseAdminController
 
     public function updatePatientNotes($id)
     {
-        $auth = AuthService::checkAdminOrStaffAuthApi();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
-            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'], 401);
         }
         $notes = $this->request->getPost('special_notes');
@@ -1226,9 +1164,8 @@ class AdminController extends BaseAdminController
 
     public function getPatientDentalRecords($id)
     {
-        $auth = AuthService::checkAdminOrStaffAuthApi();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
-            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         $model = new \App\Models\DentalRecordModel();
@@ -1242,9 +1179,8 @@ class AdminController extends BaseAdminController
 
     public function getPatientDentalChart($id)
     {
-        $auth = AuthService::checkAdminOrStaffAuthApi();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
-            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         $db = \Config\Database::connect();
@@ -1264,29 +1200,18 @@ class AdminController extends BaseAdminController
             ->orderBy('record_date', 'DESC')
             ->get()->getResultArray();
         
-        // Get visual chart data (JSON state) saved on dental_record.visual_chart_data
-        // Only include non-empty values
-        $visualChartRecords = $db->table('dental_record')
-            ->select('id, record_date, visual_chart_data')
-            ->where('user_id', $id)
-            ->where('visual_chart_data IS NOT NULL')
-            ->where('visual_chart_data !=', '')
-            ->orderBy('record_date', 'DESC')
-            ->get()->getResultArray();
-
         return $this->response->setJSON([
             'success' => true, 
             'chart' => $rows,
-            'visual_charts' => $visualChartRecords,
+            'visual_charts' => [], // Empty array since column doesn't exist
             'dental_records' => $dentalRecords
         ]);
     }
 
     public function getPatientAppointmentsModal($id)
     {
-        $auth = AuthService::checkAdminOrStaffAuthApi();
-        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse || 
-            (is_object($auth) && method_exists($auth, 'setStatusCode'))) {
+        $auth = $this->checkAdminAuth();
+        if ($auth instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $this->response->setJSON(['error' => 'Unauthorized'], 401);
         }
         

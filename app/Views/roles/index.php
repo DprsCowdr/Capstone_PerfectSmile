@@ -80,7 +80,7 @@ ob_start();
                                         <td class="px-4 py-3 text-gray-700">
                                             <?php if (!empty($role['created_at']) && strtotime($role['created_at'])): ?>
                                                 <?= esc(date('M d, Y', strtotime($role['created_at']))) ?>
-                                                <div class="text-xs text-gray-500"><?= esc(date('g:i A', strtotime($role['created_at']))) ?></div>
+                                                <div class="text-xs text-gray-500"><?= esc(date('H:i', strtotime($role['created_at']))) ?></div>
                                             <?php else: ?>
                                                 <span class="text-gray-400">-</span>
                                             <?php endif; ?>
@@ -90,7 +90,7 @@ ob_start();
                                         <td class="px-4 py-3 text-gray-700">
                                             <?php if (!empty($role['updated_at']) && strtotime($role['updated_at'])): ?>
                                                 <?= esc(date('M d, Y', strtotime($role['updated_at']))) ?>
-                                                <div class="text-xs text-gray-500"><?= esc(date('g:i A', strtotime($role['updated_at']))) ?></div>
+                                                <div class="text-xs text-gray-500"><?= esc(date('H:i', strtotime($role['updated_at']))) ?></div>
                                             <?php else: ?>
                                                 <span class="text-gray-400">-</span>
                                             <?php endif; ?>

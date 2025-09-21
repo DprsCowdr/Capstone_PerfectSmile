@@ -6,7 +6,7 @@
     Book Your Appointment
   </h5>
   
-  <form id="appointmentForm" action="<?= base_url('patient/book-appointment') ?>" method="post" novalidate data-close-on-success="#addAppointmentPanel">
+  <form id="appointmentForm" action="<?= base_url('patient/book-appointment') ?>" method="post" novalidate>
     <?= csrf_field() ?>
     <input type="hidden" name="appointment_date" id="appointmentDate">
     
@@ -48,23 +48,9 @@
         <?php if (isset($dentists) && is_array($dentists)): ?>
             <?php foreach ($dentists as $dentist): ?>
               <?php $dentistDisplay = $dentist['name'] ?? trim(($dentist['first_name'] ?? '') . ' ' . ($dentist['last_name'] ?? '')); ?>
-              <option value="<?= $dentist['id'] ?>" data-dentist-id="<?= $dentist['id'] ?>" <?= ((string)$preferredDentist === (string)$dentist['id']) ? 'selected' : '' ?>>Dr. <?= esc($dentistDisplay) ?></option>
+              <option value="<?= $dentist['id'] ?>" <?= ((string)$preferredDentist === (string)$dentist['id']) ? 'selected' : '' ?>>Dr. <?= esc($dentistDisplay) ?></option>
             <?php endforeach; ?>
         <?php endif; ?>
-      </select>
-    </div>
-
-    <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Service</label>
-      <?php $serviceModel = new \App\Models\ServiceModel(); $servicesList = $serviceModel->findAll(); ?>
-      <select name="service_id" id="service_id" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
-        <option value="">Select Service</option>
-        <?php if (!empty($servicesList) && is_array($servicesList)): foreach ($servicesList as $svc): ?>
-          <?php $dataDur = isset($svc['duration_minutes']) ? 'data-duration="'.(int)$svc['duration_minutes'].'"' : ''; ?>
-          <?php $dataDurMax = isset($svc['duration_max_minutes']) ? 'data-duration-max="'.(int)$svc['duration_max_minutes'].'"' : ''; ?>
-          <?php // Hide prices in booking UI to avoid confusing users; prices shown in admin/procedures views only ?>
-          <option value="<?= $svc['id'] ?>" <?= old('service_id') == $svc['id'] ? 'selected' : '' ?> <?= $dataDur ?> <?= $dataDurMax ?>><?= esc($svc['name']) ?></option>
-        <?php endforeach; endif; ?>
       </select>
     </div>
 
@@ -121,12 +107,6 @@
       if(opts.length === 1 && !sel.value){ sel.value = opts[0].value; sel.dispatchEvent(new Event('change')); }
     }catch(e){ console.error('calendar branch select init error', e); }
   });
-  // mark dentist select options with data attributes (helps badge helper map names to rows)
-  try{
-    document.querySelectorAll('select[name="dentist_id"] option[data-dentist-id]').forEach(opt => {
-      // nothing to do here; presence of data-dentist-id on option helps some scripts
-    });
-  }catch(e){}
   </script>
 
 <!-- Admin Appointment Panel -->
@@ -285,42 +265,12 @@
     </div>
 
     <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Service</label>
-      <?php $serviceModel = new \App\Models\ServiceModel(); $servicesList = $serviceModel->findAll(); ?>
-      <select name="service_id" id="service_id" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
-        <option value="">Select Service (optional)</option>
-        <?php if (!empty($servicesList) && is_array($servicesList)): foreach ($servicesList as $svc): ?>
-          <?php $dataDur = isset($svc['duration_minutes']) ? 'data-duration="'.(int)$svc['duration_minutes'].'"' : ''; ?>
-          <?php $dataDurMax = isset($svc['duration_max_minutes']) ? 'data-duration-max="'.(int)$svc['duration_max_minutes'].'"' : ''; ?>
-          <option value="<?= $svc['id'] ?>" <?= old('service_id') == $svc['id'] ? 'selected' : '' ?> <?= $dataDur ?> <?= $dataDurMax ?>><?= esc($svc['name']) ?></option>
-        <?php endforeach; endif; ?>
-      </select>
-    </div>
-
-    <div class="mb-3 sm:mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
-      <!-- editable selector populated dynamically from available-slots API; shows exact end-time candidates when available -->
-      <select name="appointment_time" id="timeSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
-        <option value="">Select Time</option>
-      </select>
-      <div class="text-xs text-green-600 mt-1" id="availabilityMessage" style="display: none;">
-        <i class="fas fa-check-circle"></i> <span id="availabilityText"></span>
-      </div>
-      <div class="text-xs text-red-600 mt-1" id="unavailableMessage" style="display: none;">
-        <i class="fas fa-exclamation-triangle"></i> <span id="unavailableText"></span>
-      </div>
+      <input type="time" name="time" id="appointmentTime" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
       <div id="timeConflictWarning" class="text-xs text-red-600 mt-1 hidden">
         <i class="fas fa-exclamation-triangle"></i> <span id="conflictMessage"></span>
       </div>
     </div>
-
-    <?php if ($user['user_type'] === 'admin'): ?>
-    <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Procedure duration (minutes) — admin only (optional)</label>
-      <input type="number" name="procedure_duration" id="procedureDuration" min="1" step="1" placeholder="e.g. 30" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base">
-      <div class="text-xs text-gray-500 mt-1">If set, this will override the service default duration for this booking.</div>
-    </div>
-    <?php endif; ?>
 
     <div class="mb-4 sm:mb-6">
       <label class="block text-sm font-medium text-gray-700 mb-2">Remarks</label>

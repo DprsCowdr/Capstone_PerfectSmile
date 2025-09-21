@@ -147,8 +147,7 @@ class Auth extends BaseController
      */
     public static function isAuthenticated()
     {
-        // Accept truthy values stored in session (boolean true or integer 1)
-        return (bool) session()->get('isLoggedIn');
+        return session()->get('isLoggedIn') === true;
     }
 
     /**
@@ -157,17 +156,8 @@ class Auth extends BaseController
     public static function getCurrentUser()
     {
         if (self::isAuthenticated()) {
-            $uid = session()->get('user_id');
-            // Defensive: ensure we have a valid numeric user id before querying
-            $uid = is_numeric($uid) ? intval($uid) : 0;
-            if ($uid <= 0) return null;
             $userModel = new UserModel();
-            try {
-                return $userModel->find($uid);
-            } catch (\Throwable $e) {
-                // On CLI/test harness, DB/model might not be fully available; return null
-                return null;
-            }
+            return $userModel->find(session()->get('user_id'));
         }
         return null;
     }

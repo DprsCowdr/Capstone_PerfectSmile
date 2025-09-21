@@ -108,7 +108,7 @@
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <?php foreach ($pendingAppointments as $appointment): ?>
-                                    <tr class="hover:bg-gray-50" <?= !empty($appointment['dentist_id']) ? 'data-dentist-id="' . esc($appointment['dentist_id']) . '"' : '' ?> >
+                                    <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <div class="flex-shrink-0 h-8 w-8">
@@ -271,7 +271,7 @@ function showDentistSelectionModal(appointmentId) {
                             <option value="">-- Select Dentist --</option>
                             <?php 
                             $userModel = new \App\Models\UserModel();
-                            $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
+                            $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
                             foreach ($dentists as $dentist): 
                             ?>
                             <option value="<?= $dentist['id'] ?>"><?= $dentist['name'] ?> (ID: <?= $dentist['id'] ?>)</option>

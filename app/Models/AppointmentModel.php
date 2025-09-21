@@ -25,10 +25,6 @@ class AppointmentModel extends Model
         'remarks',
         'created_at',
         'updated_at',
-        // Guest booking fields
-        'patient_email',
-        'patient_phone',
-        'patient_name',
         // Workflow/queue fields
         'checked_in_at',
         'checked_in_by',
@@ -53,21 +49,18 @@ class AppointmentModel extends Model
 
     // Validation
     protected $validationRules = [
-        'user_id' => 'permit_empty|integer',  // Allow guest bookings
+        'user_id' => 'required|integer',
         'branch_id' => 'required|integer',
         'dentist_id' => 'permit_empty|integer',
         'appointment_datetime' => 'required',
         'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,checked_in,ongoing,completed,cancelled,no_show]',
         'appointment_type' => 'permit_empty|in_list[scheduled,walkin]',
         'approval_status' => 'permit_empty|in_list[pending,approved,declined,auto_approved]',
-        // Guest booking validation - require either user_id OR contact info
-        'patient_email' => 'permit_empty|valid_email',
-        'patient_phone' => 'permit_empty|string',
-        'patient_name' => 'permit_empty|string',
     ];
 
     protected $validationMessages = [
         'user_id' => [
+            'required' => 'Patient is required',
             'integer' => 'Invalid patient ID'
         ],
         'branch_id' => [
@@ -76,9 +69,6 @@ class AppointmentModel extends Model
         ],
         'appointment_datetime' => [
             'required' => 'Appointment date/time is required',
-        ],
-        'patient_email' => [
-            'valid_email' => 'Please provide a valid email address'
         ]
     ];
 
@@ -130,12 +120,7 @@ class AppointmentModel extends Model
             unset($data['appointment_date'], $data['appointment_time']);
         }
         
-        // Custom validation: require either user_id OR guest contact info
-        if (empty($data['user_id']) && empty($data['patient_email']) && empty($data['patient_phone'])) {
-            throw new \Exception('Either patient ID or contact information (email/phone) is required for booking.');
-        }
-        
-        // Backend validation: no past dates, only 08:00-20:00
+        // Backend validation: no past dates, only 08:00-17:00
         if (isset($data['appointment_datetime'])) {
             $dt = strtotime($data['appointment_datetime']);
             if ($dt < strtotime(date('Y-m-d 00:00:00'))) {
@@ -160,15 +145,15 @@ class AppointmentModel extends Model
             $data['appointment_datetime'] = $data['appointment_date'] . ' ' . $data['appointment_time'] . ':00';
             unset($data['appointment_date'], $data['appointment_time']);
         }
-        // Backend validation: no past dates, only 08:00-20:00 (unified with insert)
+        // Backend validation: no past dates, only 08:00-17:00
         if (isset($data['appointment_datetime'])) {
             $dt = strtotime($data['appointment_datetime']);
             if ($dt < strtotime(date('Y-m-d 00:00:00'))) {
                 throw new \Exception('Cannot book an appointment in the past.');
             }
             $hour = (int)date('H', $dt);
-            if ($hour < 8 || $hour > 20) {
-                throw new \Exception('Appointments can only be booked between 08:00 and 20:00.');
+            if ($hour < 8 || $hour > 17) {
+                throw new \Exception('Appointments can only be booked between 08:00 and 17:00.');
             }
         }
         return parent::update($id, $data);
@@ -223,7 +208,7 @@ class AppointmentModel extends Model
     }
 
     /**
-     * Get appointments with user, branch, and dentist info (for admin/staff calendar views)
+     * Get appointments with user, branch, and dentist info (only approved appointments)
      */
     public function getAppointmentsWithDetails()
     {
@@ -236,8 +221,7 @@ class AppointmentModel extends Model
                     ->join('user', 'user.id = appointments.user_id')
                     ->join('branches', 'branches.id = appointments.branch_id', 'left')
                     ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
-                    ->whereIn('appointments.approval_status', ['approved', 'pending', 'auto_approved']) // Include pending and auto-approved
-                    ->whereIn('appointments.status', ['confirmed', 'scheduled', 'pending', 'pending_approval', 'ongoing']) // Include relevant statuses
+                    ->where('appointments.approval_status', 'approved') // Only show approved appointments
                     ->orderBy('appointments.appointment_datetime', 'DESC')
                     ->findAll();
         
@@ -491,216 +475,6 @@ class AppointmentModel extends Model
     }
 
     /**
-     * Check if a given datetime conflicts with existing appointments within a grace window.
-     * Returns true if a conflict exists.
-     * @param string $datetime Y-m-d H:i:s
-     * @param int $graceMinutes minutes to treat as buffer for conflict detection
-     * @param int|null $dentistId optional dentist filter
-     * @param int|null $excludeId optional appointment id to exclude from check
-     * @return bool
-     */
-    public function isTimeConflictingWithGrace($datetime, $graceMinutes = 15, $dentistId = null, $excludeId = null, $requiredDurationMinutes = null)
-    {
-        // Candidate range: start = $datetime; end = start + requiredDuration (if provided) else start
-        $candidateStart = $datetime;
-        if ($requiredDurationMinutes && is_numeric($requiredDurationMinutes) && (int)$requiredDurationMinutes > 0) {
-            $candidateEnd = date('Y-m-d H:i:s', strtotime($candidateStart) + ((int)$requiredDurationMinutes * 60));
-        } else {
-            // If no required duration supplied, treat candidateEnd as candidateStart (we'll still check any appointment that overlaps by grace)
-            $candidateEnd = $candidateStart;
-        }
-
-        // Build query that finds any appointment where:
-        // appointment_datetime < candidateEnd
-        // AND DATE_ADD(appointment_datetime, INTERVAL (COALESCE(svc.total_service_minutes, a.procedure_duration, 0) + grace) MINUTE) > candidateStart
-        // This ensures we consider the appointment's real occupied window (service duration + grace)
-
-    $db = \Config\Database::connect();
-        $sql = "SELECT a.id FROM appointments a
-            LEFT JOIN (
-                SELECT aps.appointment_id, SUM(COALESCE(s.duration_max_minutes, s.duration_minutes, 0)) AS total_service_minutes
-                FROM appointment_service aps
-                JOIN services s ON s.id = aps.service_id
-                GROUP BY aps.appointment_id
-            ) svc ON svc.appointment_id = a.id
-            WHERE a.appointment_datetime < ?
-            AND DATE_ADD(a.appointment_datetime, INTERVAL (COALESCE(svc.total_service_minutes, a.procedure_duration, 0) + ?) MINUTE) > ?
-            AND a.status IN ('confirmed','scheduled','ongoing')
-            AND a.approval_status IN ('approved','auto_approved')";
-
-        $params = [$candidateEnd, (int)$graceMinutes, $candidateStart];
-
-        if ($dentistId) {
-            $sql .= " AND a.dentist_id = ?";
-            $params[] = $dentistId;
-        }
-        if ($excludeId) {
-            $sql .= " AND a.id != ?";
-            $params[] = $excludeId;
-        }
-
-        $query = $db->query($sql, $params);
-        // Some DB drivers (SQLite in-memory used during tests) do not support DATE_ADD/INTERVAL syntax.
-        // Attempt the SQL query first; if it fails or returns false, fall back to a PHP-based check
-        try {
-            $query = $db->query($sql, $params);
-            if ($query === false) {
-                throw new \Exception('SQL query not supported by driver');
-            }
-            $rows = $query->getResultArray();
-            return !empty($rows);
-        } catch (\Throwable $e) {
-            // Fallback: fetch potentially conflicting appointments and compute overlap in PHP
-            try {
-                $builder = $db->table('appointments a')
-                              ->select('a.id, a.appointment_datetime, a.procedure_duration')
-                              ->where('a.appointment_datetime <', $candidateEnd)
-                              ->whereIn('a.status', ['confirmed','scheduled','ongoing'])
-                              ->whereIn('a.approval_status', ['approved','auto_approved']);
-                if ($dentistId) $builder->where('a.dentist_id', $dentistId);
-                if ($excludeId) $builder->where('a.id !=', $excludeId);
-
-                $candidates = $builder->get()->getResultArray();
-                if (empty($candidates)) return false;
-
-                foreach ($candidates as $appt) {
-                    $apptStart = strtotime($appt['appointment_datetime']);
-                    $duration = 0;
-                    // If procedure_duration present, use it
-                    if (!empty($appt['procedure_duration'])) {
-                        $duration = (int)$appt['procedure_duration'];
-                    } else {
-                        // Sum linked service durations
-                        try {
-                            $svcBuilder = $db->table('appointment_service')->select('services.duration_minutes, services.duration_max_minutes')
-                                              ->join('services', 'services.id = appointment_service.service_id', 'left')
-                                              ->where('appointment_service.appointment_id', $appt['id']);
-                            $services = $svcBuilder->get()->getResultArray();
-                            $totalDuration = 0;
-                            foreach ($services as $service) {
-                                if (!empty($service['duration_max_minutes'])) $totalDuration += (int)$service['duration_max_minutes'];
-                                elseif (!empty($service['duration_minutes'])) $totalDuration += (int)$service['duration_minutes'];
-                            }
-                            $duration = $totalDuration;
-                        } catch (\Throwable $inner) {
-                            $duration = 30; // conservative default
-                        }
-                    }
-
-                    $apptEnd = $apptStart + ($duration * 60);
-                    $candStartTs = strtotime($candidateStart);
-
-                    // Apply grace buffer: treat appointment as extended by grace minutes
-                    $apptEndWithGrace = $apptEnd + ($graceMinutes * 60);
-
-                    // If the appointment start is before candidate end AND appointment end+grace is after candidate start -> conflict
-                    if ($apptStart < strtotime($candidateEnd) && $apptEndWithGrace > $candStartTs) {
-                        return true;
-                    }
-                }
-
-                return false;
-            } catch (\Throwable $final) {
-                // If fallback also fails, be conservative and report a conflict to avoid double-booking
-                log_message('error', 'isTimeConflictingWithGrace fallback failed: ' . $final->getMessage());
-                return true;
-            }
-        }
-    }
-
-    /**
-     * Mark scheduled/confirmed appointments as no-show if they haven't checked in and
-     * have passed their appointment time plus a grace period.
-     * @param int $graceMinutes
-     * @return int number of rows updated
-     */
-    public function expireOverdueScheduled($graceMinutes = 15)
-    {
-        $now = date('Y-m-d H:i:s');
-        $threshold = date('Y-m-d H:i:s', strtotime("-{$graceMinutes} minutes"));
-
-        // Appointments where appointment_datetime < threshold, status is scheduled/confirmed,
-        // approval_status is approved/auto_approved, and patient hasn't checked in
-        $builder = $this->builder();
-        $builder->where('appointment_datetime <', $threshold)
-                ->whereIn('status', ['scheduled', 'confirmed'])
-                ->whereIn('approval_status', ['approved', 'auto_approved'])
-                ->where('checked_in_at IS NULL', null, false)
-                ->set(['status' => 'no_show', 'updated_at' => $now]);
-
-        return $builder->update();
-    }
-
-    /**
-     * Get the next appointment to call for a given dentist.
-     * Priority:
-     *  1) Patients who have checked-in (ordered by checked_in_at ASC)
-     *  2) If none checked-in, return the earliest scheduled/confirmed appointment for today
-     * This supports FCFS behavior because walk-ins that check in will appear in checked-in set
-     * and will be selected based on their arrival time. Overdue scheduled appointments
-     * should be expired first using expireOverdueScheduled().
-     * @param int|null $dentistId
-     * @return array|null appointment row or null
-     */
-    public function getNextAppointmentForDentist($dentistId = null)
-    {
-        $today = date('Y-m-d');
-
-        // 1) Prefer checked-in patients (waiting list)
-        $qb = $this->select('appointments.*')
-                   ->join('patient_checkins', 'patient_checkins.appointment_id = appointments.id')
-                   ->where('DATE(appointments.appointment_datetime)', $today)
-                   ->where('appointments.status', 'checked_in')
-                   ->whereIn('appointments.approval_status', ['approved', 'auto_approved'])
-                   ->orderBy('patient_checkins.checked_in_at', 'ASC')
-                   ->orderBy('appointments.appointment_datetime', 'ASC');
-
-        if ($dentistId) $qb->where('appointments.dentist_id', $dentistId);
-
-        $row = $qb->limit(1)->get()->getRowArray();
-        if ($row) return $row;
-
-        // 2) No one checked-in: return earliest scheduled/confirmed appointment for today
-        $qb2 = $this->select('appointments.*')
-                    ->where('DATE(appointments.appointment_datetime)', $today)
-                    ->whereIn('appointments.status', ['scheduled', 'confirmed'])
-                    ->whereIn('appointments.approval_status', ['approved', 'auto_approved'])
-                    ->orderBy('appointments.appointment_datetime', 'ASC');
-
-        if ($dentistId) $qb2->where('appointments.dentist_id', $dentistId);
-
-        return $qb2->limit(1)->get()->getRowArray();
-    }
-
-    /**
-     * Find the next available slot (time string H:i) on the given date that does not conflict
-     * with existing appointments when considering a grace period. Searches forward in 5-minute
-     * steps up to $lookaheadMinutes.
-     * Returns null if no slot found within lookahead.
-     * @param string $date Y-m-d
-     * @param string $preferredTime H:i
-     * @param int $graceMinutes
-     * @param int $lookaheadMinutes
-     * @param int|null $dentistId
-     * @return string|null time in H:i
-     */
-    public function findNextAvailableSlot($date, $preferredTime, $graceMinutes = 15, $lookaheadMinutes = 120, $dentistId = null, $requiredDurationMinutes = null)
-    {
-        $preferredTs = strtotime($date . ' ' . $preferredTime . ':00');
-    $step = 1 * 60; // 1 minute step to allow minute-granular booking
-        $limitTs = $preferredTs + ($lookaheadMinutes * 60);
-
-        for ($ts = $preferredTs; $ts <= $limitTs; $ts += $step) {
-            $candidate = date('Y-m-d H:i:s', $ts);
-            if (!$this->isTimeConflictingWithGrace($candidate, $graceMinutes, $dentistId, null, $requiredDurationMinutes)) {
-                return date('H:i', $ts);
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Approve appointment
      */
     public function approveAppointment($appointmentId, $dentistId = null)
@@ -744,34 +518,15 @@ class AppointmentModel extends Model
     }
 
     /**
-     * Decline appointment - mark as declined instead of deleting
-     * This avoids foreign key constraint issues with related tables (e.g. appointment_service)
+     * Decline appointment - DELETE from database instead of just marking as declined
      */
     public function declineAppointment($appointmentId, $reason)
     {
-        // Log the decline reason
+        // Log the decline reason before deleting
         log_message('info', "Appointment {$appointmentId} declined with reason: {$reason}");
-
-        $updateData = [
-            'approval_status' => 'declined',
-            'status' => 'cancelled',
-            'decline_reason' => $reason,
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
-
-        // Update the appointment record instead of deleting it to preserve related rows
-        try {
-            $result = $this->update($appointmentId, $updateData);
-            if ($result) {
-                log_message('info', "Appointment {$appointmentId} marked as declined successfully");
-            } else {
-                log_message('error', "Failed to mark appointment {$appointmentId} as declined");
-            }
-            return $result;
-        } catch (\Exception $e) {
-            log_message('error', "Exception while declining appointment {$appointmentId}: " . $e->getMessage());
-            return false;
-        }
+        
+        // Delete the appointment completely from database
+        return $this->delete($appointmentId);
     }
 
     /**
@@ -826,7 +581,7 @@ class AppointmentModel extends Model
         $builder = $db->table('user');
         $builder->select('user.id, user.name, user.email')
                 ->join('branch_staff', 'branch_staff.user_id = user.id')
-                ->where('user.user_type', 'dentist')
+                ->where('user.user_type', 'doctor')
                 ->where('user.status', 'active')
                 ->where('branch_staff.branch_id', $branchId);
         
@@ -835,65 +590,17 @@ class AppointmentModel extends Model
         $availableDentists = [];
         
         foreach ($allDentists as $dentist) {
-            // Check if dentist has any conflicting appointments using proper duration logic
-            $conflictBuilder = $db->table('appointments a');
-            $conflictBuilder->select('a.id, a.appointment_datetime, a.procedure_duration')
-                           ->where('a.dentist_id', $dentist['id'])
-                           ->where('DATE(a.appointment_datetime)', $date)
-                           ->where('a.status !=', 'cancelled')
-                           ->where('a.status !=', 'completed')
-                           ->where('a.status !=', 'declined');
+            // Check if dentist has any conflicting appointments
+            $conflictBuilder = $db->table('appointments');
+            $conflictBuilder->where('dentist_id', $dentist['id'])
+                           ->where('appointment_datetime <=', $datetime)
+                           ->where('DATE_ADD(appointment_datetime, INTERVAL 30 MINUTE) >', $datetime)
+                           ->where('status !=', 'cancelled')
+                           ->where('status !=', 'completed');
             
-            $conflictingAppointments = $conflictBuilder->get()->getResultArray();
+            $conflicts = $conflictBuilder->countAllResults();
             
-            $hasConflict = false;
-            $targetTimestamp = strtotime($datetime);
-            
-            foreach ($conflictingAppointments as $appt) {
-                $apptStart = strtotime($appt['appointment_datetime']);
-                $duration = 0;
-                
-                // Use procedure_duration if available
-                if (!empty($appt['procedure_duration'])) {
-                    $duration = (int)$appt['procedure_duration'];
-                } else {
-                    // Aggregate linked service durations (same logic as other methods)
-                    try {
-                        $serviceBuilder = $db->table('appointment_service')
-                                            ->select('services.duration_minutes, services.duration_max_minutes')
-                                            ->join('services', 'services.id = appointment_service.service_id', 'left')
-                                            ->where('appointment_service.appointment_id', $appt['id']);
-                        $services = $serviceBuilder->get()->getResultArray();
-                        
-                        $totalDuration = 0;
-                        foreach ($services as $service) {
-                            // Prefer duration_max_minutes when present (conservative scheduling)
-                            if (!empty($service['duration_max_minutes'])) {
-                                $totalDuration += (int)$service['duration_max_minutes'];
-                            } elseif (!empty($service['duration_minutes'])) {
-                                $totalDuration += (int)$service['duration_minutes'];
-                            }
-                        }
-                        $duration = $totalDuration;
-                    } catch (\Exception $e) {
-                        // If service lookup fails, use a conservative 30-minute default
-                        $duration = 30;
-                    }
-                }
-                
-                $apptEnd = $apptStart + ($duration * 60);
-                
-                // Check for overlap with 30-minute buffer around target time
-                $targetStart = $targetTimestamp - (15 * 60);  // 15 minutes before
-                $targetEnd = $targetTimestamp + (15 * 60);    // 15 minutes after
-                
-                if ($apptStart < $targetEnd && $apptEnd > $targetStart) {
-                    $hasConflict = true;
-                    break;
-                }
-            }
-            
-            if (!$hasConflict) {
+            if ($conflicts == 0) {
                 $availableDentists[] = $dentist;
             }
         }
