@@ -1056,13 +1056,8 @@ function applyChartColors(chart) {
         // Apply chart colors
         chart.forEach(tooth => {
             const condition = (tooth.condition || '').replace(' ', '_') || 'healthy';
-            if (condition === 'missing') {
-                // Hide missing tooth instead of coloring it black
-                window._chart3DViewer.setToothColor(parseInt(tooth.tooth_number), null, true);
-            } else {
-                const color = colorMap[condition] || colorMap.other;
-                window._chart3DViewer.setToothColor(parseInt(tooth.tooth_number), color);
-            }
+            const color = colorMap[condition] || colorMap.other;
+            window._chart3DViewer.setToothColor(parseInt(tooth.tooth_number), color);
         });
 
         // Save chart data map for popup lookups

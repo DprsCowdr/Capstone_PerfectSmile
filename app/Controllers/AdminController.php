@@ -544,6 +544,55 @@ class AdminController extends BaseAdminController
         }
     }
 
+    /**
+     * Parse duration input that may contain hours (e.g., '2h') or plain minutes (e.g., '120')
+     * Returns integer minutes or null for empty input.
+     */
+    protected function parseDurationInput($input)
+    {
+        if ($input === null) return null;
+        $input = trim((string)$input);
+        if ($input === '') return null;
+
+        // Accept formats like '2h', '2.5h', '150', '120m'
+        // Normalize
+        $lower = strtolower($input);
+
+        // If contains 'h' treat as hours
+        if (strpos($lower, 'h') !== false) {
+            // extract numeric part
+            $num = floatval(str_replace('h', '', $lower));
+            if ($num <= 0) return null;
+            return (int) round($num * 60);
+        }
+
+        // If contains 'm' remove it
+        if (strpos($lower, 'm') !== false) {
+            $lower = str_replace('m', '', $lower);
+        }
+
+        // fallback to integer minutes
+        $minutes = intval($lower);
+        if ($minutes <= 0) return null;
+        return $minutes;
+    }
+
+    /**
+     * Format minutes to readable string, e.g., 150 -> '2h 30m' or '30m'
+     */
+    protected function formatMinutesReadable($minutes)
+    {
+        if ($minutes === null) return 'Not set';
+        $m = intval($minutes);
+        if ($m <= 0) return 'Not set';
+        $hours = intdiv($m, 60);
+        $rem = $m % 60;
+        if ($hours > 0) {
+            return $hours . 'h' . ($rem ? ' ' . $rem . 'm' : '');
+        }
+        return $rem . 'm';
+    }
+
     public function procedures()
     {
         $user = $this->checkAdminAuth();

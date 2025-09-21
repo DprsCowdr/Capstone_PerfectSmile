@@ -24,9 +24,18 @@ $routes->get('auth/logout', 'Auth::logout');
 $routes->get('dashboard', 'Dashboard::index');
 
 // Admin routes (protected)
-// Debug route (remove in production)
-$routes->get('debug/appointments', 'Debug::checkAppointments');
-$routes->get('debug/add-test', 'Debug::addTestAppointment');
+
+// Debug-only admin helpers (register only in development)
+if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
+    $routes->get('debug/appointments', 'Debug::checkAppointments');
+    $routes->get('debug/add-test', 'Debug::addTestAppointment');
+    // Debug approve endpoint (dev-only)
+    $routes->get('debug/approve-test/(:num)', 'Debug::approveTestAppointment/$1');
+    // Debug list branch notifications
+    $routes->get('debug/branch-notifications', 'Debug::listBranchNotifications');
+    $routes->get('debug/smoke-run', 'Debug::smokeRun');
+}
+
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard

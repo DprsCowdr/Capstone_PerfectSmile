@@ -46,19 +46,19 @@
                                     </select>
                                 </div>
 
-                                <!-- Service -->
+                                <!-- Procedure -->
                                 <div>
-                                    <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">Primary Service *</label>
-                                    <select id="service_id" 
-                                            name="service_id" 
+                                    <label for="procedure_id" class="block text-sm font-medium text-gray-700 mb-2">Primary Procedure *</label>
+                                    <select id="procedure_id" 
+                                            name="procedure_id" 
                                             class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" 
                                             required>
-                                        <option value="">Select a service</option>
-                                        <?php foreach ($services ?? [] as $service): ?>
-                                            <option value="<?= $service['id'] ?>" 
-                                                    data-price="<?= esc($service['price'] ?? 0) ?>"
-                                                    <?= ($invoice['service_id'] ?? '') == $service['id'] ? 'selected' : '' ?>>
-                                                <?= esc($service['service_name'] ?? $service['name'] ?? '') ?> - $<?= number_format($service['price'] ?? 0, 2) ?>
+                                        <option value="">Select a procedure</option>
+                                        <?php foreach ($procedures ?? [] as $proc): ?>
+                                            <option value="<?= $proc['id'] ?>" 
+                                                    data-price="<?= esc($proc['price'] ?? 0) ?>"
+                                                    <?= ($invoice['procedure_id'] ?? '') == $proc['id'] ? 'selected' : '' ?>>
+                                                <?= esc($proc['procedure_name'] ?? $proc['name'] ?? '') ?> - $<?= number_format($proc['price'] ?? 0, 2) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
