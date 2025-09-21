@@ -128,6 +128,9 @@
                                                 class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold transition-colors">
                                             <i class="fas fa-times mr-1"></i> Decline
                                         </button>
+                                        <button onclick="reschedulePatient(<?= $appointment['id'] ?>)" class="inline-flex items-center px-3 py-1 border border-purple-600 text-sm font-medium rounded text-purple-700 bg-white hover:bg-purple-50">
+                                            <i class="fas fa-calendar-plus mr-1"></i>Reschedule
+                                        </button>
                                     </div>
                                 </div>
                                 <?php if ($appointment['remarks']): ?>

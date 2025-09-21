@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced availableSlots() API Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .slot { 
+            display: inline-block; 
+            margin: 5px; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            cursor: pointer;
+        }
+        .slot.available { background-color: #e8f5e8; border-color: #4caf50; }
+        .slot.blocked { background-color: #ffe8e8; border-color: #f44336; cursor: not-allowed; }
+        .slot.owned-by-me { background-color: #fff3cd; border-color: #ffc107; }
+        .metadata { background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .section { margin: 20px 0; }
+        .section h3 { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Enhanced availableSlots() API Demo</h1>
+    
+    <div class="section">
+        <h3>API Response Preview</h3>
+        <p>This demonstrates how the enhanced availableSlots() API response can be consumed by frontend applications.</p>
+    </div>
+
+    <div class="metadata">
+        <h3>Appointment Metadata</h3>
+        <div id="metadata-display">Loading...</div>
+    </div>
+
+    <div class="section">
+        <h3>All Time Slots (Timeline View)</h3>
+        <div id="all-slots-display">Loading slots...</div>
+    </div>
+
+    <div class="section">
+        <h3>Available Slots Only (Booking Form)</h3>
+        <select id="available-slots-select">
+            <option>Loading available slots...</option>
+        </select>
+    </div>
+
+    <div class="section">
+        <h3>My Existing Appointments (Reschedule Options)</h3>
+        <div id="my-appointments">Loading...</div>
+    </div>
+
+    <script>
+        // Simulated enhanced API response
+        const mockApiResponse = {
+            "success": true,
+            "slots": [
+                // Backward compatibility array (available only)
+                { "time": "9:00 AM", "timestamp": 1705327200, "available": true, "duration_minutes": 60, "grace_minutes": 15, "ends_at": "10:15 AM" },
+                { "time": "11:30 AM", "timestamp": 1705336200, "available": true, "duration_minutes": 60, "grace_minutes": 15, "ends_at": "12:45 PM" }
+            ],
+            "all_slots": [
+                { "time": "9:00 AM", "timestamp": 1705327200, "available": true, "duration_minutes": 60, "grace_minutes": 15, "ends_at": "10:15 AM" },
+                { 
+                    "time": "10:00 AM", 
+                    "timestamp": 1705330800, 
+                    "available": false, 
+                    "duration_minutes": 60, 
+                    "grace_minutes": 15, 
+                    "ends_at": "11:15 AM",
+                    "blocking_info": {
+                        "type": "appointment",
+                        "start": "10:00 AM",
+                        "end": "11:00 AM", 
+                        "appointment_id": 123,
+                        "owned_by_current_user": false
+                    },
+                    "owned_by_current_user": false
+                },
+                { 
+                    "time": "11:00 AM", 
+                    "timestamp": 1705334400, 
+                    "available": false, 
+                    "duration_minutes": 60, 
+                    "grace_minutes": 15, 
+                    "ends_at": "12:15 PM",
+                    "blocking_info": {
+                        "type": "appointment",
+                        "start": "11:00 AM",
+                        "end": "12:00 PM",
+                        "appointment_id": 124,
+                        "owned_by_current_user": true
+                    },
+                    "owned_by_current_user": true
+                },
+                { "time": "11:30 AM", "timestamp": 1705336200, "available": true, "duration_minutes": 60, "grace_minutes": 15, "ends_at": "12:45 PM" },
+                { 
+                    "time": "1:00 PM", 
+                    "timestamp": 1705341600, 
+                    "available": false, 
+                    "duration_minutes": 60, 
+                    "grace_minutes": 15, 
+                    "ends_at": "2:15 PM",
+                    "blocking_info": {
+                        "type": "availability_block",
+                        "start": "1:00 PM",
+                        "end": "2:00 PM"
+                    },
+                    "owned_by_current_user": false
+                }
+            ],
+            "available_slots": [
+                { "time": "9:00 AM", "timestamp": 1705327200, "available": true, "duration_minutes": 60, "grace_minutes": 15, "ends_at": "10:15 AM" },
+                { "time": "11:30 AM", "timestamp": 1705336200, "available": true, "duration_minutes": 60, "grace_minutes": 15, "ends_at": "12:45 PM" }
+            ],
+            "unavailable_slots": [
+                { 
+                    "time": "10:00 AM", 
+                    "available": false, 
+                    "blocking_info": { "type": "appointment", "appointment_id": 123, "owned_by_current_user": false }
+                },
+                { 
+                    "time": "11:00 AM", 
+                    "available": false, 
+                    "blocking_info": { "type": "appointment", "appointment_id": 124, "owned_by_current_user": true }
+                },
+                { 
+                    "time": "1:00 PM", 
+                    "available": false, 
+                    "blocking_info": { "type": "availability_block" }
+                }
+            ],
+            "metadata": {
+                "total_slots_checked": 5,
+                "available_count": 2,
+                "unavailable_count": 3,
+                "duration_minutes": 60,
+                "grace_minutes": 15,
+                "day_start": "8:00 AM",
+                "day_end": "5:00 PM"
+            }
+        };
+
+        function displayMetadata(metadata) {
+            document.getElementById('metadata-display').innerHTML = `
+                <p><strong>Schedule Overview:</strong> ${metadata.available_count} of ${metadata.total_slots_checked} slots available</p>
+                <p><strong>Service Duration:</strong> ${metadata.duration_minutes} minutes + ${metadata.grace_minutes} minutes grace period</p>
+                <p><strong>Operating Hours:</strong> ${metadata.day_start} - ${metadata.day_end}</p>
+            `;
+        }
+
+        function displayAllSlots(allSlots) {
+            const container = document.getElementById('all-slots-display');
+            container.innerHTML = '';
+            
+            allSlots.forEach(slot => {
+                const slotElement = document.createElement('div');
+                slotElement.className = 'slot';
+                slotElement.textContent = `${slot.time} - ${slot.ends_at}`;
+                
+                if (slot.available) {
+                    slotElement.classList.add('available');
+                    slotElement.title = 'Available for booking';
+                    slotElement.onclick = () => alert(`Selected: ${slot.time}`);
+                } else {
+                    slotElement.classList.add('blocked');
+                    
+                    if (slot.owned_by_current_user) {
+                        slotElement.classList.add('owned-by-me');
+                        // Admin view: indicate ownership without patient-facing wording
+                        slotElement.title = `Owned appointment: ${slot.blocking_info.start} - ${slot.blocking_info.end}`;
+                    } else if (slot.blocking_info.type === 'appointment') {
+                        slotElement.title = `Blocked by appointment: ${slot.blocking_info.start} - ${slot.blocking_info.end}`;
+                    } else {
+                        slotElement.title = `Dentist unavailable: ${slot.blocking_info.start} - ${slot.blocking_info.end}`;
+                    }
+                }
+                
+                container.appendChild(slotElement);
+            });
+        }
+
+        function displayAvailableSlots(availableSlots) {
+            const select = document.getElementById('available-slots-select');
+            select.innerHTML = '<option value="">Select an appointment time...</option>';
+            
+            availableSlots.forEach(slot => {
+                const option = document.createElement('option');
+                option.value = slot.timestamp;
+                option.textContent = `${slot.time} - ${slot.ends_at}`;
+                select.appendChild(option);
+            });
+        }
+
+        function displayMyAppointments(allSlots) {
+            const container = document.getElementById('my-appointments');
+            const myAppointments = allSlots.filter(slot => slot.owned_by_current_user);
+            
+            if (myAppointments.length === 0) {
+                container.innerHTML = '<p>No existing appointments found.</p>';
+                return;
+            }
+            
+            container.innerHTML = '<p>Click to reschedule:</p>';
+            myAppointments.forEach(slot => {
+                const appointmentElement = document.createElement('div');
+                appointmentElement.className = 'slot owned-by-me';
+                appointmentElement.textContent = `${slot.time} - ${slot.ends_at}`;
+                appointmentElement.title = 'Click to reschedule this appointment';
+                appointmentElement.onclick = () => {
+                    alert(`Reschedule appointment #${slot.blocking_info.appointment_id} at ${slot.time}`);
+                };
+                container.appendChild(appointmentElement);
+            });
+        }
+
+        // Simulate API call and render response
+        function loadDemo() {
+            console.log('Enhanced API Response:', mockApiResponse);
+            
+            displayMetadata(mockApiResponse.metadata);
+            displayAllSlots(mockApiResponse.all_slots);
+            displayAvailableSlots(mockApiResponse.available_slots);
+            displayMyAppointments(mockApiResponse.all_slots);
+        }
+
+        // Load demo on page ready
+        document.addEventListener('DOMContentLoaded', loadDemo);
+    </script>
+</body>
+</html>

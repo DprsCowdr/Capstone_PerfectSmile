@@ -1,34 +1,16 @@
-// calendar-admin.js - Dedicated admin calendar logic 
-// Separate from patient calendar to avoid function conflicts
+// calendar-admin.js - placeholder for admin/staff calendar logic
 (function(){
-  'use strict';
-  
+  window.calendarAdmin = window.calendarAdmin || {};
+  // Admin-specific handlers moved here from inline templates
   const baseUrl = window.baseUrl || '';
-
-  // If server templates provide showAdminNotification, reuse it. Otherwise provide a fallback.
-  function notifyAdmin(message, type='info', duration=6000) {
-    if (typeof window.showAdminNotification === 'function') return window.showAdminNotification(message, type, duration);
-    try { console.log('ADMIN_NOTIFY', type, message); } catch(e){}
-    if (type === 'error') { /* non-blocking */ }
-    return null;
-  }
-  
-  // Admin-specific form field selectors
-  const ADMIN_SELECTORS = {
-    dateInput: 'input[name="date"]',
-    branchSelect: 'select[name="branch"]',
-    dentistSelect: 'select[name="dentist"]', 
-    serviceSelect: 'select[name="service_id"]',
-    timeSelect: 'select[name="appointment_time"]',
-    patientSelect: 'select[name="patient"]',
-    procedureDuration: 'input[name="procedure_duration"]'
-  };
 
   function getCsrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : null;
   }
 
+<<<<<<< HEAD
+=======
   // Normalize various time string formats to 'HH:MM' 24-hour
   function normalizeTime(timeStr) {
     if (!timeStr) return '';
@@ -289,14 +271,15 @@
       }
     } catch (error) {
       if (window.__psm_debug) console.error('[admin-calendar] Error fetching slots:', error);
-  timeEl.innerHTML = '<option value="">Error loading slots</option>';
-  notifyAdmin('Error loading available times. Please try again.', 'error');
+      timeEl.innerHTML = '<option value="">Error loading slots</option>';
+      showAdminMessage('Error loading available times. Please try again.', 'error');
     }
   }
   
   // Populate time select with available slots
   function populateAdminTimeSlots(response, timeElement) {
-    const slots = response.available_slots || response.slots || [];
+    // Prefer all_slots so admin can see unavailable/blocked slots too
+    const slots = response.all_slots || response.available_slots || response.slots || [];
     
     if (window.__psm_debug) console.log('[admin-calendar] Populating slots:', slots);
     
@@ -362,7 +345,17 @@
         }
       }
       
-      option.textContent = label;
+      // If slot object explicitly marked unavailable, disable and annotate
+      if (slot && typeof slot === 'object' && slot.available === false) {
+        option.disabled = true;
+        option.textContent = label + ' (blocked)';
+        if (slot.blocking_info) {
+          const bi = slot.blocking_info;
+          option.title = (bi.type ? bi.type + ': ' : '') + (bi.start || '') + (bi.end ? ' - ' + bi.end : '');
+        }
+      } else {
+        option.textContent = label;
+      }
       timeElement.appendChild(option);
     });
     
@@ -385,7 +378,10 @@
       }
     }
     
-    showAdminMessage(`${slots.length} available time slots loaded`, 'success');
+    // If metadata exists, prefer its counts for clarity
+    const meta = response.metadata || {};
+    const avail = meta.available_count !== undefined ? meta.available_count : slots.filter(s => s && s.available !== false).length;
+    showAdminMessage(`${avail} available / ${slots.length} total slots loaded`, 'success');
   }
   
   // Show admin message
@@ -582,6 +578,7 @@
   }
 
   // Legacy functions for compatibility with existing calendar scripts
+>>>>>>> origin/main
   function editAppointment(appointmentId) {
     const appointment = (window.appointments || []).find(apt => apt.id == appointmentId);
     if (!appointment) {
@@ -608,231 +605,98 @@
   }
 
   function deleteAppointment(appointmentId) {
-    if (confirm('Are you sure you want to delete this appointment?')) {
-      const formData = new FormData();
-      formData.append('_method', 'DELETE');
-      const csrf = getCsrfToken();
-      if (csrf) formData.append('_token', csrf);
-      
-      fetch(`${baseUrl}admin/appointments/delete/${appointmentId}`, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert('Appointment deleted successfully');
-          location.reload();
-        } else {
-          alert('Failed to delete appointment: ' + (data.message || 'Unknown error'));
-        }
-      })
-      .catch(() => {
-        alert('Failed to delete appointment');
-      });
-    }
+    if (!confirm('Are you sure you want to delete this appointment?')) return;
+    const token = getCsrfToken();
+    fetch(`${baseUrl}admin/appointments/delete/${appointmentId}`, {
+      method: 'DELETE',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(token ? { csrf_token: token } : {})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Appointment deleted successfully');
+        window.appointments = (window.appointments || []).filter(apt => apt.id != appointmentId);
+        if (typeof updateCalendarDisplay === 'function') updateCalendarDisplay();
+        const editPanel = document.getElementById('editAppointmentPanel');
+        if (editPanel) editPanel.classList.remove('active');
+        const dayModal = document.getElementById('dayAppointmentsModal');
+        if (dayModal) dayModal.classList.add('hidden');
+      } else {
+        alert('Failed to delete appointment: ' + (data.message || 'Unknown error'));
+      }
+    })
+    .catch(() => {
+      alert('Failed to delete appointment');
+    });
   }
 
   function approveAppointment(appointmentId) {
-    if (confirm('Are you sure you want to approve this appointment?')) {
-      const dentistId = prompt('Enter dentist ID to assign to this appointment:');
-      if (!dentistId) {
-        alert('Dentist ID is required');
-        return;
-      }
-      
-      const formData = new FormData();
-      formData.append('dentist_id', dentistId);
-      const csrf = getCsrfToken();
-      if (csrf) formData.append('_token', csrf);
-      
-      fetch(`${baseUrl}admin/appointments/approve/${appointmentId}`, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert('Appointment approved successfully');
-          // Refresh appointments and availability so UI updates immediately
-          let selDate = null;
-          try {
-            if (typeof loadAppointmentsForDate === 'function') {
-              selDate = document.querySelector('input[name="date"]') ? document.querySelector('input[name="date"]').value : null;
-              loadAppointmentsForDate(selDate || new Date().toISOString().slice(0,10));
-              try { if (typeof refreshAppointmentsForDate === 'function') refreshAppointmentsForDate(selDate || new Date().toISOString().slice(0,10)); } catch(e) { console.warn('refreshAppointmentsForDate call failed', e); }
-            }
-          } catch (e) { console.warn('Failed to refresh appointments after approve', e); }
-          try { window.dispatchEvent(new Event('availability:changed')); } catch(e) {}
-          // Clear any available slots cache so patient/admin selects re-query the server
-          try {
-            if (window.__available_slots_cache && selDate) {
-              delete window.__available_slots_cache[selDate];
-            }
-            if (window.calendarCore && typeof window.calendarCore.refreshAllTimeSlots === 'function') {
-              window.calendarCore.refreshAllTimeSlots();
-            }
-          } catch (e) { console.warn('Failed to clear available slots cache or refresh selects', e); }
-          // Broadcast to other tabs via BroadcastChannel and localStorage fallback
-          try { if (window._availabilityBroadcast) window._availabilityBroadcast.postMessage({ detail: { appointment_id: appointmentId, action: 'approved' } }); } catch(e){}
-          try { localStorage.setItem('_availability_update', String(Date.now())); } catch(e){}
-          // NOTE: removed location.reload() so dynamic refresh (events, cache clearing, broadcast)
-          // can update other tabs and the current admin UI without a full reload.
-         } else {
-           alert('Failed to approve appointment: ' + (data.message || 'Unknown error'));
-         }
-       })
-      .catch(() => {
-        alert('Failed to approve appointment');
-      });
-    }
+    const appointment = window.appointments.find(apt => apt.id == appointmentId);
+    if (!appointment) { alert('Appointment not found'); return; }
+    const dentistId = prompt('Enter dentist ID to assign to this appointment:');
+    if (!dentistId) { alert('Dentist ID is required'); return; }
+    const formData = new FormData();
+    formData.append('dentist_id', dentistId);
+    const token = getCsrfToken(); if (token) formData.append('csrf_token', token);
+    fetch(`${baseUrl}admin/appointments/approve/${appointmentId}`, { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => { if (data.success) { alert('Appointment approved successfully'); location.reload(); } else { alert('Failed to approve appointment: ' + (data.message || '')); } })
+    .catch(()=> alert('Failed to approve appointment'));
   }
 
   function declineAppointment(appointmentId) {
     const reason = prompt('Please provide a reason for declining this appointment:');
-    if (reason) {
-      const formData = new FormData();
-      formData.append('reason', reason);
-      const csrf = getCsrfToken();
-      if (csrf) formData.append('_token', csrf);
-      
-      fetch(`${baseUrl}admin/appointments/decline/${appointmentId}`, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      })
+    if (!reason) { alert('Decline reason is required'); return; }
+    const formData = new FormData();
+    formData.append('reason', reason);
+    const token = getCsrfToken(); if (token) formData.append('csrf_token', token);
+    fetch(`${baseUrl}admin/appointments/decline/${appointmentId}`, { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => { if (data.success) { alert('Appointment declined successfully'); location.reload(); } else { alert('Failed to decline appointment: ' + (data.message || '')); } })
+    .catch(()=> alert('Failed to decline appointment'));
+  }
+
+  // Intercept edit appointment form submit via AJAX
+  function initEditFormHandler(){
+    const editPanel = document.getElementById('editAppointmentPanel');
+    if (!editPanel) return;
+    const form = editPanel.querySelector('form');
+    if (!form) return;
+    form.onsubmit = function(e){
+      e.preventDefault();
+      const formData = new FormData(form);
+      fetch(form.action, { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          alert('Appointment declined successfully');
-          // Refresh appointments and availability so UI updates immediately (mirror approve flow)
-          let selDateDecline = null;
-          try {
-            if (typeof loadAppointmentsForDate === 'function') {
-              selDateDecline = document.querySelector('input[name="date"]') ? document.querySelector('input[name="date"]').value : null;
-              loadAppointmentsForDate(selDateDecline || new Date().toISOString().slice(0,10));
-              try { if (typeof refreshAppointmentsForDate === 'function') refreshAppointmentsForDate(selDateDecline || new Date().toISOString().slice(0,10)); } catch(e) { console.warn('refreshAppointmentsForDate call failed', e); }
-            }
-          } catch (e) { console.warn('Failed to refresh appointments after decline', e); }
-          try { window.dispatchEvent(new Event('availability:changed')); } catch(e) {}
-          try {
-            if (window.__available_slots_cache && selDateDecline) delete window.__available_slots_cache[selDateDecline];
-            if (window.calendarCore && typeof window.calendarCore.refreshAllTimeSlots === 'function') window.calendarCore.refreshAllTimeSlots();
-          } catch(e) { console.warn('Failed to clear available slots cache or refresh selects after decline', e); }
-          try { if (window._availabilityBroadcast) window._availabilityBroadcast.postMessage({ detail: { appointment_id: appointmentId, action: 'declined' } }); } catch(e){}
-          try { localStorage.setItem('_availability_update', String(Date.now())); } catch(e){}
-          // NOTE: removed location.reload() so dynamic refresh (events, cache clearing, broadcast)
-          // can update other tabs and the current admin UI without a full reload.
+          alert('Appointment updated successfully');
+          location.reload();
         } else {
-          alert('Failed to decline appointment: ' + (data.message || 'Unknown error'));
+          alert('Failed to update appointment: ' + (data.message || 'Unknown error'));
         }
       })
-      .catch(() => {
-        alert('Failed to decline appointment');
-      });
-    }
+      .catch(() => { alert('Failed to update appointment'); });
+    };
   }
 
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAdminCalendar);
-  } else {
-    initAdminCalendar();
-  }
-  
-  // Expose legacy admin calendar interface for compatibility
   window.calendarAdmin = {
     editAppointment,
     deleteAppointment,
     approveAppointment,
     declineAppointment,
-    fetchSlots: fetchAdminAvailableSlots,
-    init: initAdminCalendar
+    init: function(){ initEditFormHandler(); }
   };
-  
-  // Export for debugging
-  window.adminCalendar = {
-    fetchSlots: fetchAdminAvailableSlots,
-    init: initAdminCalendar,
-    test: function() {
-      console.log('=== Admin Calendar Test ===');
-      console.log('Elements check:');
-      Object.keys(ADMIN_SELECTORS).forEach(key => {
-        const el = document.querySelector(ADMIN_SELECTORS[key]);
-        console.log(`${key}:`, el ? { name: el.name, value: el.value, id: el.id } : 'NOT FOUND');
-      });
-      console.log('=== End Test ===');
-    },
-    populateTestData: function() {
-      console.log('Populating test data...');
-      const dateEl = document.querySelector(ADMIN_SELECTORS.dateInput);
-      const branchEl = document.querySelector(ADMIN_SELECTORS.branchSelect);
-      const serviceEl = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
-      
-      if (dateEl) {
-        dateEl.value = '2025-09-20';
-        console.log('Set date to:', dateEl.value);
-      }
-      if (branchEl && branchEl.options.length > 1) {
-        branchEl.selectedIndex = 1;
-        console.log('Set branch to:', branchEl.value, branchEl.options[branchEl.selectedIndex].text);
-      }
-      if (serviceEl && serviceEl.options.length > 1) {
-        serviceEl.selectedIndex = 1;
-        console.log('Set service to:', serviceEl.value, serviceEl.options[serviceEl.selectedIndex].text);
-        
-        // Trigger change event to make sure the value is registered
-        serviceEl.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      
-      console.log('Test data populated, calling fetchSlots...');
-      fetchAdminAvailableSlots();
-    },
-    testServiceSelection: function() {
-      console.log('=== Service Selection Test ===');
-      const serviceEl = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
-      if (serviceEl) {
-        console.log('Service element found:', {
-          value: serviceEl.value,
-          selectedIndex: serviceEl.selectedIndex,
-          optionsCount: serviceEl.options.length,
-          allOptions: Array.from(serviceEl.options).map((opt, i) => ({
-            index: i,
-            value: opt.value,
-            text: opt.text
-          }))
-        });
-      } else {
-        console.log('Service element NOT found');
-      }
-      console.log('=== End Test ===');
-    }
-  };
-  
-  // Admin Available Slots Menu functionality (similar to patient calendar)
-  function initAdminAvailableSlotsMenu() {
-    const availableBtn = document.querySelector('#availableSlotsBtn');
-    const availableMenu = document.querySelector('#availableSlotsMenu');
-    const availableMenuContent = document.querySelector('#availableSlotsMenuContent');
-    
-    if (!availableBtn || !availableMenu || !availableMenuContent) {
-      console.log('[admin-calendar] Available slots menu elements not found');
-      return;
-    }
-    
-    // Hide all menus function
-    function hideAllMenus() {
-      if (availableMenu) availableMenu.classList.add('hidden');
-    }
-    
-    // Available slots preload function
-    async function preloadAdminAvailableSlots(requestedGranularity) {
-      // Ensure these variables exist in the function scope to avoid ReferenceError in any path
-      let allSlots = [];
-      let availableSlots = [];
 
+<<<<<<< HEAD
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.calendarAdmin.init);
+  else window.calendarAdmin.init();
+})();
+=======
       try {
         if (!availableMenuContent) return;
         console.log('[admin-calendar] preloadAdminAvailableSlots start');
@@ -1006,8 +870,7 @@
           console.log('[admin-calendar] Parsed response:', responseData);
         } catch (parseError) {
           console.error('[admin-calendar] JSON parse error:', parseError);
-            availableMenuContent.textContent = 'Error: Invalid response format';
-            notifyAdmin('Invalid response from available-slots endpoint', 'error');
+          availableMenuContent.textContent = 'Error: Invalid response format';
           return;
         }
         
@@ -1131,8 +994,8 @@
           }
 
           legend.appendChild(legendItem('#bbf7d0','Available'));
-          legend.appendChild(legendItem('#fff7e6','Your appointment'));
-          legend.appendChild(legendItem('#fff7f7','Blocked'));
+          // removed patient-facing "Your appointment" label for admin dashboard
+          legend.appendChild(legendItem('#fff7f7','Blocked / Unavailable'));
 
           availableMenuContent.appendChild(legend);
           availableMenuContent.appendChild(controls);
@@ -1445,3 +1308,4 @@
   console.log('[admin-calendar] Module loaded, baseUrl:', baseUrl);
   
 })();
+>>>>>>> origin/main

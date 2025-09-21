@@ -153,10 +153,11 @@
                                             </span>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div class="flex flex-col space-y-1 w-44">
-                                                <button onclick="approveAppointment(<?= $appointment['id'] ?>, '<?= $appointment['dentist_name'] ? 'assigned' : 'unassigned' ?>')" 
-                                                        class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate">
-                                                    <i class="fas fa-check mr-1"></i><?= $appointment['dentist_name'] ? 'Approve' : 'Assign & Approve' ?>
+                                            <div class="flex flex-col space-y-1 w-44" style="position:relative">
+                                                <button id="approveBtn-<?= $appointment['id'] ?>" onclick="approveAppointment(<?= $appointment['id'] ?>, '<?= $appointment['dentist_name'] ? 'assigned' : 'unassigned' ?>')" 
+                                                        class="approve-btn bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate">
+                                                    <i class="fas fa-check mr-1"></i><span class="approve-label"><?= $appointment['dentist_name'] ? 'Approve' : 'Assign & Approve' ?></span>
+                                                    <span class="ml-2 approve-spinner hidden"> <i class="fas fa-spinner fa-spin"></i></span>
                                                 </button>
                                                 <button onclick="declineAppointment(<?= $appointment['id'] ?>)" 
                                                         class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors">
@@ -212,47 +213,105 @@
 </div>
 
 <script>
+// Small admin notification helper
+function showAdminNotification(message, type='info', duration=6000) {
+    let container = document.getElementById('adminNotifications');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'adminNotifications';
+        container.style.position = 'fixed';
+        container.style.top = '16px';
+        container.style.right = '16px';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+    const el = document.createElement('div');
+    el.className = 'p-3 mb-2 rounded shadow';
+    el.style.minWidth = '220px';
+    el.style.color = '#111827';
+    el.style.background = (type === 'error') ? '#fee2e2' : (type === 'success' ? '#dcfce7' : '#eef2ff');
+    el.textContent = message;
+    container.appendChild(el);
+    if (duration > 0) setTimeout(()=> el.remove(), duration);
+}
+
+function showAlternativeSlots(appointmentId, suggestions) {
+    // remove existing
+    const prev = document.getElementById('altSlots-' + appointmentId);
+    if (prev) prev.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'altSlots-' + appointmentId;
+    wrapper.className = 'p-3 bg-white border rounded shadow mt-2';
+    wrapper.style.position = 'absolute';
+    wrapper.style.zIndex = 9999;
+    wrapper.style.minWidth = '260px';
+    wrapper.innerHTML = '<div style="font-weight:600;margin-bottom:6px">Suggested alternative times</div>';
+    const list = document.createElement('div');
+    list.style.display = 'flex'; list.style.flexDirection = 'column'; list.style.gap = '6px';
+    (suggestions || []).slice(0,6).forEach(s => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'px-2 py-1 text-sm text-left hover:bg-gray-100 rounded';
+        const label = (s.datetime || s.time || s) + (s.dentist ? (' — ' + s.dentist) : '');
+        btn.textContent = label;
+        btn.addEventListener('click', function(){
+            // try to auto-approve at suggested time
+            const fd = new FormData();
+            fd.append('<?= csrf_token() ?>','<?= csrf_hash() ?>');
+            if (s.time) fd.append('appointment_time', s.time);
+            if (s.datetime) fd.append('appointment_datetime', s.datetime);
+            if (s.dentist_id) fd.append('dentist_id', s.dentist_id);
+            fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, { method: 'POST', headers: {'X-Requested-With':'XMLHttpRequest'}, body: fd })
+            .then(r => r.json()).then(d => {
+                if (d.success) { showAdminNotification('Approved at suggested time','success'); setTimeout(()=> location.reload(), 600); }
+                else showAdminNotification(d.message || 'Failed to approve', 'error');
+            }).catch(()=> showAdminNotification('Network error','error'));
+        });
+        list.appendChild(btn);
+    });
+    wrapper.appendChild(list);
+    const btn = document.getElementById('approveBtn-' + appointmentId);
+    if (btn) { btn.parentNode.appendChild(wrapper); }
+    else document.body.appendChild(wrapper);
+}
+
 function approveAppointment(appointmentId, isAssigned) {
     const confirmMessage = isAssigned === 'assigned'
         ? 'Are you sure you want to approve this appointment? (Dentist is already assigned)'
         : 'Are you sure you want to approve this appointment? You will need to assign a dentist.';
 
     if (confirm(confirmMessage)) {
+        const btn = document.getElementById('approveBtn-' + appointmentId);
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); const sp = btn.querySelector('.approve-spinner'); if (sp) sp.classList.remove('hidden'); }
+
         const formData = new FormData();
         formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
 
         fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
             method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: formData
         })
-        .then(response => response.text())
-        .then(text => {
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                console.error('Non-JSON response:', text);
-                alert('Server returned an unexpected response. Please check the logs.');
-                return;
-            }
+        .then(response => response.json())
+        .then(data => {
             if (data.success) {
-                location.reload();
+                showAdminNotification('Appointment approved', 'success');
+                setTimeout(()=> location.reload(), 600);
             } else {
                 if (data.message && data.message.includes('No dentists available')) {
-                    alert('No dentists available for auto-assignment. Please manually select a dentist.');
+                    showAdminNotification('No dentists available for auto-assignment. Please select manually.', 'error', 8000);
                     showDentistSelectionModal(appointmentId);
+                } else if (data.conflict || (Array.isArray(data.suggestions) && data.suggestions.length)) {
+                    showAdminNotification(data.message || 'Scheduling conflict detected', 'error', 8000);
+                    showAlternativeSlots(appointmentId, data.suggestions || []);
                 } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
+                    showAdminNotification('Error: ' + (data.message || 'Unknown error'), 'error', 8000);
                 }
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while approving the appointment. Please check the console for details.');
-        });
+        .catch(error => { console.error('Error:', error); showAdminNotification('Network error approving appointment','error'); })
+        .finally(()=>{ if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); const sp = btn.querySelector('.approve-spinner'); if (sp) sp.classList.add('hidden'); } });
     }
 }
 
