@@ -5,7 +5,10 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', to: 'Home::index');
+// Set landing page as default route
+$routes->get('/', function() {
+    return view('landingPage/index');
+});
 
 // Guest routes (no authentication required)
 $routes->get('guest/book-appointment', 'Guest::bookAppointment');
