@@ -52,24 +52,24 @@ class InvoiceService
             }
         }
 
-        // Get procedure information if procedure_id exists
-        if (!empty($invoice['procedure_id'])) {
+        // Get service information if service_id exists
+        if (!empty($invoice['service_id'])) {
             try {
-                if ($this->procedureModel) {
-                    $procedure = $this->procedureModel->find($invoice['procedure_id']);
-                    if ($procedure) {
-                        $invoice['procedure_name'] = $procedure['name'] ?? $procedure['procedure_name'] ?? 'Unknown Procedure';
-                        $invoice['procedure_description'] = $procedure['description'] ?? 'N/A';
+                if ($this->serviceModel) {
+                    $service = $this->serviceModel->find($invoice['service_id']);
+                    if ($service) {
+                        $invoice['service_name'] = $service['name'] ?? 'Unknown Service';
+                        $invoice['service_description'] = $service['description'] ?? 'N/A';
                     }
                 } else {
-                    // Fallback if procedure model not available
-                    $invoice['procedure_name'] = 'Procedure ID: ' . $invoice['procedure_id'];
-                    $invoice['procedure_description'] = 'N/A';
+                    // Fallback if service model not available
+                    $invoice['service_name'] = 'Service ID: ' . $invoice['service_id'];
+                    $invoice['service_description'] = 'N/A';
                 }
             } catch (\Throwable $e) {
-                log_message('error', "Error fetching procedure data: " . $e->getMessage());
-                $invoice['procedure_name'] = 'Unknown Procedure';
-                $invoice['procedure_description'] = 'N/A';
+                log_message('error', "Error fetching service data: " . $e->getMessage());
+                $invoice['service_name'] = 'Unknown Service';
+                $invoice['service_description'] = 'N/A';
             }
         }
 
@@ -121,6 +121,9 @@ class InvoiceService
         $items = $data['items'] ?? [];
         unset($data['items']);
 
+        // Debug: Log the incoming data
+        log_message('debug', 'InvoiceService::create - incoming data: ' . json_encode($data));
+
     try {
             // Ensure required numeric fields exist so model validation doesn't fail on insert
             $data['total_amount'] = isset($data['total_amount']) ? $data['total_amount'] : 0;
@@ -137,6 +140,14 @@ class InvoiceService
                 } catch (\Throwable $_e) {
                     // If introspection fails, fall back to model allowedFields to avoid data loss
                     $tableFields = property_exists($this->invoiceModel, 'allowedFields') ? $this->invoiceModel->allowedFields : [];
+                }
+
+                // Ensure critical fields are always preserved
+                $criticalFields = ['patient_id', 'service_id', 'total_amount', 'discount', 'final_amount', 'invoice_number'];
+                foreach ($criticalFields as $field) {
+                    if (!in_array($field, $tableFields)) {
+                        $tableFields[] = $field;
+                    }
                 }
 
                 $removed = [];
@@ -414,40 +425,24 @@ class InvoiceService
         }
     }
 
-    public function getProcedures()
+    public function getServices()
     {
-        // Prefer procedures table if present (procedures may reference services). Return a consistent shape for the create view.
         try {
-            // Fetch all procedures; do not assume a 'status' column/value exists in all installations
-            $procs = $this->procedureModel->findAll();
-            // Normalize to id/name/price keys expected by the view
-            $result = [];
-            foreach ($procs as $p) {
-                $result[] = [
-                    'id' => $p['id'],
-                    'procedure_name' => $p['procedure_name'] ?? ($p['title'] ?? 'Procedure'),
-                    'name' => $p['procedure_name'] ?? ($p['title'] ?? 'Procedure'),
-                    'price' => $p['fee'] ?? ($p['price'] ?? 0)
-                ];
-            }
-            if (!empty($result)) return $result;
-        } catch (\Throwable $e) {
-            // ignore and fallback to services
-        }
-        try {
-            // Fallback to services table without assuming a status column
+            // Fetch all services from services table
             $services = $this->serviceModel->findAll();
             $result = [];
             foreach ($services as $s) {
                 $result[] = [
                     'id' => $s['id'],
-                    'procedure_name' => $s['name'] ?? $s['title'] ?? 'Service',
-                    'name' => $s['name'] ?? $s['title'] ?? 'Service',
+                    'service_name' => $s['name'] ?? 'Service',
+                    'name' => $s['name'] ?? 'Service',
+                    'description' => $s['description'] ?? '',
                     'price' => $s['price'] ?? 0
                 ];
             }
             return $result;
         } catch (\Throwable $e) {
+            log_message('error', 'Error fetching services: ' . $e->getMessage());
             return [];
         }
     }
@@ -470,19 +465,19 @@ class InvoiceService
             $data['total_amount'] = $subtotal;
             $data['final_amount'] = $finalAmount;
         } else {
-            // If no items, try to get procedure price. Accept multiple field names (fee/price/amount) depending on schema.
-            if (isset($data['procedure_id'])) {
+            // If no items, try to get service price
+            if (isset($data['service_id'])) {
                 try {
-                    $procedure = $this->procedureModel->find($data['procedure_id']);
-                    if ($procedure) {
-                        $price = floatval($procedure['fee'] ?? $procedure['price'] ?? $procedure['amount'] ?? 0);
+                    $service = $this->serviceModel->find($data['service_id']);
+                    if ($service) {
+                        $price = floatval($service['price'] ?? 0);
                         $discount = floatval($data['discount'] ?? 0);
                         $finalAmount = max(0, $price - $discount);
                         $data['total_amount'] = $price;
                         $data['final_amount'] = $finalAmount;
                     }
                 } catch (\Throwable $e) {
-                    log_message('error', 'Failed to get procedure price: ' . $e->getMessage());
+                    log_message('error', 'Failed to get service price: ' . $e->getMessage());
                 }
             }
         }

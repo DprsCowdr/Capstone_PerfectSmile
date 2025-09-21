@@ -36,6 +36,7 @@ $routes->get('auth/logout', 'Auth::logout');
 $routes->get('dashboard', 'Dashboard::index');
 
 // Admin routes (protected)
+
 // Debug-only admin helpers (register only in development)
 if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
     $routes->get('debug/appointments', 'Debug::checkAppointments');
@@ -46,6 +47,7 @@ if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
     $routes->get('debug/branch-notifications', 'Debug::listBranchNotifications');
     $routes->get('debug/smoke-run', 'Debug::smokeRun');
 }
+
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard
@@ -132,6 +134,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
+    $routes->get('services/ajax-list', 'AdminController::servicesAjaxList'); // AJAX endpoint for services
     $routes->post('services/store', 'AdminController::storeService');
     $routes->get('services/(:num)', 'AdminController::getService/$1');
     $routes->post('services/update/(:num)', 'AdminController::updateService/$1');
@@ -344,6 +347,7 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->get('get-bills/(:num)', 'Patient::getPatientBills/$1'); // Get patient bills via AJAX
     $routes->get('test-treatments', 'Patient::testTreatmentsEndpoint'); // Test treatments endpoint
     $routes->get('test-database', 'Patient::testDatabase'); // Test database connection
+    $routes->get('debug-records', 'Patient::debugRecords'); // Debug records loading
 });
 
 // API endpoints for patient-scoped appointment data

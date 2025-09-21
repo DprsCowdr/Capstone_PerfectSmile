@@ -101,15 +101,20 @@
                                         <?php endif; ?>
                                     </div>
 
-                                    <!-- Procedure Selection -->
+                                    <!-- Service Selection -->
                                     <div>
-                                        <label for="procedure_id" class="block text-sm font-medium text-gray-700 mb-2">Primary Procedure
-                                            <button type="button" id="refreshProcedures" title="Refresh procedures" class="ml-2 text-xs text-blue-600 hover:underline">Refresh</button>
+                                        <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">Primary Service
+                                            <button type="button" id="refreshServices" title="Refresh services" class="ml-2 text-xs text-blue-600 hover:underline">Refresh</button>
                                         </label>
-                                        <select id="procedure_id" 
-                                                name="procedure_id" 
+                                        <select id="service_id" 
+                                                name="service_id" 
                                                 class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                                            <option value="">Select a procedure (optional)</option>
+                                            <option value="">Select a service (optional)</option>
+                                            <?php foreach ($services ?? [] as $service): ?>
+                                                <option value="<?= $service['id'] ?>" data-price="<?= esc($service['price'] ?? 0) ?>">
+                                                    <?= esc($service['name']) ?> - $<?= number_format($service['price'] ?? 0, 2) ?>
+                                                </option>
+                                            <?php endforeach; ?>
                                         </select>
                                     </div>
 
@@ -370,33 +375,33 @@ document.getElementById('invoiceForm').addEventListener('submit', function(e) {
     }
 });
 
-// Fetch procedures via AJAX and populate the select
-function loadProcedures() {
-    fetch('<?= base_url('admin/procedures/ajax-list') ?>', { credentials: 'same-origin' })
+// Fetch services via AJAX and populate the select
+function loadServices() {
+    fetch('<?= base_url('admin/services/ajax-list') ?>', { credentials: 'same-origin' })
         .then(resp => resp.json())
         .then(data => {
             if (!data || !data.success) return;
-            const select = document.getElementById('procedure_id');
+            const select = document.getElementById('service_id');
             // Clear existing options except default
-            select.innerHTML = '<option value="">Select a procedure (optional)</option>';
-            data.data.forEach(p => {
+            select.innerHTML = '<option value="">Select a service (optional)</option>';
+            data.data.forEach(s => {
                 const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.dataset.price = p.price || 0;
-                opt.textContent = p.name + ' - $' + (Number(p.price || 0)).toFixed(2);
+                opt.value = s.id;
+                opt.dataset.price = s.price || 0;
+                opt.textContent = s.name + ' - $' + (Number(s.price || 0)).toFixed(2);
                 select.appendChild(opt);
             });
         })
-        .catch(err => console.error('Failed to load procedures', err));
+        .catch(err => console.error('Failed to load services', err));
 }
 
-document.getElementById('refreshProcedures').addEventListener('click', function() {
-    loadProcedures();
+document.getElementById('refreshServices').addEventListener('click', function() {
+    loadServices();
 });
 
 // Load on page start
 document.addEventListener('DOMContentLoaded', function() {
-    loadProcedures();
+    loadServices();
 });
 </script>
 
