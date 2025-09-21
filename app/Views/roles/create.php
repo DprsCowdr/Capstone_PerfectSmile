@@ -61,6 +61,8 @@ ob_start();
 </div>
 <?php
 $content = ob_get_clean();
+// Opt-in for fixed sidebar offset so admin sidebar remains intact
+$content = '<div data-sidebar-offset>' . $content . '</div>';
 echo view('templates/admin_layout', [
     'title' => $title,
     'content' => $content,

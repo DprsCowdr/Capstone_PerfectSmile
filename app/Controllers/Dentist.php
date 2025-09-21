@@ -795,25 +795,41 @@ class Dentist extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
-        $appointmentModel = new \App\Models\AppointmentModel();
-        
+        // Delegate to AppointmentService so we get FCFS/record return behavior
+        $appointmentService = new \App\Services\AppointmentService();
+
+        // Accept both a single datetime or separate date/time fields
+        $appointment_datetime = $this->request->getPost('appointment_datetime');
+        $date = $this->request->getPost('date');
+        $time = $this->request->getPost('time');
+        if (empty($appointment_datetime) && $date && $time) {
+            $appointment_datetime = $date . ' ' . $time . ':00';
+        }
+
         $data = [
-            'user_id' => $this->request->getPost('user_id'),
-            'dentist_id' => $this->request->getPost('dentist_id'),
-            'branch_id' => $this->request->getPost('branch_id'),
-            'appointment_datetime' => $this->request->getPost('appointment_datetime'),
+            'branch_id' => $this->request->getPost('branch_id') ?: $this->request->getPost('branch'),
+            'user_id' => $this->request->getPost('user_id') ?: $this->request->getPost('patient'),
+            'dentist_id' => $this->request->getPost('dentist_id') ?: Auth::getCurrentUser()['id'],
+            'appointment_datetime' => $appointment_datetime,
             'service' => $this->request->getPost('service'),
             'notes' => $this->request->getPost('notes'),
-            'status' => 'confirmed', // Dentist can directly confirm
+            'status' => 'confirmed',
             'approval_status' => 'approved',
             'created_by' => Auth::getCurrentUser()['id']
         ];
 
-        if ($appointmentModel->insert($data)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Appointment created successfully']);
-        } else {
-            return $this->response->setJSON(['success' => false, 'message' => 'Failed to create appointment']);
+    // Annotate as created by a dentist/staff user so message template is appropriate
+    $data['created_by_role'] = 'staff';
+    $result = $appointmentService->createAppointment($data);
+
+        // Ensure AJAX clients receive JSON with the saved record
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON($result);
         }
+
+        // Fallback to previous behavior (flash + redirect)
+        session()->setFlashdata($result['success'] ? 'success' : 'error', $result['message']);
+        return redirect()->back();
     }
 
     public function updateAppointment($id)

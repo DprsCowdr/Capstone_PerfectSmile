@@ -5,29 +5,7 @@
     
     <div class="flex-1 flex flex-col min-h-screen bg-white">
         <main class="flex-1 px-6 py-8 bg-white">
-            <!-- Breadcrumb -->
-            <nav class="flex mb-6" aria-label="Breadcrumb">
-                <ol class="inline-flex items-center space-x-1 md:space-x-3">
-                    <li class="inline-flex items-center">
-                        <a href="<?= base_url('admin/dashboard') ?>" class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-home mr-2"></i>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <div class="flex items-center">
-                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                            <a href="<?= base_url('admin/procedures') ?>" class="text-sm font-medium text-gray-500 hover:text-gray-700">Procedures</a>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="flex items-center">
-                            <i class="fas fa-chevron-right text-gray-400 mx-2"></i>
-                            <span class="text-sm font-medium text-gray-700">New Procedure</span>
-                        </div>
-                    </li>
-                </ol>
-            </nav>
+            <!-- Breadcrumb removed as requested by admin UX -->
 
             <!-- Page Header -->
             <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
@@ -101,20 +79,14 @@
                             </select>
                         </div>
 
-                        <!-- Category -->
+                        <!-- Service (populated from services endpoint) -->
                         <div>
-                            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                            <select id="category" 
-                                    name="category" 
-                                    class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
-                                <option value="none" <?= old('category') == 'none' ? 'selected' : '' ?>>None</option>
-                                <option value="cleaning" <?= old('category') == 'cleaning' ? 'selected' : '' ?>>Cleaning</option>
-                                <option value="extraction" <?= old('category') == 'extraction' ? 'selected' : '' ?>>Extraction</option>
-                                <option value="filling" <?= old('category') == 'filling' ? 'selected' : '' ?>>Filling</option>
-                                <option value="crown" <?= old('category') == 'crown' ? 'selected' : '' ?>>Crown</option>
-                                <option value="root_canal" <?= old('category') == 'root_canal' ? 'selected' : '' ?>>Root Canal</option>
-                                <option value="whitening" <?= old('category') == 'whitening' ? 'selected' : '' ?>>Whitening</option>
-                                <option value="consultation" <?= old('category') == 'consultation' ? 'selected' : '' ?>>Consultation</option>
+                            <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">Service *</label>
+                            <select id="service_id"
+                                    name="service_id"
+                                    class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+                                    required>
+                                <option value="">Loading services...</option>
                             </select>
                         </div>
 
@@ -131,8 +103,21 @@
                                    placeholder="0.00">
                         </div>
 
-                        <!-- Treatment Area -->
+                        <!-- Duration (minutes) -->
                         <div>
+                            <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
+                            <input type="number"
+                                   id="duration"
+                                   name="duration"
+                                   value="<?= old('duration') ?>"
+                                   min="0"
+                                   step="1"
+                                   class="w-full border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+                                   placeholder="e.g. 30">
+                        </div>
+
+                        <!-- Treatment Area (hidden by default; shown when a service requires it) -->
+                        <div id="treatment_area_wrapper" style="display: none;">
                             <label for="treatment_area" class="block text-sm font-medium text-gray-700 mb-2">Treatment Area</label>
                             <select id="treatment_area" 
                                     name="treatment_area" 
@@ -202,25 +187,101 @@
 // Set minimum date to today
 document.getElementById('procedure_date').min = new Date().toISOString().split('T')[0];
 
-// Auto-fill procedure name based on category
-document.getElementById('category').addEventListener('change', function() {
-    const category = this.value;
+// Fetch services and populate the Service select
+(function() {
+    const serviceSelect = document.getElementById('service_id');
+    const feeField = document.getElementById('fee');
+    const durationField = document.getElementById('duration');
+    const treatmentAreaWrapper = document.getElementById('treatment_area_wrapper');
     const procedureNameField = document.getElementById('procedure_name');
-    
-    const categoryNames = {
-        'cleaning': 'Dental Cleaning',
-        'extraction': 'Tooth Extraction',
-        'filling': 'Dental Filling',
-        'crown': 'Dental Crown',
-        'root_canal': 'Root Canal Treatment',
-        'whitening': 'Teeth Whitening',
-        'consultation': 'Dental Consultation'
-    };
-    
-    if (categoryNames[category]) {
-        procedureNameField.value = categoryNames[category];
+
+    // Helper to clear options
+    function clearOptions(select) {
+        while (select.firstChild) select.removeChild(select.firstChild);
     }
-});
+
+    // Load services from endpoint
+    fetch('<?= base_url('checkup/services/all') ?>', { credentials: 'same-origin' })
+        .then(resp => resp.json())
+        .then(json => {
+            clearOptions(serviceSelect);
+            if (!json || !json.services) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'No services available';
+                serviceSelect.appendChild(opt);
+                return;
+            }
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Select a service';
+            serviceSelect.appendChild(defaultOpt);
+
+            json.services.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name + (s.price ? ` ($${parseFloat(s.price).toFixed(2)})` : '');
+                // Store metadata on option for quick access
+                opt.dataset.price = s.price ?? '';
+                // duration and treatment_area may not exist - keep flexible
+                if (s.duration !== undefined) opt.dataset.duration = s.duration;
+                if (s.treatment_area_required !== undefined) opt.dataset.treatmentAreaRequired = s.treatment_area_required;
+                serviceSelect.appendChild(opt);
+            });
+
+            // If there's an old value (server validation), select it
+            const oldService = '<?= old('service_id') ?>';
+            if (oldService) {
+                serviceSelect.value = oldService;
+                serviceSelect.dispatchEvent(new Event('change'));
+            }
+        })
+        .catch(err => {
+            clearOptions(serviceSelect);
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = 'Failed to load services';
+            serviceSelect.appendChild(opt);
+            console.error('Failed to load services:', err);
+        });
+
+    // On service change, autofill fee, duration, and toggle treatment area
+    serviceSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (!selected || !selected.value) {
+            feeField.value = '';
+            durationField.value = '';
+            treatmentAreaWrapper.style.display = 'none';
+            return;
+        }
+
+        const price = selected.dataset.price;
+        const duration = selected.dataset.duration;
+        const treatmentRequired = selected.dataset.treatmentAreaRequired;
+
+        if (price !== undefined) {
+            feeField.value = parseFloat(price).toFixed(2);
+        }
+
+        if (duration !== undefined) {
+            durationField.value = duration;
+        }
+
+        // If service includes a treatment_area_required flag (truthy), show the control
+        if (treatmentRequired !== undefined && (treatmentRequired === '1' || treatmentRequired === 'true' || treatmentRequired === 'yes')) {
+            treatmentAreaWrapper.style.display = '';
+        } else {
+            // Keep it hidden by default
+            treatmentAreaWrapper.style.display = 'none';
+        }
+
+        // Optionally set a default procedure name to the service name if procedure_name is empty
+        if (procedureNameField && (!procedureNameField.value || procedureNameField.value.trim() === '')) {
+            procedureNameField.value = selected.textContent.replace(/\s*\(\$.*\)$/, '');
+        }
+    });
+})();
 </script>
 
 <?= view('templates/footer') ?>

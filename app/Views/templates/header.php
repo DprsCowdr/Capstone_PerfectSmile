@@ -28,8 +28,25 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <?= view('templates/alert_helper') ?>
     <?= view('templates/prompt_helper') ?>
+    <script>
+        // Global base URL bootstrap to prevent client scripts from concatenating 'undefined'
+        // Do not overwrite if already set by a page-specific script.
+        try {
+            if (typeof window !== 'undefined') {
+                window.baseUrl = window.baseUrl || '<?= rtrim(base_url(), "/") ?>';
+            }
+        } catch (e) {
+            // noop
+            console.error('Failed to set global baseUrl', e);
+        }
+    </script>
 </head>
-<body style="background: #ffffff; color: #1e293b;"> 
+    <body style="background: #ffffff; color: #1e293b;"> 
+    <!-- Global snackbar (Tailwind styled) -->
+    <div id="globalSnackbar" class="fixed right-5 bottom-5 z-50 hidden transform transition-all duration-200" aria-live="polite">
+           <!-- Theme: soft-primary with subtle shadow and slide/opacity transitions -->
+           <div id="globalSnackbarInner" class="max-w-xl mr-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg shadow-xl opacity-0 translate-y-2 transform transition-all duration-250 ease-out pointer-events-auto"></div>
+    </div>
 <?php
 // Admin header quick-switcher: renders a compact branch select and JS to post to admin/switch-branch
 // Shows only for admin users. Uses session('selected_branch_id') as current selection.

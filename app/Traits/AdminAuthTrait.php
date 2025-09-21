@@ -30,9 +30,11 @@ trait AdminAuthTrait
             return redirect()->to('/login');
         }
         
-        if ($user['user_type'] !== 'admin') {
-            log_message('debug', "AdminAuthTrait::checkAdminAuth - User type '{$user['user_type']}' is not admin, redirecting");
-            session()->setFlashdata('error', 'Admin access required for this page');
+        // Allow both 'admin' and 'dentist' roles to access admin-style pages that manage patients/clinic data.
+        // NOTE: this is a conscious, minimal change to unblock dentist access to patient modules.
+        if (! in_array($user['user_type'], ['admin', 'dentist'])) {
+            log_message('debug', "AdminAuthTrait::checkAdminAuth - User type '{$user['user_type']}' is not admin or dentist, redirecting");
+            session()->setFlashdata('error', 'Admin or Dentist access required for this page');
             return redirect()->to('/dashboard');
         }
         
@@ -44,7 +46,7 @@ trait AdminAuthTrait
     {
         $user = Auth::getCurrentUser();
         
-        if (!$user || !isset($user['user_type']) || $user['user_type'] !== 'admin') {
+        if (!$user || !isset($user['user_type']) || ! in_array($user['user_type'], ['admin', 'dentist'])) {
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
         return $user;

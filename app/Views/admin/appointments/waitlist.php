@@ -108,7 +108,7 @@
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <?php foreach ($pendingAppointments as $appointment): ?>
-                                    <tr class="hover:bg-gray-50">
+                                    <tr class="hover:bg-gray-50" <?= !empty($appointment['dentist_id']) ? 'data-dentist-id="' . esc($appointment['dentist_id']) . '"' : '' ?> >
                                         <td class="px-4 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <div class="flex-shrink-0 h-8 w-8">
@@ -153,11 +153,10 @@
                                             </span>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div class="flex flex-col space-y-1 w-44" style="position:relative">
-                                                <button id="approveBtn-<?= $appointment['id'] ?>" onclick="approveAppointment(<?= $appointment['id'] ?>, '<?= $appointment['dentist_name'] ? 'assigned' : 'unassigned' ?>')" 
-                                                        class="approve-btn bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate">
-                                                    <i class="fas fa-check mr-1"></i><span class="approve-label"><?= $appointment['dentist_name'] ? 'Approve' : 'Assign & Approve' ?></span>
-                                                    <span class="ml-2 approve-spinner hidden"> <i class="fas fa-spinner fa-spin"></i></span>
+                                            <div class="flex flex-col space-y-1 w-44">
+                                                <button onclick="approveAppointment(<?= $appointment['id'] ?>, '<?= $appointment['dentist_name'] ? 'assigned' : 'unassigned' ?>')" 
+                                                        class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate">
+                                                    <i class="fas fa-check mr-1"></i><?= $appointment['dentist_name'] ? 'Approve' : 'Assign & Approve' ?>
                                                 </button>
                                                 <button onclick="declineAppointment(<?= $appointment['id'] ?>)" 
                                                         class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition-colors">
@@ -187,6 +186,8 @@
     </div>
 </div>
 
+<?= view('templates/partials/loading_overlay') ?>
+
 <!-- Decline Appointment Modal -->
 <div id="declineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
@@ -213,106 +214,140 @@
 </div>
 
 <script>
-// Small admin notification helper
-function showAdminNotification(message, type='info', duration=6000) {
-    let container = document.getElementById('adminNotifications');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'adminNotifications';
-        container.style.position = 'fixed';
-        container.style.top = '16px';
-        container.style.right = '16px';
-        container.style.zIndex = '9999';
-        document.body.appendChild(container);
-    }
-    const el = document.createElement('div');
-    el.className = 'p-3 mb-2 rounded shadow';
-    el.style.minWidth = '220px';
-    el.style.color = '#111827';
-    el.style.background = (type === 'error') ? '#fee2e2' : (type === 'success' ? '#dcfce7' : '#eef2ff');
-    el.textContent = message;
-    container.appendChild(el);
-    if (duration > 0) setTimeout(()=> el.remove(), duration);
-}
-
-function showAlternativeSlots(appointmentId, suggestions) {
-    // remove existing
-    const prev = document.getElementById('altSlots-' + appointmentId);
-    if (prev) prev.remove();
-
-    const wrapper = document.createElement('div');
-    wrapper.id = 'altSlots-' + appointmentId;
-    wrapper.className = 'p-3 bg-white border rounded shadow mt-2';
-    wrapper.style.position = 'absolute';
-    wrapper.style.zIndex = 9999;
-    wrapper.style.minWidth = '260px';
-    wrapper.innerHTML = '<div style="font-weight:600;margin-bottom:6px">Suggested alternative times</div>';
-    const list = document.createElement('div');
-    list.style.display = 'flex'; list.style.flexDirection = 'column'; list.style.gap = '6px';
-    (suggestions || []).slice(0,6).forEach(s => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'px-2 py-1 text-sm text-left hover:bg-gray-100 rounded';
-        const label = (s.datetime || s.time || s) + (s.dentist ? (' — ' + s.dentist) : '');
-        btn.textContent = label;
-        btn.addEventListener('click', function(){
-            // try to auto-approve at suggested time
-            const fd = new FormData();
-            fd.append('<?= csrf_token() ?>','<?= csrf_hash() ?>');
-            if (s.time) fd.append('appointment_time', s.time);
-            if (s.datetime) fd.append('appointment_datetime', s.datetime);
-            if (s.dentist_id) fd.append('dentist_id', s.dentist_id);
-            fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, { method: 'POST', headers: {'X-Requested-With':'XMLHttpRequest'}, body: fd })
-            .then(r => r.json()).then(d => {
-                if (d.success) { showAdminNotification('Approved at suggested time','success'); setTimeout(()=> location.reload(), 600); }
-                else showAdminNotification(d.message || 'Failed to approve', 'error');
-            }).catch(()=> showAdminNotification('Network error','error'));
-        });
-        list.appendChild(btn);
-    });
-    wrapper.appendChild(list);
-    const btn = document.getElementById('approveBtn-' + appointmentId);
-    if (btn) { btn.parentNode.appendChild(wrapper); }
-    else document.body.appendChild(wrapper);
-}
-
 function approveAppointment(appointmentId, isAssigned) {
     const confirmMessage = isAssigned === 'assigned'
         ? 'Are you sure you want to approve this appointment? (Dentist is already assigned)'
         : 'Are you sure you want to approve this appointment? You will need to assign a dentist.';
 
     if (confirm(confirmMessage)) {
-        const btn = document.getElementById('approveBtn-' + appointmentId);
-        if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); const sp = btn.querySelector('.approve-spinner'); if (sp) sp.classList.remove('hidden'); }
+        // Before final approval, call server to check conflicts and get suggestions
+            const checkData = new FormData();
+            checkData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+            showLoading();
+
+            fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/check-conflicts`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: checkData
+            })
+            .then(r => r.text())
+            .then(text => {
+                let resp;
+                try { resp = JSON.parse(text); } catch (e) { resp = null; }
+                // If check endpoint returned a conflict payload, show suggestions modal
+                if (resp && resp.success === false && resp.conflicts) {
+                    hideLoading();
+                    // Show conflict modal with suggestions if available
+                    showConflictModal(appointmentId, resp.suggestions || []);
+                    return;
+                }
+
+                // Otherwise, proceed to approve (server side will still validate strict conflicts)
+                const formData = new FormData();
+                formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+                return fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+            })
+            .then(response => {
+                // If previous branch returned early (conflict), response may be undefined
+                if (!response) return;
+                return response.text();
+            })
+            .then(text => {
+                if (!text) return;
+                let data;
+                try { data = JSON.parse(text); } catch (e) { data = null; }
+                hideLoading();
+                if (data && data.success) {
+                    location.reload();
+                } else if (data && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+                    showConflictModal(appointmentId, data.suggestions);
+                } else {
+                    if (data && data.message && data.message.includes('No dentists available')) {
+                        alert('No dentists available for auto-assignment. Please manually select a dentist.');
+                        showDentistSelectionModal(appointmentId);
+                    } else {
+                        alert('Error: ' + (data && data.message ? data.message : 'Unknown error'));
+                    }
+                }
+            })
+            .catch(error => { hideLoading(); console.error('Error:', error); alert('Failed to check/approve: ' + error.message); });
+    }
+}
+
+function showConflictModal(appointmentId, suggestions) {
+    // Build modal content
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50';
+        // Render suggestions as radio list so user can explicitly pick one
+        const suggestionsHtml = suggestions.length ? suggestions.map((s, idx) => `
+            <li class="py-1 flex items-center"><label class="flex items-center space-x-2"><input type="radio" name="suggestion" value="${s}" ${idx===0? 'checked':''} class="suggestion-radio" /><span>${s}</span></label></li>
+        `).join('') : '<li class="py-1 text-gray-500">No suggestions available</li>';
+    modal.innerHTML = `
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Scheduling Conflict Detected</h3>
+                    <p class="text-sm text-gray-600 mb-4">This appointment conflicts with existing bookings. You can choose a suggested time to auto-reschedule and approve.</p>
+                        <ul id="suggestionList" class="mb-4 list-disc list-inside text-sm text-gray-800">${suggestionsHtml}</ul>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeConflictModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Cancel</button>
+                        <button type="button" onclick="autoRescheduleApprove(${appointmentId})" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">Auto-reschedule & Approve</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function closeConflictModal() {
+    const modal = document.querySelector('.fixed.inset-0.bg-gray-600');
+    if (modal) modal.remove();
+}
+
+function autoRescheduleApprove(appointmentId) {
+    // Pick first suggestion and post auto_reschedule param
+        // Pick selected suggestion radio value
+        const radio = document.querySelector('.suggestion-radio:checked');
+        const chosen = radio ? radio.value : null;
+        if (!chosen) {
+            alert('No suggested time selected to auto-reschedule');
+            return;
+        }
 
         const formData = new FormData();
         formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+        formData.append('auto_reschedule', '1');
+        formData.append('chosen_time', chosen);
 
-        fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
+        showLoading();
+
+        fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showAdminNotification('Appointment approved', 'success');
-                setTimeout(()=> location.reload(), 600);
+        .then(r => r.text())
+        .then(text => {
+            let data;
+            try { data = JSON.parse(text); } catch (e) { data = null; }
+            hideLoading();
+            if (data && data.success) {
+                closeConflictModal();
+                location.reload();
             } else {
-                if (data.message && data.message.includes('No dentists available')) {
-                    showAdminNotification('No dentists available for auto-assignment. Please select manually.', 'error', 8000);
-                    showDentistSelectionModal(appointmentId);
-                } else if (data.conflict || (Array.isArray(data.suggestions) && data.suggestions.length)) {
-                    showAdminNotification(data.message || 'Scheduling conflict detected', 'error', 8000);
-                    showAlternativeSlots(appointmentId, data.suggestions || []);
-                } else {
-                    showAdminNotification('Error: ' + (data.message || 'Unknown error'), 'error', 8000);
-                }
+                alert('Auto-reschedule failed: ' + (data && data.message ? data.message : 'Unknown error'));
             }
         })
-        .catch(error => { console.error('Error:', error); showAdminNotification('Network error approving appointment','error'); })
-        .finally(()=>{ if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); const sp = btn.querySelector('.approve-spinner'); if (sp) sp.classList.add('hidden'); } });
-    }
+        .catch(err => { hideLoading(); console.error('Error:', err); alert('Auto-reschedule request failed'); });
+
+    // Note: the request to approve is sent above; no duplicate request here.
 }
 
 function showDentistSelectionModal(appointmentId) {
@@ -330,7 +365,7 @@ function showDentistSelectionModal(appointmentId) {
                             <option value="">-- Select Dentist --</option>
                             <?php 
                             $userModel = new \App\Models\UserModel();
-                            $dentists = $userModel->where('user_type', 'doctor')->where('status', 'active')->findAll();
+                            $dentists = $userModel->where('user_type', 'dentist')->where('status', 'active')->findAll();
                             foreach ($dentists as $dentist): 
                             ?>
                             <option value="<?= $dentist['id'] ?>"><?= $dentist['name'] ?> (ID: <?= $dentist['id'] ?>)</option>
@@ -473,6 +508,16 @@ document.addEventListener('DOMContentLoaded', function() {
 setInterval(function() {
     location.reload();
 }, 30000);
+
+function showLoading(){
+    const el = document.getElementById('globalLoadingOverlay');
+    if (el) el.classList.remove('hidden');
+}
+
+function hideLoading(){
+    const el = document.getElementById('globalLoadingOverlay');
+    if (el) el.classList.add('hidden');
+}
 </script>
 
 <?= view('templates/footer') ?> 

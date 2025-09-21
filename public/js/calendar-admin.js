@@ -294,98 +294,167 @@
     }
   }
   
-  // Populate time select with available slots
+  // Populate time select with available + unavailable slots; mark availability and ensure prefill uses an actually available slot
   function populateAdminTimeSlots(response, timeElement) {
-    const slots = response.available_slots || response.slots || [];
-    
-    if (window.__psm_debug) console.log('[admin-calendar] Populating slots:', slots);
-    
+    // Use the complete slots list when available so we can mark unavailable times
+    const allSlots = response.all_slots || response.slots || [];
+    // Fallback to available_slots if all_slots missing
+    const availableSlots = response.available_slots || [];
+
+    if (window.__psm_debug) console.log('[admin-calendar] Populating slots (allSlots, availableSlots):', allSlots, availableSlots);
+
     // Clear existing options
     timeElement.innerHTML = '<option value="">Select Time</option>';
-    
-    if (!Array.isArray(slots) || slots.length === 0) {
-      timeElement.innerHTML = '<option value="">No available slots</option>';
-      return;
-    }
-    
-    // Add slot options with end time information
-    slots.forEach(slot => {
-      const option = document.createElement('option');
-      
-      // Extract time value - handle both 12-hour (9:00 AM) and 24-hour (09:00) formats
-      let timeValue;
-      let displayTime;
-      
-      if (typeof slot === 'string') {
-        // slot string - try to normalize AM/PM to 24-hour
-        timeValue = normalizeTime(slot);
-        displayTime = slot;
-      } else if (slot.datetime) {
-        // Prefer authoritative datetime when available (format: "YYYY-MM-DD HH:MM:SS")
-        const timePart = slot.datetime.split(' ')[1];
-        timeValue = timePart ? timePart.slice(0, 5) : (slot.time ? normalizeTime(slot.time) : ''); // "09:00"
-        displayTime = slot.time || timeValue;
-      } else if (slot.time) {
-        // Fallback to slot.time but normalize AM/PM strings into 24-hour
-        timeValue = normalizeTime(slot.time);
-        displayTime = slot.time;
-      } else {
-        timeValue = String(slot);
-        displayTime = String(slot);
+
+    if (!Array.isArray(allSlots) || allSlots.length === 0) {
+      // If no complete list provided, fall back to available only
+      if (!Array.isArray(availableSlots) || availableSlots.length === 0) {
+        timeElement.innerHTML = '<option value="">No available slots</option>';
+        return;
       }
-      
-      // Use the time as-is for value (the API expects this format)
-      option.value = timeValue;
-      
-      // Create label with end time if available
-      let label = displayTime;
+    }
+
+    // Helper to extract normalized time and timestamp from slot object/string
+    function slotInfo(slot) {
+      let timeValue = '';
+      let displayTime = '';
+      let timestamp = null;
+      let available = false;
+
+      if (typeof slot === 'string') {
+        displayTime = slot;
+        timeValue = normalizeTime(slot);
+      } else {
+        // slot object
+        if (slot.datetime) {
+          const parts = slot.datetime.split(' ');
+          if (parts.length >= 2) timeValue = parts[1].slice(0,5);
+          displayTime = slot.time || timeValue;
+          if (slot.timestamp) timestamp = Number(slot.timestamp);
+          else timestamp = Date.parse((slot.datetime || '').replace(' ', 'T'))/1000 || null;
+        } else if (slot.time) {
+          displayTime = slot.time;
+          timeValue = normalizeTime(slot.time);
+        } else {
+          displayTime = String(slot);
+          timeValue = normalizeTime(displayTime) || displayTime;
+        }
+        available = !!slot.available;
+      }
+
+      // If timestamp missing but we can derive from time and current date in metadata, attempt a best-effort
+      if (timestamp === null && response.metadata && response.metadata.day_start && response.metadata.day_end && response.metadata.duration_minutes) {
+        // best-effort: use the response day (not perfect, but gives comparable values)
+        try {
+          const day = (response.metadata && response.metadata.first_available && response.metadata.first_available.datetime) ? response.metadata.first_available.datetime.split(' ')[0] : null;
+          if (day && timeValue) timestamp = Date.parse(day + 'T' + timeValue + ':00')/1000;
+        } catch (e) { timestamp = null; }
+      }
+
+      return { timeValue, displayTime, timestamp, available };
+    }
+
+    // Build options from allSlots when possible so users can see blocked times. Otherwise fall back to availableSlots
+    const renderSlots = (Array.isArray(allSlots) && allSlots.length) ? allSlots : availableSlots;
+
+    // Keep a map of timestamps -> option values for nearest-available lookup
+    const availableIndex = [];
+
+    renderSlots.forEach(slot => {
+      const info = slotInfo(slot);
+      const option = document.createElement('option');
+      option.value = info.timeValue || '';
+      option.dataset.available = info.available ? '1' : '0';
+      // Annotate timestamp for nearest searches
+      if (info.timestamp) option.dataset.timestamp = String(info.timestamp);
+
+      let label = info.displayTime || info.timeValue || '';
       if (slot && typeof slot === 'object') {
-        if (slot.ends_at) {
-          label += ' — ends ' + slot.ends_at;
-        } else if (slot.end) {
-          label += ' — ends ' + slot.end;
-        } else if (slot.duration_minutes) {
-          // Calculate end time from duration (fallback if ends_at not provided)
+        if (slot.ends_at) label += ' — ends ' + slot.ends_at;
+        else if (slot.end) label += ' — ends ' + slot.end;
+        else if (slot.duration_minutes && info.timeValue) {
           try {
-            const timeMatch = timeValue.match(/(\d+):(\d+)/);
-            if (timeMatch) {
-              const hours = parseInt(timeMatch[1], 10);
-              const minutes = parseInt(timeMatch[2], 10);
-              const endDate = new Date(2000, 0, 1, hours, minutes + slot.duration_minutes);
-              const endTime = String(endDate.getHours()).padStart(2, '0') + ':' + 
-                             String(endDate.getMinutes()).padStart(2, '0');
+            const m = info.timeValue.match(/(\d+):(\d+)/);
+            if (m) {
+              const h = parseInt(m[1],10);
+              const mm = parseInt(m[2],10) + Number(slot.duration_minutes || 0);
+              const dt = new Date(2000,0,1,h,mm);
+              const endTime = String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
               label += ' — ends ' + endTime;
             }
-          } catch (e) {
-            // If calculation fails, just use the base time
-          }
+          } catch(e){}
         }
       }
-      
+
+      // Mark unavailable visually and disable selection
+      if (!info.available) {
+        option.disabled = true;
+        label += ' (Unavailable)';
+      } else {
+        // record available entries for nearest lookup
+        availableIndex.push({ timestamp: info.timestamp || null, value: info.timeValue });
+      }
+
       option.textContent = label;
       timeElement.appendChild(option);
     });
-    
-    // Pre-select first available if specified
+
+    // Now determine preselection: use metadata.first_available if it's truly available; otherwise pick nearest available
+    let preselectTimestamp = null;
     if (response.metadata && response.metadata.first_available) {
-      const firstAvailable = response.metadata.first_available;
-      let firstTime = null;
-      
-      if (firstAvailable.time) {
-        firstTime = firstAvailable.time; // Use full time format
-      } else if (firstAvailable.datetime) {
-        firstTime = firstAvailable.datetime.split(' ')[1].slice(0, 5);
-      }
-      
-      if (firstTime) {
-        // Normalize firstAvailable time to 24-hour if it's in 12-hour format
-        const norm = normalizeTime(firstTime);
-        timeElement.value = norm;
-        if (window.__psm_debug) console.log('[admin-calendar] Pre-selected first available time:', norm);
+      const fa = response.metadata.first_available;
+      if (fa.timestamp) preselectTimestamp = Number(fa.timestamp);
+      else if (fa.datetime) preselectTimestamp = Date.parse(fa.datetime.replace(' ', 'T'))/1000;
+      else if (fa.time && response.metadata && response.metadata.first_available && response.metadata.first_available.datetime) {
+        // combine date from datetime and time
+        try { preselectTimestamp = Date.parse(response.metadata.first_available.datetime.replace(' ', 'T'))/1000; } catch(e) { preselectTimestamp = null; }
       }
     }
-    
-    showAdminMessage(`${slots.length} available time slots loaded`, 'success');
+
+    // Helper to find nearest available by timestamp
+    function findNearestAvailable(ts) {
+      if (!ts) return null;
+      let best = null;
+      let bestDiff = Infinity;
+      availableIndex.forEach(item => {
+        if (!item.timestamp) return; // skip if we couldn't derive timestamp
+        const diff = Math.abs(item.timestamp - ts);
+        if (diff < bestDiff) { bestDiff = diff; best = item; }
+      });
+      return best;
+    }
+
+    // Attempt preselection
+    if (preselectTimestamp) {
+      // Try to find an exact available option with matching timestamp
+      let chosen = null;
+      // Check options for one with data-timestamp == preselectTimestamp and not disabled
+      for (let i=0;i<timeElement.options.length;i++) {
+        const opt = timeElement.options[i];
+        if (opt.dataset && opt.dataset.timestamp && Number(opt.dataset.timestamp) === preselectTimestamp && opt.disabled === false) {
+          chosen = opt.value; break;
+        }
+      }
+
+      if (!chosen) {
+        // No exact available match, find nearest available
+        const nearest = findNearestAvailable(preselectTimestamp);
+        if (nearest && nearest.value) chosen = nearest.value;
+      }
+
+      if (chosen) {
+        timeElement.value = chosen;
+        if (window.__psm_debug) console.log('[admin-calendar] Pre-selected nearest available time:', chosen);
+      }
+    } else {
+      // If no metadata provided, still prefer the first non-disabled option
+      for (let i=0;i<timeElement.options.length;i++) {
+        const opt = timeElement.options[i];
+        if (!opt.disabled && opt.value) { timeElement.value = opt.value; break; }
+      }
+    }
+
+    showAdminMessage(`${availableSlots.length} available time slots loaded`, 'success');
   }
   
   // Show admin message

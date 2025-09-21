@@ -50,7 +50,7 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        if ($user['user_type'] !== 'doctor') {
+        if ($user['user_type'] !== 'dentist') {
             return redirect()->to('/dashboard');
         }
 
@@ -160,7 +160,7 @@ class AuthService
         }
 
         $user = Auth::getCurrentUser();
-        if (!in_array($user['user_type'], ['admin', 'doctor'])) {
+        if (!in_array($user['user_type'], ['admin', 'dentist'])) {
             return redirect()->to('/dashboard');
         }
 

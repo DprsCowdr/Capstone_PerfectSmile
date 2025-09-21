@@ -80,7 +80,7 @@ ob_start();
                                         <td class="px-4 py-3 text-gray-700">
                                             <?php if (!empty($role['created_at']) && strtotime($role['created_at'])): ?>
                                                 <?= esc(date('M d, Y', strtotime($role['created_at']))) ?>
-                                                <div class="text-xs text-gray-500"><?= esc(date('H:i', strtotime($role['created_at']))) ?></div>
+                                                <div class="text-xs text-gray-500"><?= esc(date('g:i A', strtotime($role['created_at']))) ?></div>
                                             <?php else: ?>
                                                 <span class="text-gray-400">-</span>
                                             <?php endif; ?>
@@ -90,7 +90,7 @@ ob_start();
                                         <td class="px-4 py-3 text-gray-700">
                                             <?php if (!empty($role['updated_at']) && strtotime($role['updated_at'])): ?>
                                                 <?= esc(date('M d, Y', strtotime($role['updated_at']))) ?>
-                                                <div class="text-xs text-gray-500"><?= esc(date('H:i', strtotime($role['updated_at']))) ?></div>
+                                                <div class="text-xs text-gray-500"><?= esc(date('g:i A', strtotime($role['updated_at']))) ?></div>
                                             <?php else: ?>
                                                 <span class="text-gray-400">-</span>
                                             <?php endif; ?>
@@ -199,6 +199,9 @@ $content = ob_get_clean();
 
 // Ensure $user is provided to the admin layout; fallback to session user
 $userData = isset($user) ? $user : (session('user') ?? []);
+
+// Opt-in for the fixed sidebar offset so admin sidebar remains intact and page content scrolls
+$content = '<div data-sidebar-offset>' . $content . '</div>';
 
 echo view('templates/admin_layout', [
     'title' => $title,
