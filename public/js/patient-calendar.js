@@ -70,77 +70,7 @@
     });
   }
 
-  function parseAmPmTo24(t){
-    // t like '8:35 AM' or '12:05 PM' -> '08:35' or '12:05'
-    if(!t || typeof t !== 'string') return t;
-    const m = t.match(/^(\d{1,2}:\d{2})\s*([AP]M)$/i);
-    if(!m) return t.slice(0,5);
-    let [_, hm, ampm] = m;
-    let [h, mm] = hm.split(':').map(Number);
-    if(ampm.toUpperCase() === 'PM' && h < 12) h += 12;
-    if(ampm.toUpperCase() === 'AM' && h === 12) h = 0;
-    return (h<10? '0'+h : String(h)) + ':' + (mm<10? '0'+mm : String(mm));
-  }
-
-  function slotValue(slot){
-    // prefer explicit datetime (Y-m-d H:i:s) -> return HH:MM
-    if(slot && typeof slot === 'object' && slot.datetime){
-      try{ return slot.datetime.split(' ')[1].slice(0,5); }catch(e){}
-    }
-    if(slot && typeof slot === 'object' && slot.time){
-      // convert AM/PM time string to 24h HH:MM
-      return parseAmPmTo24(slot.time);
-    }
-    if(typeof slot === 'string'){
-      // assume 'HH:MM' or 'HH:MM:SS'
-      return slot.slice(0,5);
-    }
-    return '';
-  }
-
-  function slotLabel(slot){
-    // friendly label: HH:MM (ends HH:MM) — 30m
-    const val = slotValue(slot);
-    if(slot && typeof slot === 'object'){
-      const ends = slot.ends_at ? (slot.ends_at.length>0 ? slot.ends_at : '') : '';
-      const dur = slot.duration_minutes || slot.duration || '';
-      // ends_at may be 'g:i A' format — convert if needed
-      let endsVal = '';
-      if(slot.datetime && slot.ends_at === undefined){
-        // compute ends from datetime + duration if available
-        try{
-          const dt = slot.datetime.split(' ');
-          if(dt && dt.length>1 && dur){
-            const startTs = new Date(slot.datetime.replace(' ', 'T')).getTime();
-            const endTs = new Date(startTs + (Number(dur) * 60 * 1000));
-            const hh = ('0' + endTsToString(endTs).slice(0,2)).slice(-2);
-          }
-        }catch(e){ }
-      }
-      if(slot.ends_at && typeof slot.ends_at === 'string'){
-        // ends_at likely like '9:05 AM' -> convert to 24h
-        endsVal = parseAmPmTo24(slot.ends_at);
-      } else if(slot.datetime && dur){
-        try{
-          const start = new Date(slot.datetime.replace(' ', 'T'));
-          const end = new Date(start.getTime() + (Number(dur) * 60 * 1000));
-          endsVal = ('0'+end.getHours()).slice(-2) + ':' + ('0'+end.getMinutes()).slice(-2);
-        }catch(e){ endsVal = ''; }
-      }
-      const parts = [val];
-      if(endsVal) parts.push('(ends ' + endsVal + ')');
-      if(dur) parts.push('— ' + dur + 'm');
-      return parts.join(' ');
-    }
-    return val || '';
-  }
-
-  function endTsToString(ms){
-    const d = new Date(ms);
-    return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
-  }
-
-  function showSlots(containerEl, slots, metadata){
+  function showSlots(containerEl, slots){
     // containerEl may be null if aside was removed; try menu content fallbacks
     if(!containerEl){
       containerEl = qs('#availableSlots') || qs('#availableSlotsMenuContent') || document.getElementById('availableSlots');
@@ -152,50 +82,22 @@
       return;
     }
     const ul = document.createElement('ul');
-    ul.className = 'slot-list';
-    // find first available hint from metadata
-    let firstAvailableValue = null;
-    if(metadata && metadata.first_available){
-      firstAvailableValue = slotValue(metadata.first_available);
-    }
     slots.forEach(s => {
       const li = document.createElement('li');
-      li.className = 'slot-item';
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'slot-btn';
-      const val = slotValue(s);
-      btn.textContent = slotLabel(s) || val;
-      btn.dataset.value = val;
+      // support string slots or object {time, dentist_id}
+      const timeStr = (typeof s === 'string') ? s : (s.time || s.time || '');
+      btn.textContent = timeStr;
       if (s && typeof s === 'object' && s.dentist_id) btn.dataset.dentist = s.dentist_id;
-      // visually mark unavailable
-      if(s && s.available === false){ btn.disabled = true; btn.classList.add('slot-unavailable'); }
-      // highlight first available
-      if(firstAvailableValue && val === firstAvailableValue){ btn.classList.add('slot-first-available'); }
       btn.addEventListener('click', () => {
         const timeInput = qs('input[name="appointment_time"]') || qs('select[name="appointment_time"]');
-        if(timeInput){
-          try{
-            if(timeInput.tagName && timeInput.tagName.toLowerCase() === 'select'){
-              let opt = timeInput.querySelector('option[value="'+val+'"]');
-              if(!opt){
-                opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = btn.textContent || val;
-                timeInput.insertBefore(opt, timeInput.firstChild);
-              }
-              timeInput.value = val;
-            } else {
-              timeInput.value = val;
-            }
-          }catch(e){ try{ timeInput.value = val; }catch(err){} }
-        }
+        if(timeInput) timeInput.value = timeStr;
         // if slot includes dentist, preselect dentist
         const dt = btn.dataset && btn.dataset.dentist ? btn.dataset.dentist : null;
         const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect');
         if(dt && dentistSelect) dentistSelect.value = dt;
-        // trigger conflict check for the selected time
-        checkConflictFor(val);
       });
       li.appendChild(btn);
       ul.appendChild(li);
@@ -224,17 +126,6 @@
   }
 
   function showConflicts(containerEl, conflicts){
-    // Resolve fallback containers if the passed one is null
-    if(!containerEl){
-      containerEl = qs('#timeConflicts') || qs('.time-conflicts') || document.getElementById('timeConflicts');
-    }
-    if(!containerEl){
-      // Nothing to render into; avoid throwing and log for diagnostics
-      console.warn('[patient-calendar] showConflicts: no container element found to render conflicts');
-      return;
-    }
-
-    // Safely render conflicts
     containerEl.innerHTML = '';
     if(!conflicts || conflicts.length === 0){
       containerEl.textContent = 'No conflicts detected.';
@@ -256,7 +147,6 @@
     const dateEl = qs('input[name="appointment_date"]');
     const durationEl = qs('select[name="procedure_duration"]') || qs('input[name="procedure_duration"]');
     const dentistEl = qs('select[name="dentist_id"]');
-    const svcSel = document.querySelector('select[name="service_id"]') || document.querySelector('select[name="service"]') || document.getElementById('service_id');
     const timeTakenSelect = qs('#timeTakenSelect');
     const slotsContainer = qs('#availableSlots');
     const conflictsContainer = qs('#timeConflicts');
@@ -339,108 +229,37 @@
       }
       const dentist = dentistEl ? dentistEl.value : '';
       if(!date) return;
-      
-      // Include service_id when present so server can compute authoritative duration
-  // Support both select[name="service_id"] and select[name="service"] (some pages use `service`)
-  const svcSel = document.querySelector('select[name="service_id"]') || document.querySelector('select[name="service"]') || document.getElementById('service_id');
-      const svcId = svcSel ? svcSel.value : '';
-      
-  const payload = {branch_id: branch, date, dentist_id: dentist, granularity: 3};
-      // Only send duration if no service_id (let server be authoritative)
-      if (svcId) {
-        payload.service_id = svcId;
-      } else {
-        payload.duration = Number(duration);
-      }
-      
-      postForm('/appointments/available-slots', payload)
+      postForm('/appointments/available-slots', {branch_id: branch, date, duration: Number(duration), dentist_id: dentist})
         .then(res => {
           if(res && res.success){
-            // Enhanced API compatibility: try different slot sources
-            // For UI to work correctly, prefer all_slots (available + unavailable) over just available_slots
-            let slots = res.all_slots || res.slots || res.available_slots || [];
-            
-            // For display purposes, show only available slots
-            let displaySlots = res.slots || res.available_slots || [];
-            
-            // Ensure slots is an array
-            if (!Array.isArray(slots)) {
-              console.warn('[patient-calendar] fetchAvailableSlots - slots is not an array:', typeof slots, slots);
-              slots = [];
-            }
-            if (!Array.isArray(displaySlots)) {
-              console.warn('[patient-calendar] fetchAvailableSlots - displaySlots is not an array:', typeof displaySlots, displaySlots);
-              displaySlots = [];
-            }
-            
-            // Cache the complete slot data (includes available and unavailable) so calendar-core can disable unavailable options
-            try{ window.__available_slots_cache = window.__available_slots_cache || {}; if(date) window.__available_slots_cache[date] = slots; }catch(e){}
-            
-            showSlots(slotsContainer, displaySlots);
-            // prefill earliest slot: prefer server-provided first_available, otherwise use first available slot
+            const slots = res.slots || [];
+            showSlots(slotsContainer, slots);
+            // prefill earliest slot if time field is empty
             try{
               const timeInput = qs('input[name="appointment_time"]') || qs('select[name="appointment_time"]') || qs('#timeSelect');
-              if(timeInput && !timeInput.value){
-                let firstTime = null;
-                let dentistForFirst = null;
-                if(res && res.metadata && res.metadata.first_available){
-                  const fa = res.metadata.first_available;
-                  firstTime = fa.time || (fa.datetime ? fa.datetime.split(' ')[1].slice(0,5) : null);
-                  dentistForFirst = fa.dentist_id || null;
+              if(slots.length && timeInput && !timeInput.value){
+                const first = slots[0];
+                const firstTime = (typeof first === 'string') ? first : (first.time || first);
+                timeInput.value = firstTime;
+                // if slot includes dentist, preselect dentist
+                if(first && typeof first === 'object' && first.dentist_id){
+                  const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect');
+                  if(dentistSelect) dentistSelect.value = first.dentist_id;
                 }
-                if(!firstTime && slots.length){
-                  const first = slots[0];
-                  firstTime = (typeof first === 'string') ? first : (first.time || first);
-                  dentistForFirst = first && first.dentist_id ? first.dentist_id : dentistForFirst;
-                }
-                if(firstTime){
-                  try{
-                    if(timeInput.tagName && timeInput.tagName.toLowerCase() === 'select'){
-                      let opt = timeInput.querySelector('option[value="'+firstTime+'"]');
-                      if(!opt){
-                        opt = document.createElement('option');
-                        opt.value = firstTime;
-                        opt.textContent = firstTime;
-                        timeInput.insertBefore(opt, timeInput.firstChild);
-                      }
-                      timeInput.value = firstTime;
-                    } else {
-                      timeInput.value = firstTime;
-                    }
-                  }catch(e){ try{ timeInput.value = firstTime; }catch(err){} }
-                  if(dentistForFirst){ const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect'); if(dentistSelect) dentistSelect.value = dentistForFirst; }
-                  showPrefillHint(timeInput);
-                  // use metadata duration when available for conflict check
-                  const mdDuration = res && res.metadata && res.metadata.duration_minutes ? Number(res.metadata.duration_minutes) : null;
-                  checkConflictFor(firstTime, mdDuration);
-                }
+                showPrefillHint(timeInput);
+                // also perform a conflict check for the newly selected time
+                checkConflictFor(firstTime);
               }
             }catch(e){ console.error('prefill earliest slot error', e); }
           }
         }).catch(console.error);
     }
 
-    // UX hint: show a helpful note near the Service select explaining service affects available times
-    try{
-      if(svcSel){
-        let hint = svcSel.parentNode && svcSel.parentNode.querySelector('.service-duration-hint');
-        if(!hint){
-          hint = document.createElement('div');
-          hint.className = 'service-duration-hint text-xs text-gray-500 mt-1';
-          hint.textContent = 'Service determines duration — pick a service to see available times';
-          if(svcSel.parentNode) svcSel.parentNode.appendChild(hint);
-        }
-        // when service changes, reload slots (server needs service to compute duration)
-        svcSel.addEventListener('change', () => { loadSlots(); });
-      }
-    }catch(e){ console.error('service hint injection failed', e); }
-
-    function checkConflictFor(timeValue, overrideDuration){
+    function checkConflictFor(timeValue){
       const branch = branchEl ? branchEl.value : '';
       const date = dateEl.value;
-      const localDuration = durationEl ? (Number(durationEl.value) || 30) : 30;
+      const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
       const dentist = dentistEl ? dentistEl.value : '';
-      const duration = (typeof overrideDuration === 'number' && overrideDuration > 0) ? overrideDuration : localDuration;
       if(!date || !timeValue) return;
   postForm('/appointments/check-conflicts', {branch_id: branch, date, time: timeValue, duration, dentist_id: dentist})
         .then(res => {
@@ -495,12 +314,12 @@
           else payload.procedure_duration = 30;
         } else { const pn = Number(payload.procedure_duration); payload.procedure_duration = (Number.isFinite(pn) && pn>0)? pn:30; }
 
-        // Ensure service/service_id present: prefer select[name="service_id"] then select[name="service"].
+        // Ensure service/service_id present: prefer select[name="service"], fallback to service_id
         if(!payload.service && !payload.service_id){
-          const svcSelForm = document.querySelector('select[name="service_id"]') || document.querySelector('select[name="service"]') || document.querySelector('input[name="service_id"]') || document.querySelector('input[name="service"]');
+          const svcSel = document.querySelector('select[name="service"]') || document.querySelector('select[name="service_id"]') || document.querySelector('input[name="service_id"]') || document.querySelector('input[name="service"]');
           const svcText = document.getElementById('service_text');
           let sv = '';
-          if(svcSelForm) sv = svcSelForm.value || svcSelForm.getAttribute('value') || '';
+          if(svcSel) sv = svcSel.value || svcSel.getAttribute('value') || '';
           if(!sv && svcText) sv = svcText.value || '';
           // final fallback to any global default
           if(!sv && window.defaultService) sv = window.defaultService;
@@ -590,34 +409,9 @@
         const date = dateEl ? dateEl.value : '';
         const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
         const dentist = dentistEl ? dentistEl.value : '';
-        
-        // Include service_id when present so server can compute authoritative duration for staff/admin
-        const svcSel = document.querySelector('select[name="service_id"]') || document.getElementById('service_id');
-        const svcId = svcSel ? svcSel.value : '';
-        
-  const payload = {branch_id: branch, date, dentist_id: dentist, granularity: 3};
-        // Only send duration if no service_id (let server be authoritative)
-        if (svcId) {
-          payload.service_id = svcId;
-        } else {
-          payload.duration = duration;
-        }
-        
-        const res = await postForm('/appointments/available-slots', payload);
+        const res = await postForm('/appointments/available-slots', {branch_id: branch, date, duration, dentist_id: dentist});
         if(res && res.success){
-          // Enhanced API compatibility: try different slot sources
-          let slots = res.slots || res.available_slots || [];
-          
-          // Debug logging for troubleshooting
-          console.log('[patient-calendar] API response:', res);
-          console.log('[patient-calendar] Extracted slots:', slots);
-          
-          // Ensure slots is an array
-          if (!Array.isArray(slots)) {
-            console.warn('[patient-calendar] slots is not an array:', typeof slots, slots);
-            slots = [];
-          }
-          
+          const slots = res.slots || [];
           if(slots.length === 0){
             availableMenuContent.textContent = 'No available slots';
           } else {
@@ -639,22 +433,7 @@
               if(s && typeof s === 'object' && s.dentist_id) btn.dataset.dentist = s.dentist_id;
               btn.addEventListener('click', () => {
                 const timeInput = qs('input[name="appointment_time"]') || qs('#timeSelect') || qs('select[name="appointment_time"]');
-                if(timeInput){
-                  try{
-                    if(timeInput.tagName && timeInput.tagName.toLowerCase() === 'select'){
-                      let opt = timeInput.querySelector('option[value="'+timeStr+'"]');
-                      if(!opt){
-                        opt = document.createElement('option');
-                        opt.value = timeStr;
-                        opt.textContent = timeStr;
-                        timeInput.insertBefore(opt, timeInput.firstChild);
-                      }
-                      timeInput.value = timeStr;
-                    } else {
-                      timeInput.value = timeStr;
-                    }
-                  }catch(e){ try{ timeInput.value = timeStr; }catch(err){} }
-                }
+                if(timeInput) timeInput.value = timeStr;
                 // if slot contains dentist, select it
                 if(btn.dataset && btn.dataset.dentist){ const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect'); if(dentistSelect) dentistSelect.value = btn.dataset.dentist; }
                 hideAllMenus();
@@ -664,51 +443,6 @@
               ul.appendChild(li);
             });
             availableMenuContent.appendChild(ul);
-            
-            // Show enhanced metadata if available
-            if (res.metadata) {
-              const metaDiv = document.createElement('div');
-              metaDiv.style.fontSize = '12px';
-              metaDiv.style.color = '#666';
-              metaDiv.style.padding = '8px';
-              metaDiv.style.borderTop = '1px solid #eee';
-              metaDiv.textContent = `${res.metadata.available_count} available of ${res.metadata.total_slots_checked} total slots`;
-              availableMenuContent.appendChild(metaDiv);
-            }
-            
-            // Show user's existing appointments for rescheduling
-            if (res.unavailable_slots && res.unavailable_slots.length > 0) {
-              const userAppointments = res.unavailable_slots.filter(slot => slot.owned_by_current_user);
-              if (userAppointments.length > 0) {
-                const rescheduleDiv = document.createElement('div');
-                rescheduleDiv.style.marginTop = '10px';
-                rescheduleDiv.style.padding = '8px';
-                rescheduleDiv.style.borderTop = '1px solid #eee';
-                rescheduleDiv.style.backgroundColor = '#fff3cd';
-                
-                const rescheduleTitle = document.createElement('div');
-                rescheduleTitle.textContent = 'Your existing appointments (click to reschedule):';
-                rescheduleTitle.style.fontSize = '12px';
-                rescheduleTitle.style.fontWeight = 'bold';
-                rescheduleTitle.style.marginBottom = '4px';
-                rescheduleDiv.appendChild(rescheduleTitle);
-                
-                userAppointments.forEach(slot => {
-                  const rescheduleBtn = document.createElement('button');
-                  rescheduleBtn.type = 'button';
-                  rescheduleBtn.className = 'w-full text-left px-2 py-1 hover:bg-yellow-100 text-orange-700';
-                  rescheduleBtn.style.fontSize = '11px';
-                  rescheduleBtn.textContent = `${slot.time} - ${slot.ends_at || 'existing appointment'}`;
-                  rescheduleBtn.title = 'Click to reschedule this appointment';
-                  rescheduleBtn.addEventListener('click', () => {
-                    alert(`Reschedule appointment at ${slot.time}? (Feature coming soon)`);
-                  });
-                  rescheduleDiv.appendChild(rescheduleBtn);
-                });
-                
-                availableMenuContent.appendChild(rescheduleDiv);
-              }
-            }
           }
         } else {
           availableMenuContent.textContent = 'No available slots';
@@ -751,22 +485,7 @@
               btn.textContent = `${a.start} - ${a.end} (${duration}m) ${branch ? '• ' + branch : ''}`;
               btn.addEventListener('click', () => {
                 const timeInput = qs('input[name="appointment_time"]') || qs('#timeSelect') || qs('select[name="appointment_time"]');
-                if(timeInput){
-                  try{
-                    if(timeInput.tagName && timeInput.tagName.toLowerCase() === 'select'){
-                      let opt = timeInput.querySelector('option[value="'+a.start+'"]');
-                      if(!opt){
-                        opt = document.createElement('option');
-                        opt.value = a.start;
-                        opt.textContent = a.start;
-                        timeInput.insertBefore(opt, timeInput.firstChild);
-                      }
-                      timeInput.value = a.start;
-                    } else {
-                      timeInput.value = a.start;
-                    }
-                  }catch(e){ try{ timeInput.value = a.start; }catch(err){} }
-                }
+                if(timeInput) timeInput.value = a.start;
                 hideAllMenus();
                 checkConflictFor(a.start);
               });

@@ -168,94 +168,9 @@ class Appointments extends BaseController
 
         try {
             $appointmentModel = new \App\Models\AppointmentModel();
-            // include id and user_id so we can resolve service-linked durations and track ownership
-            // IMPORTANT: Only consider approved appointments for slot blocking to ensure accuracy
-            $existing = $appointmentModel->select('appointments.id, appointment_datetime, procedure_duration, user_id, status, approval_status')
-                                         ->where('DATE(appointment_datetime)', $date)
-                                         ->where('approval_status', 'approved') // Only approved appointments block slots
-                                         ->whereNotIn('status', ['cancelled', 'rejected', 'no_show']); // Exclude non-blocking statuses
-            if ($branchId) $existing->where('branch_id', $branchId);
-            if ($dentistId) $existing->where('dentist_id', $dentistId);
-            $existing = $existing->findAll();
-            
-            log_message('debug', "availableSlots: Found " . count($existing) . " approved appointments for date {$date}");
-
-            // Build occupied intervals. For appointments without explicit procedure_duration, conservatively
-            // compute occupied time from linked services: prefer duration_max_minutes when present, otherwise duration_minutes.
-            $occupied = [];
-            $needLookup = [];
-            foreach ($existing as $e) {
-                $start = strtotime($e['appointment_datetime']);
-                $dur = isset($e['procedure_duration']) && $e['procedure_duration'] ? (int)$e['procedure_duration'] : 0;
-                if ($dur > 0) {
-                    $end = $start + ($dur * 60);
-                    // Store as [start, end, appointment_id, user_id] for richer slot analysis
-                    $occupied[] = [$start, $end, $e['id'], $e['user_id']];
-                } else {
-                    // will look up linked services to determine conservative duration
-                    $needLookup[] = $e['id'];
-                    // temporarily push with zero end; will replace
-                    $occupied[$e['id']] = [$start, $start, $e['id'], $e['user_id']];
-                }
-            }
-
-            if (!empty($needLookup)) {
-                try {
-                    $db = \Config\Database::connect();
-                    $builder = $db->table('appointment_service')
-                                  ->select('appointment_service.appointment_id, services.duration_minutes, services.duration_max_minutes')
-                                  ->join('services', 'services.id = appointment_service.service_id', 'left')
-                                  ->whereIn('appointment_service.appointment_id', $needLookup);
-                    $rowsSrv = $builder->get()->getResultArray();
-                    // aggregate per appointment
-                    $agg = [];
-                    foreach ($rowsSrv as $r) {
-                        $aid = $r['appointment_id'];
-                        if (!isset($agg[$aid])) $agg[$aid] = ['sum_min' => 0, 'sum_max' => 0, 'has_max' => false];
-                        $min = !empty($r['duration_minutes']) ? (int)$r['duration_minutes'] : 0;
-                        $max = !empty($r['duration_max_minutes']) ? (int)$r['duration_max_minutes'] : 0;
-                        $agg[$aid]['sum_min'] += $min;
-                        if ($max > 0) { $agg[$aid]['sum_max'] += $max; $agg[$aid]['has_max'] = true; }
-                    }
-                    // replace temporary occupied entries
-                    foreach ($needLookup as $aid) {
-                        // find original start time and user_id from $existing
-                        $startTime = null;
-                        $userId = null;
-                        foreach ($existing as $e) {
-                            if ($e['id'] == $aid) {
-                                $startTime = strtotime($e['appointment_datetime']);
-                                $userId = $e['user_id'];
-                                break;
-                            }
-                        }
-                        $durMinutes = 0;
-                        if (isset($agg[$aid])) {
-                            if ($agg[$aid]['has_max'] && $agg[$aid]['sum_max'] > 0) $durMinutes = $agg[$aid]['sum_max'];
-                            elseif ($agg[$aid]['sum_min'] > 0) $durMinutes = $agg[$aid]['sum_min'];
-                        }
-                        $end = $startTime + ($durMinutes * 60);
-                        // overwrite or append with full metadata
-                        $occupied[] = [$startTime, $end, $aid, $userId];
-                        // remove temporary keyed entry
-                        if (isset($occupied[$aid])) unset($occupied[$aid]);
-                    }
-                } catch (\Exception $e) {
-                    // on error, fallback to treating unknown appointments as 0 minutes (no magic default)
-                    foreach ($needLookup as $aid) {
-                        $startTime = null;
-                        $userId = null;
-                        foreach ($existing as $e) {
-                            if ($e['id'] == $aid) {
-                                $startTime = strtotime($e['appointment_datetime']);
-                                $userId = $e['user_id'];
-                                break;
-                            }
-                        }
-                        $occupied[] = [$startTime, $startTime, $aid, $userId];
-                    }
-                }
-            }
+            // Use SQL-aggregated occupied intervals to avoid per-appointment service lookups
+            $occupied = $appointmentModel->getOccupiedIntervals($date, $branchId, $dentistId);
+            log_message('debug', "availableSlots: Found " . count($occupied) . " occupied intervals for date {$date}");
 
             // If dentist specified, load availability blocks and mark as occupied
             $availabilityBlocks = [];
@@ -275,28 +190,59 @@ class Appointments extends BaseController
 
             // Determine working hours from branch.operating_hours if available (safe fallback to 08:00-21:00 for evening coverage)
             $dayStart = strtotime($date . ' 08:00:00');
-            $dayEnd = strtotime($date . ' 21:00:00'); // Extended to 9 PM for evening appointments
+            $dayEnd = strtotime($date . ' 20:00:00'); // Default operating hours: 08:00-20:00
             try {
                 if ($branchId) {
                     $db = \Config\Database::connect();
                     $b = $db->table('branches')->select('operating_hours')->where('id', $branchId)->get()->getRowArray();
                     if ($b && !empty($b['operating_hours'])) {
                         $oh = json_decode($b['operating_hours'], true);
-                        if (is_array($oh)) {
-                            $weekday = strtolower(date('l', strtotime($date)));
-                            if (isset($oh[$weekday]) && isset($oh[$weekday]['enabled']) && $oh[$weekday]['enabled']) {
-                                $open = isset($oh[$weekday]['open']) ? $oh[$weekday]['open'] : '08:00';
-                                $close = isset($oh[$weekday]['close']) ? $oh[$weekday]['close'] : '17:00';
-                                // Validate HH:MM format
-                                if (preg_match('/^([01]?\\d|2[0-3]):[0-5]\\d$/', $open) && preg_match('/^([01]?\\d|2[0-3]):[0-5]\\d$/', $close)) {
-                                    $dayStart = strtotime($date . ' ' . $open . ':00');
-                                    $dayEnd = strtotime($date . ' ' . $close . ':00');
-                                }
-                            } else {
-                                // If branch closed that weekday, make no slots
-                                return $this->response->setJSON(['success' => true, 'slots' => []]);
-                            }
-                        }
+                                    if (is_array($oh)) {
+                                        $weekday = strtolower(date('l', strtotime($date)));
+                                        if (isset($oh[$weekday]) && isset($oh[$weekday]['enabled']) && $oh[$weekday]['enabled']) {
+                                            $open = isset($oh[$weekday]['open']) ? $oh[$weekday]['open'] : '08:00';
+                                            $close = isset($oh[$weekday]['close']) ? $oh[$weekday]['close'] : '20:00';
+                                            // Validate HH:MM format
+                                            if (preg_match('/^([01]?\\d|2[0-3]):[0-5]\\d$/', $open) && preg_match('/^([01]?\\d|2[0-3]):[0-5]\\d$/', $close)) {
+                                                // Heuristic: if close is an early-hour like '1:26' and open is morning (08:00+),
+                                                // it's likely stored without AM/PM and should be PM. Adjust accordingly.
+                                                $openParts = explode(':', $open);
+                                                $closeParts = explode(':', $close);
+                                                $openHour = (int)$openParts[0];
+                                                $closeHour = (int)$closeParts[0];
+                                                $closeMin = isset($closeParts[1]) ? (int)$closeParts[1] : 0;
+                                                if ($closeHour < 8 && $openHour >= 8) {
+                                                    // Interpret as PM
+                                                    log_message('info', "availableSlots: interpreting branch close time '{$close}' as PM because open={$open}");
+                                                    $closeHour += 12;
+                                                    $close = str_pad((string)$closeHour, 2, '0', STR_PAD_LEFT) . ':' . str_pad((string)$closeMin, 2, '0', STR_PAD_LEFT);
+                                                }
+                                                $dayStart = strtotime($date . ' ' . $open . ':00');
+                                                $dayEnd = strtotime($date . ' ' . $close . ':00');
+                                                    // guard: ensure dayEnd is not before dayStart
+                                                    if ($dayEnd <= $dayStart) {
+                                                        log_message('warning', "availableSlots: branch operating_hours close <= open ({$open} <= {$close}), falling back to 20:00");
+                                                        $dayEnd = strtotime($date . ' 20:00:00');
+                                                    }
+                                                    // Enforce a sensible clinic window: do not start before 08:00 and ensure at least a 20:00 end
+                                                    $minDayStart = strtotime($date . ' 08:00:00');
+                                                    $minDayEnd = strtotime($date . ' 20:00:00');
+                                                    // Do not allow dayStart before 08:00
+                                                    if ($dayStart < $minDayStart) {
+                                                        log_message('info', "availableSlots: branch open before 08:00 ({$open}), clamping to 08:00");
+                                                        $dayStart = $minDayStart;
+                                                    }
+                                                    // Ensure dayEnd is at least 20:00 so early-closing data doesn't truncate availability
+                                                    if ($dayEnd < $minDayEnd) {
+                                                        log_message('info', "availableSlots: branch close before 20:00 ({$close}), clamping to 20:00");
+                                                        $dayEnd = $minDayEnd;
+                                                    }
+                                            }
+                                        } else {
+                                            // If branch closed that weekday, make no slots
+                                            return $this->response->setJSON(['success' => true, 'slots' => []]);
+                                        }
+                                    }
                     }
                 }
             } catch (\Exception $e) {
@@ -652,23 +598,14 @@ class Appointments extends BaseController
         }
 
         try {
-            $start = strtotime($date . ' ' . $time . ':00');
-            // treat requested booking as occupying (duration + grace) for conflict detection
-            $end = $start + (($duration + $grace) * 60);
+            // Use SQL-based strict conflict detection where possible
+            $requestedDatetime = $date . ' ' . $time . ':00';
+            $appointmentModel = new \App\Models\AppointmentModel();
+            // Use model's SQL-first conflict detection (isTimeConflictingWithGrace)
+            $strictConflict = $appointmentModel->isTimeConflictingWithGrace($requestedDatetime, $grace, $dentistId, null, $duration);
 
-            $db = \Config\Database::connect();
-            $builder = $db->table('appointments');
-            $builder->select('appointments.id, appointments.appointment_datetime, appointments.procedure_duration, user.name as patient_name')
-                    ->join('user', 'user.id = appointments.user_id', 'left')
-                    ->where('DATE(appointments.appointment_datetime)', $date)
-                    ->where('appointments.status !=', 'cancelled');
-            if ($branchId) $builder->where('appointments.branch_id', $branchId);
-            if ($dentistId) $builder->where('appointments.dentist_id', $dentistId);
-
-            $rows = $builder->get()->getResultArray();
-            $conflicts = [];
-            // Also check availability blocks for the dentist
-            $availConflicts = [];
+            $availabilityConflicts = [];
+            // Still check availability blocks for dentist (separately)
             if ($dentistId) {
                 try {
                     $availModel = new \App\Models\AvailabilityModel();
@@ -676,80 +613,28 @@ class Appointments extends BaseController
                     foreach ($blocks as $b) {
                         $s = strtotime($b['start_datetime']);
                         $e = strtotime($b['end_datetime']);
-                        if ($start < $e && $end > $s) {
-                            $availConflicts[] = ['type' => $b['type'], 'start' => date('g:i A', $s), 'end' => date('g:i A', $e), 'notes' => $b['notes'] ?? ''];
+                        if (strtotime($requestedDatetime) < $e && (strtotime($requestedDatetime) + ($duration + $grace) * 60) > $s) {
+                            $availabilityConflicts[] = ['type' => $b['type'], 'start' => date('g:i A', $s), 'end' => date('g:i A', $e), 'notes' => $b['notes'] ?? ''];
                         }
                     }
                 } catch (\Exception $e) {
                     log_message('error', 'checkConflicts availability error: ' . $e->getMessage());
                 }
             }
-            // Build map of existing appointments and compute their end times conservatively
-            $appEnds = [];
-            $idsToLookup = [];
-            foreach ($rows as $r) {
-                $s = strtotime($r['appointment_datetime']);
-                $dur = isset($r['procedure_duration']) && $r['procedure_duration'] ? (int)$r['procedure_duration'] : 0;
-                if ($dur > 0) {
-                    $appEnds[] = ['id' => $r['id'], 'start' => $s, 'end' => $s + ($dur * 60), 'patient_name' => $r['patient_name'] ?? null];
-                } else {
-                    $idsToLookup[] = $r['id'];
-                }
-            }
-            if (!empty($idsToLookup)) {
+
+            $hasConflicts = $strictConflict || !empty($availabilityConflicts);
+
+            $suggestions = [];
+            if ($hasConflicts) {
+                // Attempt to find nearby suggestions (lookahead 180 minutes by default)
                 try {
-                    $db = \Config\Database::connect();
-                    $builder = $db->table('appointment_service')
-                                  ->select('appointment_service.appointment_id, services.duration_minutes, services.duration_max_minutes')
-                                  ->join('services', 'services.id = appointment_service.service_id', 'left')
-                                  ->whereIn('appointment_service.appointment_id', $idsToLookup);
-                    $rowsSrv = $builder->get()->getResultArray();
-                    $agg = [];
-                    foreach ($rowsSrv as $r) {
-                        $aid = $r['appointment_id'];
-                        if (!isset($agg[$aid])) $agg[$aid] = ['sum_min' => 0, 'sum_max' => 0, 'has_max' => false];
-                        $min = !empty($r['duration_minutes']) ? (int)$r['duration_minutes'] : 0;
-                        $max = !empty($r['duration_max_minutes']) ? (int)$r['duration_max_minutes'] : 0;
-                        $agg[$aid]['sum_min'] += $min;
-                        if ($max > 0) { $agg[$aid]['sum_max'] += $max; $agg[$aid]['has_max'] = true; }
-                    }
-                    // attach aggregated end times
-                    foreach ($rows as $r) {
-                        if (in_array($r['id'], $idsToLookup)) {
-                            $s = strtotime($r['appointment_datetime']);
-                            $durMinutes = 0;
-                            if (isset($agg[$r['id']])) {
-                                if ($agg[$r['id']]['has_max'] && $agg[$r['id']]['sum_max'] > 0) $durMinutes = $agg[$r['id']]['sum_max'];
-                                elseif ($agg[$r['id']]['sum_min'] > 0) $durMinutes = $agg[$r['id']]['sum_min'];
-                            }
-                            $appEnds[] = ['id' => $r['id'], 'start' => $s, 'end' => $s + ($durMinutes * 60), 'patient_name' => $r['patient_name'] ?? null];
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // fallback: treat unknown appointment durations as 0 (no magic default)
-                    foreach ($rows as $r) {
-                        $s = strtotime($r['appointment_datetime']);
-                        $appEnds[] = ['id' => $r['id'], 'start' => $s, 'end' => $s, 'patient_name' => $r['patient_name'] ?? null];
-                    }
-                }
+                    $lookahead = 180;
+                    $next = $appointmentModel->findNextAvailableSlot($date, $time, $grace, $lookahead, $dentistId, $duration);
+                    if ($next) $suggestions[] = $next;
+                } catch (\Exception $e) { log_message('warning', 'checkConflicts: suggestion lookup failed: ' . $e->getMessage()); }
             }
 
-            foreach ($appEnds as $item) {
-                $s = $item['start'];
-                $e = $item['end'];
-                if ($start < $e && $end > $s) {
-                    $conflicts[] = [
-                        'id' => $item['id'],
-                        'patient_name' => $item['patient_name'] ?? null,
-                        'start' => date('g:i A', $s),
-                        'end' => date('g:i A', $e),
-                        'overlap_minutes' => ceil((min($end, $e) - max($start, $s))/60)
-                    ];
-                }
-            }
-
-            $hasConflicts = count($conflicts) > 0 || count($availConflicts) > 0;
-            return $this->response->setJSON(['success' => true, 'conflicts' => $conflicts, 'availability_conflicts' => $availConflicts, 'hasConflicts' => $hasConflicts]);
+            return $this->response->setJSON(['success' => true, 'conflicts' => $strictConflict ? ['conflict' => true] : [], 'availability_conflicts' => $availabilityConflicts, 'hasConflicts' => $hasConflicts, 'suggestions' => $suggestions]);
         } catch (\Exception $e) {
             log_message('error', 'checkConflicts error: ' . $e->getMessage());
             return $this->response->setJSON(['success' => false, 'message' => 'Server error'])->setStatusCode(500);

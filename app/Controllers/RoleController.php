@@ -52,14 +52,22 @@ class RoleController extends BaseController
         // save permissions
         if (!empty($data['permissions']) && $roleId) {
             $changes = [];
+            // sanitize posted permission keys and avoid duplicates
             foreach ($data['permissions'] as $module => $acts) {
+                $moduleKey = trim((string)$module);
                 foreach ($acts as $action => $v) {
+                    $actionKey = trim((string)$action);
+                    if ($moduleKey === '' || $actionKey === '') continue;
+                    // prevent duplicate inserts by checking existing in-memory set
+                    $key = $moduleKey . ':' . $actionKey;
+                    if (in_array($key, $changes, true)) continue;
                     $this->permissionModel->insert([
                         'role_id' => $roleId,
-                        'module' => $module,
-                        'action' => $action
+                        'module' => $moduleKey,
+                        'action' => $actionKey,
+                        'created_at' => date('Y-m-d H:i:s')
                     ]);
-                    $changes[] = "$module:$action";
+                    $changes[] = $key;
                 }
             }
             // write audit log for permission creation
@@ -94,16 +102,26 @@ class RoleController extends BaseController
         $this->roleModel->update($id, ['name' => $data['name'] ?? '', 'description' => $data['description'] ?? '']);
 
         // replace permissions
-        $this->permissionModel->where('role_id', $id)->delete();
         $changes = [];
+        // Use DB transaction where possible to avoid partial state
+    $db = \Config\Database::connect();
+        $db->transStart();
+        $this->permissionModel->where('role_id', $id)->delete();
         if (!empty($data['permissions'])) {
             foreach ($data['permissions'] as $module => $acts) {
+                $moduleKey = trim((string)$module);
                 foreach ($acts as $action => $v) {
-                    $this->permissionModel->insert(['role_id' => $id, 'module' => $module, 'action' => $action]);
-                    $changes[] = "$module:$action";
+                    $actionKey = trim((string)$action);
+                    if ($moduleKey === '' || $actionKey === '') continue;
+                    $key = $moduleKey . ':' . $actionKey;
+                    if (in_array($key, $changes, true)) continue;
+                    $this->permissionModel->insert(['role_id' => $id, 'module' => $moduleKey, 'action' => $actionKey, 'created_at' => date('Y-m-d H:i:s')]);
+                    $changes[] = $key;
                 }
             }
         }
+        $db->transComplete();
+
         // audit
         $actor = session('user') ?? null;
         $this->auditModel->insert([
@@ -153,12 +171,34 @@ class RoleController extends BaseController
     {
         if ($this->request->getMethod() === 'post') {
             $userIds = $this->request->getPost('user_ids');
-            $this->userRoleModel->where('role_id', $id)->delete();
+            // sanitize posted user ids and only keep positive integers
+            $ids = [];
             if (!empty($userIds)) {
-                $ids = array_filter(array_map('trim', explode(',', $userIds)));
-                foreach ($ids as $uid) {
-                    $this->userRoleModel->insert(['user_id' => $uid, 'role_id' => $id]);
+                $raw = array_filter(array_map('trim', explode(',', $userIds)));
+                foreach ($raw as $r) {
+                    if ($r === '') continue;
+                    // accept numeric ids only
+                    if (is_numeric($r)) {
+                        $n = (int)$r;
+                        if ($n > 0) $ids[] = $n;
+                    }
                 }
+                // dedupe and reindex
+                $ids = array_values(array_unique($ids));
+            }
+
+            // Perform delete + insert in transaction to avoid partial state
+            $db = \Config\Database::connect();
+            $db->transStart();
+            $this->userRoleModel->where('role_id', $id)->delete();
+            if (!empty($ids)) {
+                foreach ($ids as $uid) {
+                    $this->userRoleModel->insert(['user_id' => $uid, 'role_id' => $id, 'assigned_at' => date('Y-m-d H:i:s')]);
+                }
+            }
+            $db->transComplete();
+
+            if (!empty($ids)) {
                 // audit assignment
                 $actor = session('user') ?? null;
                 $this->auditModel->insert([

@@ -328,6 +328,9 @@ class AdminController extends BaseAdminController
             }
 
             $dentistId = $this->request->getPost('dentist_id');
+            // Optional: allow client to request auto-reschedule if conflicts detected
+            $autoReschedule = $this->request->getPost('auto_reschedule') ? true : false;
+            $chosenTime = $this->request->getPost('chosen_time') ?: null;
             log_message('info', "Admin approving appointment ID: {$id}, Dentist ID: " . ($dentistId ?: 'null'));
             
             // Get appointment details before approval for logging
@@ -337,7 +340,7 @@ class AdminController extends BaseAdminController
                 log_message('info', "Appointment before approval: " . json_encode($appointment));
             }
             
-            $result = $this->appointmentService->approveAppointment($id, $dentistId);
+            $result = $this->appointmentService->approveAppointment($id, $dentistId, ['auto_reschedule' => $autoReschedule, 'chosen_time' => $chosenTime]);
             
             log_message('info', "Appointment approval result: " . json_encode($result));
             
@@ -442,10 +445,21 @@ class AdminController extends BaseAdminController
         $data = [
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
-            'duration_minutes' => $this->parseDurationInput($this->request->getPost('duration_minutes')),
-            'duration_max_minutes' => $this->parseDurationInput($this->request->getPost('duration_max_minutes')),
             'price' => $this->request->getPost('price')
         ];
+
+        // Parse duration inputs (accepts '1.5h', '90', '60m')
+        $durationInput = $this->request->getPost('duration');
+        $parsed = $this->parseDurationInput($durationInput);
+        if ($parsed !== null) {
+            $data['duration_minutes'] = $parsed;
+        }
+
+        $maxInput = $this->request->getPost('duration_max_minutes');
+        $maxParsed = $this->parseDurationInput($maxInput);
+        if ($maxParsed !== null) {
+            $data['duration_max_minutes'] = $maxParsed;
+        }
 
         if ($serviceModel->insert($data)) {
             return $this->response->setJSON([
@@ -472,10 +486,6 @@ class AdminController extends BaseAdminController
         $service = $serviceModel->find($id);
 
         if ($service) {
-            // ensure duration fields are present for the front-end
-            if (!isset($service['duration_minutes'])) $service['duration_minutes'] = null;
-            if (!isset($service['duration_max_minutes'])) $service['duration_max_minutes'] = null;
-
             return $this->response->setJSON([
                 'success' => true,
                 'service' => $service
@@ -500,10 +510,21 @@ class AdminController extends BaseAdminController
         $data = [
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
-            'duration_minutes' => $this->parseDurationInput($this->request->getPost('duration_minutes')),
-            'duration_max_minutes' => $this->parseDurationInput($this->request->getPost('duration_max_minutes')),
             'price' => $this->request->getPost('price')
         ];
+
+        // Parse duration inputs for update
+        $durationInput = $this->request->getPost('duration');
+        $parsed = $this->parseDurationInput($durationInput);
+        if ($parsed !== null) {
+            $data['duration_minutes'] = $parsed;
+        }
+
+        $maxInput = $this->request->getPost('duration_max_minutes');
+        $maxParsed = $this->parseDurationInput($maxInput);
+        if ($maxParsed !== null) {
+            $data['duration_max_minutes'] = $maxParsed;
+        }
 
         if ($serviceModel->update($id, $data)) {
             return $this->response->setJSON([
@@ -765,7 +786,7 @@ class AdminController extends BaseAdminController
         if ($user instanceof \CodeIgniter\HTTP\RedirectResponse) {
             return $user;
         }
-    return view('admin/settings/settings', ['user' => $user]);
+        return view('admin/management/settings', ['user' => $user]);
     }
 
     // ==================== USERS MANAGEMENT ====================

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Patient Visual Charts</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-info { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; }
+        .chart-preview { max-width: 200px; max-height: 150px; border: 1px solid #ddd; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Debug Patient Visual Charts</h1>
+    
+    <div id="debug-output"></div>
+    
+    <script>
+        async function debugVisualCharts() {
+            const output = document.getElementById('debug-output');
+            
+            try {
+                output.innerHTML = '<div class="debug-info">Making API request to /patient/dental-chart...</div>';
+                
+                const response = await fetch('/patient/dental-chart', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                output.innerHTML += '<div class="debug-info">Response status: ' + response.status + '</div>';
+                
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                
+                const data = await response.json();
+                output.innerHTML += '<div class="debug-info success">API Response received</div>';
+                output.innerHTML += '<div class="debug-info"><strong>Response:</strong><br><pre>' + JSON.stringify(data, null, 2) + '</pre></div>';
+                
+                if (data.visual_charts && data.visual_charts.length > 0) {
+                    output.innerHTML += '<div class="debug-info success">Found ' + data.visual_charts.length + ' visual charts</div>';
+                    
+                    data.visual_charts.forEach((chart, index) => {
+                        output.innerHTML += '<div class="debug-info">';
+                        output.innerHTML += '<strong>Chart ' + (index + 1) + ':</strong><br>';
+                        output.innerHTML += 'ID: ' + chart.id + '<br>';
+                        output.innerHTML += 'Date: ' + chart.record_date + '<br>';
+                        output.innerHTML += 'Visual data: ' + (chart.visual_chart_data ? 'Present (' + chart.visual_chart_data.length + ' chars)' : 'Missing') + '<br>';
+                        
+                        if (chart.visual_chart_data && chart.visual_chart_data.trim() !== '') {
+                            output.innerHTML += '<br>Image preview:<br>';
+                            output.innerHTML += '<img src="' + chart.visual_chart_data + '" class="chart-preview" onerror="this.alt=\'Failed to load image\'; this.style.display=\'none\'; this.nextSibling.style.display=\'block\';">';
+                            output.innerHTML += '<div style="display:none; color: red;">Failed to load image from visual_chart_data</div>';
+                        }
+                        
+                        output.innerHTML += '</div>';
+                    });
+                } else {
+                    output.innerHTML += '<div class="debug-info">No visual charts found in response</div>';
+                }
+                
+            } catch (error) {
+                output.innerHTML += '<div class="debug-info error">Error: ' + error.message + '</div>';
+                console.error('Debug error:', error);
+            }
+        }
+        
+        // Run debug when page loads
+        window.addEventListener('load', debugVisualCharts);
+    </script>
+</body>
+</html>

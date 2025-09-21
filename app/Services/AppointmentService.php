@@ -639,7 +639,7 @@ class AppointmentService
             return $record;
         }
 
-    public function approveAppointment($id, $dentistId = null)
+    public function approveAppointment($id, $dentistId = null, $options = [])
     {
         try {
             // Get appointment details for notification
@@ -690,14 +690,78 @@ class AppointmentService
                     return ['success' => false, 'message' => 'Selected dentist is not available at this time'];
                 }
             }
+
+            // Strict conflict detection using SQL-based isTimeConflictingWithGrace
+            $date = $appointment['appointment_date'] ?? substr($appointment['appointment_datetime'], 0, 10);
+            $time = $appointment['appointment_time'] ?? substr($appointment['appointment_datetime'], 11, 5);
+            $datetime = $date . ' ' . $time . ':00';
+            $grace = 15;
+            try {
+                $gpPath = WRITEPATH . 'grace_periods.json';
+                if (is_file($gpPath)) {
+                    $gp = json_decode(file_get_contents($gpPath), true);
+                    if (!empty($gp['default'])) $grace = (int)$gp['default'];
+                }
+            } catch (\Exception $e) { $grace = 15; }
+
+            // Determine required duration for conflict checks
+            $requiredDuration = null;
+            try {
+                $meta = $this->gatherAppointmentMeta($appointment) ?: [];
+                if (!empty($meta['total_service_minutes'])) $requiredDuration = (int)$meta['total_service_minutes'];
+                elseif (!empty($appointment['procedure_duration'])) $requiredDuration = (int)$appointment['procedure_duration'];
+            } catch (\Exception $e) { $requiredDuration = null; }
+
+            // If caller didn't pass a dentistId, prefer the appointment's dentist_id for conflict checks
+            $dentistForCheck = $dentistId ?: ($appointment['dentist_id'] ?? null);
+            $conflict = $this->appointmentModel->isTimeConflictingWithGrace($datetime, $grace, $dentistForCheck, $id, $requiredDuration);
+
+            if ($conflict) {
+                // Provide suggestions: attempt to find a nearest available slot within lookahead (default 180 min)
+                $lookahead = isset($options['lookahead_minutes']) ? (int)$options['lookahead_minutes'] : 180;
+                $preferredTime = $time;
+                $suggestion = $this->appointmentModel->findNextAvailableSlot($date, $preferredTime, $grace, $lookahead, $dentistForCheck, $requiredDuration);
+
+                // If client requested auto_reschedule and provided a chosen_time, use it (after re-checking conflicts)
+                $autoReschedule = !empty($options['auto_reschedule']);
+                $chosenTime = !empty($options['chosen_time']) ? $options['chosen_time'] : null;
+
+                if ($autoReschedule && $chosenTime) {
+                    $candidateDatetime = $date . ' ' . $chosenTime . ':00';
+                    $candidateConflict = $this->appointmentModel->isTimeConflictingWithGrace($candidateDatetime, $grace, $dentistForCheck, $id, $requiredDuration);
+                    if (!$candidateConflict) {
+                        // update appointment time and proceed to approve
+                        $this->appointmentModel->update($id, ['appointment_time' => $chosenTime, 'appointment_datetime' => $date . ' ' . $chosenTime . ':00']);
+                        log_message('info', "Auto-reschedule: appointment {$id} moved to {$chosenTime} before approval");
+                        // refresh appointment record
+                        $appointment = $this->appointmentModel->find($id);
+                    } else {
+                        // chosen time conflicted, fall back to suggestion (if exists)
+                        if ($suggestion) {
+                            $this->appointmentModel->update($id, ['appointment_time' => $suggestion, 'appointment_datetime' => $date . ' ' . $suggestion . ':00']);
+                            log_message('info', "Auto-reschedule: appointment {$id} moved to suggested {$suggestion} before approval");
+                            $appointment = $this->appointmentModel->find($id);
+                        } else {
+                            return ['success' => false, 'message' => 'Conflict detected and auto-reschedule failed', 'suggestions' => $suggestion ? [$suggestion] : []];
+                        }
+                    }
+                }
+
+                // If we reach here and still conflicted and no auto-reschedule performed, return suggestions to client
+                if ($conflict && !$autoReschedule) {
+                    return ['success' => false, 'message' => 'Scheduling conflict detected', 'suggestions' => ($suggestion ? [$suggestion] : []) , 'conflict' => true];
+                }
+            }
             
             if ($this->appointmentModel->approveAppointment($id, $dentistId)) {
+                // Refresh appointment record after model updates
+                $appointment = $this->appointmentModel->find($id);
                 $this->sendAppointmentNotification($appointment, 'approved');
                 $message = 'Appointment approved successfully';
                 if ($dentistId && !$appointment['dentist_id'] && !empty($assignedDentistName)) {
                     $message .= '. Dentist ' . $assignedDentistName . ' was assigned.';
                 }
-                return ['success' => true, 'message' => $message];
+                return ['success' => true, 'message' => $message, 'appointment_time' => $appointment['appointment_time'] ?? null];
             } else {
                 return ['success' => false, 'message' => 'Failed to approve appointment'];
             }

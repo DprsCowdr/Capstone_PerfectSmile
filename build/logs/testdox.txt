@@ -1,0 +1,3 @@
+Double Booking Smoke (Tests\Integration\DoubleBookingSmoke)
+ [x] Approve assigns dentist and provides suggestions and auto reschedules
+

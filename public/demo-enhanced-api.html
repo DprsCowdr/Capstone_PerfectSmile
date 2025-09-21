@@ -169,8 +169,7 @@
                     
                     if (slot.owned_by_current_user) {
                         slotElement.classList.add('owned-by-me');
-                        // Admin view: indicate ownership without patient-facing wording
-                        slotElement.title = `Owned appointment: ${slot.blocking_info.start} - ${slot.blocking_info.end}`;
+                        slotElement.title = `Your appointment: ${slot.blocking_info.start} - ${slot.blocking_info.end}`;
                     } else if (slot.blocking_info.type === 'appointment') {
                         slotElement.title = `Blocked by appointment: ${slot.blocking_info.start} - ${slot.blocking_info.end}`;
                     } else {

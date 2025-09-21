@@ -19,7 +19,7 @@ class ProcedureModel extends Model
         'description',
         'category',
         'fee',
-        'treatment_area',
+        'duration_minutes',
         'procedure_date',
         'status'
     ];
@@ -35,7 +35,8 @@ class ProcedureModel extends Model
     protected $validationRules      = [
         'user_id'        => 'required|integer',
         'procedure_name' => 'required|string|max_length[255]',
-        'procedure_date' => 'required|valid_date'
+        'procedure_date' => 'required|valid_date',
+        'duration_minutes' => 'permit_empty|integer'
     ];
     protected $validationMessages   = [];
     protected $skipValidation       = false;

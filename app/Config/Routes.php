@@ -36,6 +36,7 @@ $routes->get('auth/logout', 'Auth::logout');
 $routes->get('dashboard', 'Dashboard::index');
 
 // Admin routes (protected)
+
 // Debug-only admin helpers (register only in development)
 if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
     $routes->get('debug/appointments', 'Debug::checkAppointments');
@@ -46,6 +47,7 @@ if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
     $routes->get('debug/branch-notifications', 'Debug::listBranchNotifications');
     $routes->get('debug/smoke-run', 'Debug::smokeRun');
 }
+
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     // Main dashboard
@@ -132,11 +134,13 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     
     // Management routes
     $routes->get('services', 'AdminController::services'); // → management/services.php
+    $routes->get('services/ajax-list', 'AdminController::servicesAjaxList'); // AJAX endpoint for services
     $routes->post('services/store', 'AdminController::storeService');
     $routes->get('services/(:num)', 'AdminController::getService/$1');
     $routes->post('services/update/(:num)', 'AdminController::updateService/$1');
     $routes->delete('services/delete/(:num)', 'AdminController::deleteService/$1');
-    $routes->get('role-permission', 'AdminController::rolePermission'); // → management/roles.php
+        // Link 'role-permission' directly to the main RoleController index (canonical UI)
+        $routes->get('role-permission', 'RoleController::index');
     // Role & Permission management (RoleController)
     $routes->get('roles', 'RoleController::index');
     $routes->get('roles/create', 'RoleController::create');
@@ -344,6 +348,7 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->get('get-bills/(:num)', 'Patient::getPatientBills/$1'); // Get patient bills via AJAX
     $routes->get('test-treatments', 'Patient::testTreatmentsEndpoint'); // Test treatments endpoint
     $routes->get('test-database', 'Patient::testDatabase'); // Test database connection
+    $routes->get('debug-records', 'Patient::debugRecords'); // Debug records loading
 });
 
 // API endpoints for patient-scoped appointment data
@@ -386,6 +391,8 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     $routes->get('appointments', 'StaffController::appointments');
     $routes->post('appointments/create', 'StaffController::createAppointment');
     $routes->post('appointments/checkConflicts', 'StaffController::checkConflicts');
+    // Accept hyphenated route variant for consistency with other role groups
+    $routes->post('appointments/check-conflicts', 'StaffController::checkConflicts');
     $routes->get('records', 'Staff::records');
     $routes->get('waitlist', 'StaffController::waitlist');
     // Allow staff to approve or decline appointments (matches admin/dentist endpoints)

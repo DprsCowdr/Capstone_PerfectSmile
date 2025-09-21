@@ -515,21 +515,38 @@ class AppointmentModel extends Model
         // AND DATE_ADD(appointment_datetime, INTERVAL (COALESCE(svc.total_service_minutes, a.procedure_duration, 0) + grace) MINUTE) > candidateStart
         // This ensures we consider the appointment's real occupied window (service duration + grace)
 
-    $db = \Config\Database::connect();
-        $sql = "SELECT a.id FROM appointments a
-            LEFT JOIN (
-                SELECT aps.appointment_id, SUM(COALESCE(s.duration_max_minutes, s.duration_minutes, 0)) AS total_service_minutes
-                FROM appointment_service aps
-                JOIN services s ON s.id = aps.service_id
-                GROUP BY aps.appointment_id
-            ) svc ON svc.appointment_id = a.id
-            WHERE a.appointment_datetime < ?
-            AND DATE_ADD(a.appointment_datetime, INTERVAL (COALESCE(svc.total_service_minutes, a.procedure_duration, 0) + ?) MINUTE) > ?
-            AND a.status IN ('confirmed','scheduled','ongoing')
-            AND a.approval_status IN ('approved','auto_approved')";
+        $db = \Config\Database::connect();
+        // Build driver-aware SQL to avoid DATE_ADD/INTERVAL incompatibilities (SQLite vs MySQL)
+        $driver = strtolower($db->DBDriver ?? '');
+        if (strpos($driver, 'sqlite') !== false) {
+            // SQLite: use datetime(a.appointment_datetime, '+' || (minutes) || ' minutes')
+            $sql = "SELECT a.id FROM appointments a
+                LEFT JOIN (
+                    SELECT aps.appointment_id, SUM(COALESCE(s.duration_max_minutes, s.duration_minutes, 0)) AS total_service_minutes
+                    FROM appointment_service aps
+                    JOIN services s ON s.id = aps.service_id
+                    GROUP BY aps.appointment_id
+                ) svc ON svc.appointment_id = a.id
+                WHERE a.appointment_datetime < ?
+                AND datetime(a.appointment_datetime, '+' || (COALESCE(svc.total_service_minutes, a.procedure_duration, 0) + ?) || ' minutes') > ?
+                AND a.status IN ('confirmed','scheduled','ongoing')
+                AND a.approval_status IN ('approved','auto_approved')";
+        } else {
+            // MySQL/Postgres compatible using DATE_ADD (Postgres has different syntax, but most CI setups use MySQL)
+            $sql = "SELECT a.id FROM appointments a
+                LEFT JOIN (
+                    SELECT aps.appointment_id, SUM(COALESCE(s.duration_max_minutes, s.duration_minutes, 0)) AS total_service_minutes
+                    FROM appointment_service aps
+                    JOIN services s ON s.id = aps.service_id
+                    GROUP BY aps.appointment_id
+                ) svc ON svc.appointment_id = a.id
+                WHERE a.appointment_datetime < ?
+                AND DATE_ADD(a.appointment_datetime, INTERVAL (COALESCE(svc.total_service_minutes, a.procedure_duration, 0) + ?) MINUTE) > ?
+                AND a.status IN ('confirmed','scheduled','ongoing')
+                AND a.approval_status IN ('approved','auto_approved')";
+        }
 
         $params = [$candidateEnd, (int)$graceMinutes, $candidateStart];
-
         if ($dentistId) {
             $sql .= " AND a.dentist_id = ?";
             $params[] = $dentistId;
@@ -539,13 +556,11 @@ class AppointmentModel extends Model
             $params[] = $excludeId;
         }
 
-        $query = $db->query($sql, $params);
-        // Some DB drivers (SQLite in-memory used during tests) do not support DATE_ADD/INTERVAL syntax.
-        // Attempt the SQL query first; if it fails or returns false, fall back to a PHP-based check
+        // Attempt SQL-first path and fall back to PHP-based check if anything fails
         try {
             $query = $db->query($sql, $params);
             if ($query === false) {
-                throw new \Exception('SQL query not supported by driver');
+                throw new \Exception('SQL query returned false');
             }
             $rows = $query->getResultArray();
             return !empty($rows);
@@ -899,5 +914,41 @@ class AppointmentModel extends Model
         }
         
         return $availableDentists;
+    }
+
+    /**
+     * Return occupied intervals for a given date, aggregating service durations in SQL.
+     * This avoids per-appointment service lookups in PHP and keeps duration aggregation in the DB.
+     * Returns array of [start_ts, end_ts, appointment_id, user_id]
+     */
+    public function getOccupiedIntervals($date, $branchId = null, $dentistId = null)
+    {
+        $db = \Config\Database::connect();
+
+        // Build subquery that aggregates service durations per appointment
+        $sub = "(SELECT aps.appointment_id, SUM(COALESCE(s.duration_max_minutes, s.duration_minutes, 0)) AS total_service_minutes
+                  FROM appointment_service aps
+                  JOIN services s ON s.id = aps.service_id
+                  GROUP BY aps.appointment_id) svc";
+
+        $builder = $db->table('appointments a')
+                      ->select('a.id, a.appointment_datetime, COALESCE(svc.total_service_minutes, a.procedure_duration, 0) AS duration_minutes, a.user_id')
+                      ->join($sub, 'svc.appointment_id = a.id', 'left')
+                      ->where('DATE(a.appointment_datetime)', $date)
+                      ->whereIn('a.approval_status', ['approved','auto_approved'])
+                      ->whereNotIn('a.status', ['cancelled','rejected','no_show']);
+
+        if ($branchId) $builder->where('a.branch_id', $branchId);
+        if ($dentistId) $builder->where('a.dentist_id', $dentistId);
+
+        $rows = $builder->get()->getResultArray();
+        $out = [];
+        foreach ($rows as $r) {
+            $start = strtotime($r['appointment_datetime']);
+            $dur = isset($r['duration_minutes']) ? (int)$r['duration_minutes'] : 0;
+            $end = $start + ($dur * 60);
+            $out[] = [$start, $end, $r['id'], $r['user_id'] ?? null];
+        }
+        return $out;
     }
 }

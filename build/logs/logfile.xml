@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="AvailabilityModelTest" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AvailabilityModelTest.php" tests="2" assertions="0" errors="0" failures="0" skipped="2" time="0.000000">
-    <testcase name="test_createBlock_throws_on_missing_fields" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AvailabilityModelTest.php" line="31" class="AvailabilityModelTest" classname="AvailabilityModelTest" assertions="0" time="0.000000">
-      <skipped/>
-    </testcase>
-    <testcase name="test_create_and_query_block_and_isBlocked" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\unit\AvailabilityModelTest.php" line="37" class="AvailabilityModelTest" classname="AvailabilityModelTest" assertions="0" time="0.000000">
-      <skipped/>
-    </testcase>
+  <testsuite name="Tests\Integration\DoubleBookingSmokeTest" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\DoubleBookingSmokeTest.php" tests="1" assertions="8" errors="0" failures="0" skipped="0" time="0.144115">
+    <testcase name="testApproveAssignsDentistAndProvidesSuggestionsAndAutoReschedules" file="C:\Users\John bert\OneDrive\Documents\GitHub\Capstone_PerfectSmile\tests\integration\DoubleBookingSmokeTest.php" line="20" class="Tests\Integration\DoubleBookingSmokeTest" classname="Tests.Integration.DoubleBookingSmokeTest" assertions="8" time="0.144115"/>
   </testsuite>
 </testsuites>

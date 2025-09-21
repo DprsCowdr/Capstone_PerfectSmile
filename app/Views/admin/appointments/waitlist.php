@@ -186,6 +186,8 @@
     </div>
 </div>
 
+<?= view('templates/partials/loading_overlay') ?>
+
 <!-- Decline Appointment Modal -->
 <div id="declineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
@@ -218,42 +220,134 @@ function approveAppointment(appointmentId, isAssigned) {
         : 'Are you sure you want to approve this appointment? You will need to assign a dentist.';
 
     if (confirm(confirmMessage)) {
+        // Before final approval, call server to check conflicts and get suggestions
+            const checkData = new FormData();
+            checkData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+            showLoading();
+
+            fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/check-conflicts`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: checkData
+            })
+            .then(r => r.text())
+            .then(text => {
+                let resp;
+                try { resp = JSON.parse(text); } catch (e) { resp = null; }
+                // If check endpoint returned a conflict payload, show suggestions modal
+                if (resp && resp.success === false && resp.conflicts) {
+                    hideLoading();
+                    // Show conflict modal with suggestions if available
+                    showConflictModal(appointmentId, resp.suggestions || []);
+                    return;
+                }
+
+                // Otherwise, proceed to approve (server side will still validate strict conflicts)
+                const formData = new FormData();
+                formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+                return fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+            })
+            .then(response => {
+                // If previous branch returned early (conflict), response may be undefined
+                if (!response) return;
+                return response.text();
+            })
+            .then(text => {
+                if (!text) return;
+                let data;
+                try { data = JSON.parse(text); } catch (e) { data = null; }
+                hideLoading();
+                if (data && data.success) {
+                    location.reload();
+                } else if (data && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+                    showConflictModal(appointmentId, data.suggestions);
+                } else {
+                    if (data && data.message && data.message.includes('No dentists available')) {
+                        alert('No dentists available for auto-assignment. Please manually select a dentist.');
+                        showDentistSelectionModal(appointmentId);
+                    } else {
+                        alert('Error: ' + (data && data.message ? data.message : 'Unknown error'));
+                    }
+                }
+            })
+            .catch(error => { hideLoading(); console.error('Error:', error); alert('Failed to check/approve: ' + error.message); });
+    }
+}
+
+function showConflictModal(appointmentId, suggestions) {
+    // Build modal content
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50';
+        // Render suggestions as radio list so user can explicitly pick one
+        const suggestionsHtml = suggestions.length ? suggestions.map((s, idx) => `
+            <li class="py-1 flex items-center"><label class="flex items-center space-x-2"><input type="radio" name="suggestion" value="${s}" ${idx===0? 'checked':''} class="suggestion-radio" /><span>${s}</span></label></li>
+        `).join('') : '<li class="py-1 text-gray-500">No suggestions available</li>';
+    modal.innerHTML = `
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Scheduling Conflict Detected</h3>
+                    <p class="text-sm text-gray-600 mb-4">This appointment conflicts with existing bookings. You can choose a suggested time to auto-reschedule and approve.</p>
+                        <ul id="suggestionList" class="mb-4 list-disc list-inside text-sm text-gray-800">${suggestionsHtml}</ul>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeConflictModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Cancel</button>
+                        <button type="button" onclick="autoRescheduleApprove(${appointmentId})" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">Auto-reschedule & Approve</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function closeConflictModal() {
+    const modal = document.querySelector('.fixed.inset-0.bg-gray-600');
+    if (modal) modal.remove();
+}
+
+function autoRescheduleApprove(appointmentId) {
+    // Pick first suggestion and post auto_reschedule param
+        // Pick selected suggestion radio value
+        const radio = document.querySelector('.suggestion-radio:checked');
+        const chosen = radio ? radio.value : null;
+        if (!chosen) {
+            alert('No suggested time selected to auto-reschedule');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+        formData.append('auto_reschedule', '1');
+        formData.append('chosen_time', chosen);
 
-        fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
+        showLoading();
+
+        fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
             method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: formData
         })
-        .then(response => response.text())
+        .then(r => r.text())
         .then(text => {
             let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                console.error('Non-JSON response:', text);
-                alert('Server returned an unexpected response. Please check the logs.');
-                return;
-            }
-            if (data.success) {
+            try { data = JSON.parse(text); } catch (e) { data = null; }
+            hideLoading();
+            if (data && data.success) {
+                closeConflictModal();
                 location.reload();
             } else {
-                if (data.message && data.message.includes('No dentists available')) {
-                    alert('No dentists available for auto-assignment. Please manually select a dentist.');
-                    showDentistSelectionModal(appointmentId);
-                } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
-                }
+                alert('Auto-reschedule failed: ' + (data && data.message ? data.message : 'Unknown error'));
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while approving the appointment. Please check the console for details.');
-        });
-    }
+        .catch(err => { hideLoading(); console.error('Error:', err); alert('Auto-reschedule request failed'); });
+
+    // Note: the request to approve is sent above; no duplicate request here.
 }
 
 function showDentistSelectionModal(appointmentId) {
@@ -414,6 +508,16 @@ document.addEventListener('DOMContentLoaded', function() {
 setInterval(function() {
     location.reload();
 }, 30000);
+
+function showLoading(){
+    const el = document.getElementById('globalLoadingOverlay');
+    if (el) el.classList.remove('hidden');
+}
+
+function hideLoading(){
+    const el = document.getElementById('globalLoadingOverlay');
+    if (el) el.classList.add('hidden');
+}
 </script>
 
 <?= view('templates/footer') ?> 

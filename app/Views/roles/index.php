@@ -200,6 +200,9 @@ $content = ob_get_clean();
 // Ensure $user is provided to the admin layout; fallback to session user
 $userData = isset($user) ? $user : (session('user') ?? []);
 
+// Opt-in for the fixed sidebar offset so admin sidebar remains intact and page content scrolls
+$content = '<div data-sidebar-offset>' . $content . '</div>';
+
 echo view('templates/admin_layout', [
     'title' => $title,
     'content' => $content,
