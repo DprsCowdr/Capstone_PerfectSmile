@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Controllers\Auth;
+use App\Services\PatientRegistrationService;
 
 class Staff extends BaseController
 {
@@ -436,28 +437,24 @@ class Staff extends BaseController
         // Delegate to AppointmentService for consistency and FCFS behavior
         $appointmentService = new \App\Services\AppointmentService();
 
+        $appointmentModel = new \App\Models\AppointmentModel();
+        
+        // Get form data
         $appointmentType = $this->request->getPost('appointment_type') ?? 'scheduled';
-        $date = $this->request->getPost('date');
-        $time = $this->request->getPost('time');
-        $appointment_datetime = $this->request->getPost('appointment_datetime');
-        if (empty($appointment_datetime) && $date && $time) {
-            $appointment_datetime = $date . ' ' . $time . ':00';
-        }
-
+        $dentistId = $this->request->getPost('doctor') ?: null;
+        
         $data = [
             'branch_id' => $this->request->getPost('branch'),
             'user_id' => $this->request->getPost('patient'),
-            'dentist_id' => $this->request->getPost('doctor') ?: null,
-            'appointment_datetime' => $appointment_datetime,
+            'dentist_id' => $dentistId,
+            'appointment_date' => $this->request->getPost('date'),
+            'appointment_time' => $this->request->getPost('time'),
             'appointment_type' => $appointmentType,
             'remarks' => $this->request->getPost('remarks')
         ];
 
-        // Basic validation
-        if (empty($data['user_id']) || empty($data['appointment_datetime'])) {
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Required fields missing (Staff:459)']);
-            }
+        // Validate required fields
+        if (empty($data['user_id']) || empty($data['appointment_date']) || empty($data['appointment_time'])) {
             session()->setFlashdata('error', 'Required fields missing');
             return redirect()->back();
         }

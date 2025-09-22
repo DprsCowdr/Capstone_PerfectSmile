@@ -155,10 +155,25 @@
                         <h4 class="font-semibold text-blue-800 mb-2">How Patient Account Activation Works:</h4>
                         <ul class="text-sm text-blue-700 space-y-1">
                             <li>• <strong>Activate:</strong> Generates a temporary password and enables login access</li>
+                            <li>• <strong>Email Notification:</strong> Automatically sends temporary password to patient's email</li>
                             <li>• <strong>Deactivate:</strong> Disables login access (patient data is preserved)</li>
-                            <li>• <strong>Temporary Password:</strong> Share the generated password with the patient via email or phone</li>
                             <li>• <strong>Security:</strong> Patients should change their password after first login</li>
+                            <li>• <strong>Backup:</strong> If email fails, temporary password will be displayed for manual sharing</li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Status Info -->
+            <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-envelope text-green-500 mt-1"></i>
+                    <div>
+                        <h4 class="font-semibold text-green-800 mb-2">Email Integration:</h4>
+                        <p class="text-sm text-green-700">
+                            The system is configured to automatically send account activation emails with temporary passwords. 
+                            Patients will receive a professionally formatted email with login instructions and security recommendations.
+                        </p>
                     </div>
                 </div>
             </div>

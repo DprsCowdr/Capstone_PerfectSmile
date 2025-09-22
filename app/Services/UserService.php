@@ -3,14 +3,18 @@
 namespace App\Services;
 
 use App\Models\UserModel;
+use App\Services\EmailService;
 
 class UserService
 {
     protected $userModel;
+    protected $validationErrors = [];
+    protected $emailService;
     
     public function __construct()
     {
         $this->userModel = new UserModel();
+        $this->emailService = new EmailService();
     }
     
     /**
@@ -202,8 +206,6 @@ class UserService
         return true;
     }
     
-    protected $validationErrors = [];
-    
     public function getValidationErrors()
     {
         return $this->validationErrors;
@@ -290,11 +292,30 @@ class UserService
         if ($result) {
             log_message('info', "Patient account activated for ID: {$patientId} with temp password: {$tempPassword}");
             
-            // For prototype, return the password so admin can share it
+            // Send activation email with temporary password
+            $emailSent = false;
+            if (!empty($patient['email'])) {
+                $emailSent = $this->emailService->sendAccountActivationEmail(
+                    $patient['email'],
+                    $patient['name'],
+                    $tempPassword
+                );
+                
+                if ($emailSent) {
+                    log_message('info', "Activation email sent successfully to: {$patient['email']}");
+                } else {
+                    log_message('error', "Failed to send activation email to: {$patient['email']}");
+                }
+            } else {
+                log_message('warning', "No email address found for patient ID: {$patientId}");
+            }
+            
+            // Return the password and email status for admin feedback
             return [
                 'success' => true,
                 'password' => $tempPassword,
-                'patient' => $patient
+                'patient' => $patient,
+                'email_sent' => $emailSent
             ];
         }
         
