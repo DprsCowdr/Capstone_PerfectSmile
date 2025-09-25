@@ -1,6 +1,29 @@
 <script>
 // Marker: global calendar scripts loaded
 window.globalCalendarLoaded = window.globalCalendarLoaded || true;
+// Expose current user's type and API prefix for role-scoped endpoints
+window.userType = window.userType || <?= json_encode($user['user_type'] ?? '') ?>;
+// Safe toString wrapper to avoid calling toString on undefined/null
+function safeToString(v) {
+  try {
+    if (v === null || v === undefined) return '';
+    if (typeof v.toString === 'function') return v.toString();
+    return String(v);
+  } catch (e) {
+    return '';
+  }
+}
+
+// Map user types to API prefix used by role-scoped controllers/routes
+(() => {
+  const t = safeToString(<?= json_encode($user['user_type'] ?? '') ?> || '').toLowerCase();
+  let prefix = '';
+  if (t === 'admin') prefix = 'admin/';
+  else if (t === 'doctor' || t === 'dentist') prefix = 'dentist/';
+  else if (t === 'staff') prefix = 'staff/';
+  else if (t === 'patient') prefix = 'patient/';
+  window.calendarApiPrefix = prefix;
+})();
 // Helper to format HH:MM or full datetime -> h:MM AM/PM for display across calendar scripts
 function prettyTimeForDisplay(hm) {
   if (!hm) return hm;
@@ -59,7 +82,7 @@ window.showWeekAppointmentDetails = function(appointmentId) {
     <div class="mb-2"><span class="font-semibold">Time:</span> ${formatTimeWithGrace(appointment)}</div>
     <div class="mb-2"><span class="font-semibold">Status:</span> ${appointment.status || ''}</div>
     <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
-    <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
+  ${(window.userType === 'admin' || window.userType === 'staff') ? `<button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" data-edit-apt="${appointment.id}">Edit</button>` : ''}
   `;
 }
 // Reusable formatter for appointment time that includes grace/adjusted labels
@@ -226,8 +249,30 @@ if (!Array.isArray(_apts)) {
   window.appointments = _apts;
 }
 window.baseUrl = '<?= base_url() ?>';
+// Expose current user id for client-side ownership checks
+window.currentUserId = <?= isset($user['id']) ? (int)$user['id'] : 'null' ?>;
+// Defensive: if a patient is viewing, filter out any appointments that don't belong to them
+if (window.userType === 'patient' && window.currentUserId) {
+  console.log('[INIT] Patient filtering: currentUserId =', window.currentUserId, 'Raw appointments:', (window.appointments || []).length);
+  try {
+    window.appointments = (window.appointments || []).filter(a => {
+      const owner = a.user_id || a.patient_id || a.patient || null;
+      if (owner === null || owner === undefined) {
+        console.log('[INIT] Filtering out appointment', a.id, '- no owner field');
+        return false;
+      }
+      const isOwned = Number(owner) === Number(window.currentUserId);
+      if (!isOwned) {
+        console.log('[INIT] Filtering out appointment', a.id, '- owner:', owner, 'vs current:', window.currentUserId);
+      }
+      return isOwned;
+    });
+    console.log('[INIT] After patient filtering:', window.appointments.length, 'appointments remaining');
+  } catch (e) {
+    console.error('Failed to sanitize appointments for patient view', e);
+  }
+}
 window.branches = <?= json_encode($branches ?? []) ?>;
-window.currentUserId = <?= isset($user['id']) ? $user['id'] : 'null' ?>;
 
 // Diagnostic logs to help debug missing appointments in Day/Week views
 console.info('[Calendar Debug] Initial appointments count:', Array.isArray(window.appointments) ? window.appointments.length : typeof window.appointments);
@@ -337,145 +382,168 @@ console.log('Loaded appointments for conflict detection:', window.appointments);
 
 // Function to populate available time slots for patients
 function populateAvailableTimeSlots(selectedDate, timeSelect) {
-  // Clear existing options
+  // Clear existing options and add placeholder
   timeSelect.innerHTML = '<option value="">Select Time</option>';
-  
-  // Get all appointments for the selected date
-  const dateAppointments = (window.appointments || []).filter(apt => {
-    const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
-    return aptDate === selectedDate;
-  });
-  // Decide working hours using recurring availability events (is_recurring == 1) for this dentist/date
-  const events = (window.availabilityEvents || []);
-  // Which dentist is selected on booking form (if any)
-  let dentistId = null;
-  const dentistEl = document.querySelector('select[name="dentist_id"]') || document.getElementById('dentistSelect');
-  if (dentistEl && dentistEl.value) dentistId = dentistEl.value;
 
-  // Find recurring occurrences that intersect selectedDate and belong to the dentist (if dentistId provided)
-  const dayStart = getPHDate(selectedDate + 'T00:00:00');
-  const dayEnd = getPHDate(selectedDate + 'T23:59:59');
-
-  // Consider either explicit recurring expansions OR generated working_hours blocks
-  const recurring = events.filter(ev => (
+  // Helper: fallback to local generation (existing behavior)
+  function localPopulate() {
+    // original local computation preserved as a graceful fallback
+    // Get all appointments for the selected date
+    const dateAppointments = (window.appointments || []).filter(apt => {
+      const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0, 10) : null);
+      return aptDate === selectedDate;
+    });
+    const events = (window.availabilityEvents || []);
+    let dentistId = null;
+    const dentistEl = document.querySelector('select[name="dentist_id"]') || document.getElementById('dentistSelect');
+    if (dentistEl && dentistEl.value) dentistId = dentistEl.value;
+    const dayStart = getPHDate(selectedDate + 'T00:00:00');
+    const dayEnd = getPHDate(selectedDate + 'T23:59:59');
+    const recurring = events.filter(ev => (
       Number(ev.is_recurring) === 1 || String(ev.type) === 'working_hours'
     ) && (!dentistId || String(ev.user_id) === String(dentistId))).filter(ev => {
-    const evStart = getPHDate(ev.start);
-    const evEnd = getPHDate(ev.end);
-    return evStart <= dayEnd && evEnd >= dayStart;
-  });
-
-  // If no recurring schedule found, fall back to default clinic hours 08:00-20:00
-  let workingStart = getPHDate(selectedDate + 'T08:00:00');
-  let workingEnd = getPHDate(selectedDate + 'T20:00:00');
-  if (recurring.length) {
-    // Choose earliest start and latest end among recurring occurrences for that day
-    let earliest = recurring[0] && getPHDate(recurring[0].start);
-    let latest = recurring[0] && getPHDate(recurring[0].end);
-    recurring.forEach(r => {
-      const rs = getPHDate(r.start);
-      const re = getPHDate(r.end);
-      if (rs < earliest) earliest = rs;
-      if (re > latest) latest = re;
+      const evStart = getPHDate(ev.start);
+      const evEnd = getPHDate(ev.end);
+      return evStart <= dayEnd && evEnd >= dayStart;
     });
-    workingStart = earliest;
-    workingEnd = latest;
-  }
-
-  // Build 30-min slots between workingStart and workingEnd, exclude booked and explicit blocks
-  let availableSlots = 0;
-  let bookedSlots = 0;
-
-  // gather explicit blocks (non-recurring) affecting this date
-  const explicitBlocks = events.filter(ev => Number(ev.is_recurring) === 0 && (!dentistId || String(ev.user_id) === String(dentistId))).map(ev => ({
-    start: getPHDate(ev.start),
-    end: getPHDate(ev.end),
-    type: ev.type
-  }));
-
-  // iterate from workingStart to workingEnd in 30-min steps
-  let cursor = new Date(workingStart.getTime());
-  while (cursor < workingEnd) {
-    const slotStart = new Date(cursor.getTime());
-    const slotEnd = new Date(cursor.getTime() + 30 * 60 * 1000);
-    // format time for option value (HH:MM)
-    const hh = String(slotStart.getHours()).padStart(2, '0');
-    const mm = String(slotStart.getMinutes()).padStart(2, '0');
-    const timeStr = `${hh}:${mm}`;
-    const displayTime = formatTime(timeStr);
-
-    // Check if slot overlaps any booked appointment
-    const isBooked = dateAppointments.some(apt => {
-      const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null);
-      return aptTime === timeStr;
-    });
-
-    // Check if slot intersects explicit block
-    const blocked = explicitBlocks.some(b => !(b.end <= slotStart || b.start >= slotEnd));
-
-    const option = document.createElement('option');
-    option.value = timeStr;
-    if (isBooked || blocked) {
-      // Friendlier text for non-technical users
-      option.textContent = `${displayTime} — Not available`;
-      option.disabled = true;
-      // Many browsers ignore option styling; keep inline color as best-effort
-      option.style.color = '#b91c1c';
-      bookedSlots++;
-    } else {
-      option.textContent = displayTime;
-      availableSlots++;
+    let workingStart = getPHDate(selectedDate + 'T08:00:00');
+    let workingEnd = getPHDate(selectedDate + 'T20:00:00');
+    if (recurring.length) {
+      let earliest = recurring[0] && getPHDate(recurring[0].start);
+      let latest = recurring[0] && getPHDate(recurring[0].end);
+      recurring.forEach(r => { const rs = getPHDate(r.start); const re = getPHDate(r.end); if (rs < earliest) earliest = rs; if (re > latest) latest = re; });
+      workingStart = earliest; workingEnd = latest;
     }
-    timeSelect.appendChild(option);
-
-    cursor = new Date(cursor.getTime() + 30 * 60 * 1000);
+    const explicitBlocks = events.filter(ev => Number(ev.is_recurring) === 0 && (!dentistId || String(ev.user_id) === String(dentistId))).map(ev => ({ start: getPHDate(ev.start), end: getPHDate(ev.end), type: ev.type }));
+    let cursor = new Date(workingStart.getTime());
+    let availableSlots = 0, bookedSlots = 0;
+    while (cursor < workingEnd) {
+      const slotStart = new Date(cursor.getTime());
+      const slotEnd = new Date(cursor.getTime() + 30 * 60 * 1000);
+      const hh = String(slotStart.getHours()).padStart(2, '0');
+      const mm = String(slotStart.getMinutes()).padStart(2, '0');
+      const timeStr = `${hh}:${mm}`;
+      const displayTime = formatTime(timeStr);
+      const isBooked = dateAppointments.some(apt => { const aptTime = apt.appointment_time || (apt.appointment_datetime ? apt.appointment_datetime.substring(11, 16) : null); return aptTime === timeStr; });
+      const blocked = explicitBlocks.some(b => !(b.end <= slotStart || b.start >= slotEnd));
+      const option = document.createElement('option'); option.value = timeStr;
+      if (isBooked || blocked) { option.textContent = `${displayTime} — Not available`; option.disabled = true; option.style.color = '#b91c1c'; bookedSlots++; }
+      else { option.textContent = displayTime; availableSlots++; }
+      timeSelect.appendChild(option);
+      cursor = new Date(cursor.getTime() + 30 * 60 * 1000);
+    }
+    // update messages
+    const availabilityMessage = document.getElementById('availabilityMessage');
+    const unavailableMessage = document.getElementById('unavailableMessage');
+    const availabilityText = document.getElementById('availabilityText');
+    const unavailableText = document.getElementById('unavailableText');
+    if (availabilityMessage) { availabilityMessage.setAttribute('role','status'); availabilityMessage.setAttribute('aria-live','polite'); }
+    if (unavailableMessage) { unavailableMessage.setAttribute('role','status'); unavailableMessage.setAttribute('aria-live','polite'); }
+    if (availableSlots > 0) { if (availabilityMessage && availabilityText) { availabilityText.textContent = `${availableSlots} open times — choose one to book`; availabilityMessage.style.display = 'block'; } if (unavailableMessage) unavailableMessage.style.display = 'none'; }
+    else { if (unavailableMessage && unavailableText) { unavailableText.textContent = 'No open times on this date — try another day or contact the clinic'; unavailableMessage.style.display = 'block'; } if (availabilityMessage) availabilityMessage.style.display = 'none'; }
   }
-  
-  // Show availability message
-  const availabilityMessage = document.getElementById('availabilityMessage');
-  const unavailableMessage = document.getElementById('unavailableMessage');
 
-  // Global fallback helper. Only install if nothing else provides showMessageModal.
-  // If the server-side partial is present it will expose `pushModal`/`showMessageModal`.
-  if (!window.showMessageModal) {
-    window.showMessageModal = function(message, title = 'Message', type = 'info') {
-      // If the server partial was included and installed modal helpers, use them directly.
-      if (window._modalRoot && typeof window.pushModal === 'function') {
-        try { window.pushModal({ message, title, type }); return; } catch(e) { /* fall through to alert */ }
+  // Try server-backed slots first; fall back to local generation on error
+  try {
+    let serviceId = null;
+    const svcEl = document.querySelector('select[name="service_id"]') || document.getElementById('serviceSelect');
+    if (svcEl && svcEl.value) serviceId = svcEl.value;
+    let dentistId = null;
+    const dentistEl = document.querySelector('select[name="dentist_id"]') || document.getElementById('dentistSelect');
+    if (dentistEl && dentistEl.value) dentistId = dentistEl.value;
+    let branchId = null;
+    const branchEl = document.querySelector('select[name="branch_id"]');
+    if (branchEl && branchEl.value) branchId = branchEl.value;
+
+    // Determine requested duration (prefer explicit duration selector, fallback to 30)
+    let duration = 0;
+    try {
+      const durEl = document.querySelector('select[name="procedure_duration"], input[name="procedure_duration"]');
+      if (durEl) {
+        const v = (durEl.value !== undefined) ? durEl.value : (durEl.selectedIndex ? durEl.options[durEl.selectedIndex].value : null);
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 0) duration = n;
       }
-      // fallback to simple alert
-      alert(title + '\n\n' + message);
-    };
-  }
-  const availabilityText = document.getElementById('availabilityText');
-  const unavailableText = document.getElementById('unavailableText');
-  
-  // Provide friendly, accessible messages and set ARIA live region
-  if (availabilityMessage) {
-    availabilityMessage.setAttribute('role', 'status');
-    availabilityMessage.setAttribute('aria-live', 'polite');
-  }
-  if (unavailableMessage) {
-    unavailableMessage.setAttribute('role', 'status');
-    unavailableMessage.setAttribute('aria-live', 'polite');
-  }
+    } catch (e) { /* ignore */ }
+    if (!duration) duration = 30;
 
-  if (availableSlots > 0) {
-    if (availabilityMessage && availabilityText) {
-      availabilityText.textContent = `${availableSlots} open times — choose one to book`; // clearer action-oriented text
-      availabilityMessage.style.display = 'block';
-    }
-    if (unavailableMessage) {
-      unavailableMessage.style.display = 'none';
-    }
-  } else {
-    if (unavailableMessage && unavailableText) {
-      unavailableText.textContent = 'No open times on this date — try another day or contact the clinic';
-      unavailableMessage.style.display = 'block';
-    }
-    if (availabilityMessage) {
-      availabilityMessage.style.display = 'none';
-    }
+    // Prepare POST data
+    const formData = new URLSearchParams();
+    formData.set('date', selectedDate);
+    formData.set('duration', duration);
+    if (serviceId) formData.set('service_id', serviceId);
+    if (dentistId) formData.set('dentist_id', dentistId);
+    if (branchId) formData.set('branch_id', branchId);
+    // include branch filter if set and meaningful
+    if (!branchId && window.currentBranchFilter && window.currentBranchFilter !== 'all') formData.set('branch_id', window.currentBranchFilter);
+
+    const headers = {
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    const csrf = document.querySelector('meta[name="csrf-token"]');
+    if (csrf) headers['X-CSRF-TOKEN'] = csrf.getAttribute('content');
+
+    fetch(window.baseUrl + '/appointments/available-slots', {
+      method: 'POST',
+      headers: headers,
+      body: safeToString(formData),
+      credentials: 'same-origin'
+    })
+      .then(r => r.json())
+      .then(data => {
+        // Debug log the server response to help diagnose empty-slot cases
+        try { console.debug('available-slots response', data); } catch(e) {}
+        if (!data || !data.success) {
+          console.warn('available-slots API returned no data, falling back to local generation', data);
+          return localPopulate();
+        }
+  // Expose canonical server availability for other scripts/fallbacks
+  try { window.latestAvailability = data || {}; } catch(e) { /* ignore non-writable window */ }
+  const all = data.all_slots || data.slots || [];
+        const suggestions = data.suggestions || [];
+        let availableCount = 0;
+        all.forEach(slot => {
+          const dt = slot.datetime || '';
+          const hhmm = dt ? dt.substring(11,16) : (slot.timestamp ? new Date(slot.timestamp*1000).toISOString().substring(11,16) : '');
+          const option = document.createElement('option');
+          option.value = hhmm;
+          option.textContent = slot.time || formatTime(hhmm);
+          if (!slot.available) { option.disabled = true; option.style.color = '#b91c1c'; }
+          else availableCount++;
+          timeSelect.appendChild(option);
+        });
+
+        // Show availability message
+        const availabilityMessage = document.getElementById('availabilityMessage');
+        const unavailableMessage = document.getElementById('unavailableMessage');
+        const availabilityText = document.getElementById('availabilityText');
+        const unavailableText = document.getElementById('unavailableText');
+        if (availabilityMessage) { availabilityMessage.setAttribute('role','status'); availabilityMessage.setAttribute('aria-live','polite'); }
+        if (unavailableMessage) { unavailableMessage.setAttribute('role','status'); unavailableMessage.setAttribute('aria-live','polite'); }
+        if (availableCount > 0) { if (availabilityMessage && availabilityText) { availabilityText.textContent = `${availableCount} open times — choose one to book`; availabilityMessage.style.display = 'block'; } if (unavailableMessage) unavailableMessage.style.display = 'none'; }
+        else { if (unavailableMessage && unavailableText) { unavailableText.textContent = 'No open times on this date — try another day or contact the clinic'; unavailableMessage.style.display = 'block'; } if (availabilityMessage) availabilityMessage.style.display = 'none'; }
+
+        // If suggestions provided, prefill the best suggestion and surface text
+        if (suggestions && suggestions.length) {
+          const first = suggestions[0];
+          const hhmm = first.datetime ? first.datetime.substring(11,16) : (first.timestamp ? new Date(first.timestamp*1000).toISOString().substring(11,16) : null);
+          if (hhmm) {
+            try { timeSelect.value = hhmm; } catch(e) { /* ignore */ }
+          }
+          if (availabilityMessage && availabilityText) {
+            const labels = suggestions.slice(0,6).map(s => s.time || (s.datetime? s.datetime.substring(11,16):''));
+            availabilityText.textContent = `Suggested: ${labels.join(', ')}`;
+            availabilityMessage.style.display = 'block';
+          }
+        }
+      }).catch(err => {
+        console.warn('available-slots fetch failed, falling back to localPopulate', err);
+        localPopulate();
+      });
+  } catch (e) {
+    console.warn('populateAvailableTimeSlots error, using local fallback', e);
+    localPopulate();
   }
 }
 
@@ -608,11 +676,32 @@ function getFilteredAppointments() {
   console.log('[getFilteredAppointments] Current filter:', window.currentBranchFilter);
   console.log('[getFilteredAppointments] Raw appointments:', window.appointments?.length || 0);
   
-  if (window.currentBranchFilter === 'all') {
-    return window.appointments || [];
+  // If user is a patient, ensure we only expose their own appointments to the client
+  const raw = window.appointments || [];
+  if (window.userType === 'patient' && window.currentUserId) {
+    console.log('[getFilteredAppointments] Patient mode: currentUserId =', window.currentUserId);
+    console.log('[getFilteredAppointments] Raw appointments before patient filter:', raw.length);
+    const patientOnly = raw.filter(a => {
+      const owner = a.user_id || a.patient_id || a.patient || null;
+      const isOwned = owner !== null && owner !== undefined && Number(owner) === Number(window.currentUserId);
+      if (!isOwned) {
+        console.log('[getFilteredAppointments] FILTERING OUT appointment', a.id, 'owner:', owner, 'current user:', window.currentUserId);
+      }
+      return isOwned;
+    });
+    console.log('[getFilteredAppointments] After patient filter:', patientOnly.length, 'appointments remaining');
+    // Respect branch filter afterwards
+    if (window.currentBranchFilter === 'all') return patientOnly;
+    // fall through to branch filtering on patientOnly
+    var sourceArray = patientOnly;
+  } else {
+    if (window.currentBranchFilter === 'all') {
+      return raw;
+    }
+    var sourceArray = raw;
   }
-  
-  const filtered = (window.appointments || []).filter(apt => {
+
+  const filtered = (sourceArray || []).filter(apt => {
     if (!apt.branch_name) {
       console.log('[getFilteredAppointments] Appointment missing branch_name:', apt.id);
       return false;
@@ -1105,7 +1194,7 @@ window.showDayAppointmentDetails = function(appointmentId) {
     <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
     <div class="mb-2"><span class="font-semibold">Status:</span> ${appointment.status || ''}</div>
     <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
-    <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
+  ${(window.userType === 'admin' || window.userType === 'staff') ? `<button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" data-edit-apt="${appointment.id}">Edit</button>` : ''}
   `;
   modal.classList.remove('hidden');
   modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
@@ -1292,7 +1381,8 @@ function rebuildCalendarGrid() {
 
             const info = document.createElement('div');
             info.className = 'relative z-10 mt-1 text-xs text-green-700 font-medium flex items-center justify-center';
-            info.innerHTML = `<span class='bg-white/90 px-2 py-0.5 rounded-full border text-xs text-green-700'>Available ${formatTimeLocal(earliest)} — ${formatTimeLocal(latest)}</span>`;
+            // Show only the earliest start time to avoid implying a fixed end time.
+            info.innerHTML = `<span class='bg-white/90 px-2 py-0.5 rounded-full border text-xs text-green-700'>Available from ${formatTimeLocal(earliest)}</span>`;
             // Attach click to show recurring hours details
             info.onclick = function(e){ e.stopPropagation(); showAvailabilityListModal(recurringForDay, cell.date); };
             td.appendChild(info);
@@ -1300,6 +1390,18 @@ function rebuildCalendarGrid() {
         } catch(e) { console.error('availability render error', e); }
 // Show modal with list of appointments for a day, each clickable for editing
 function showDayAppointmentsModal(dayAppointments) {
+  // ADDITIONAL PATIENT OWNERSHIP FILTER: Final defense to ensure patients only see their own appointments
+  if (window.userType === 'patient' && window.currentUserId) {
+    dayAppointments = dayAppointments.filter(a => {
+      const owner = a.user_id || a.patient_id || a.patient || null;
+      const isOwned = owner !== null && owner !== undefined && Number(owner) === Number(window.currentUserId);
+      if (!isOwned) {
+        console.warn('[showDayAppointmentsModal] BLOCKED non-owned appointment', a.id, 'owner:', owner, 'current user:', window.currentUserId);
+      }
+      return isOwned;
+    });
+  }
+
   let modal = document.getElementById('dayAppointmentsModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -1314,25 +1416,572 @@ function showDayAppointmentsModal(dayAppointments) {
     `;
     document.body.appendChild(modal);
   }
-  // Populate the list
+  // Populate the list (clicking an item opens the read-only info panel; Edit is explicit inside the details)
   const list = modal.querySelector('#dayAppointmentsList');
   if (dayAppointments.length === 0) {
     list.innerHTML = '<div class="text-gray-500">No appointments found.</div>';
   } else {
     computeQueuePositions(dayAppointments);
     list.innerHTML = dayAppointments.map(apt => `
-      <div class="border rounded p-2 mb-2 bg-blue-50 hover:bg-blue-100 cursor-pointer" onclick="editAppointment(${apt.id})">
-        <div class="font-semibold text-blue-800">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Unknown')}</div>
-        <div class="text-xs text-gray-500">${formatAppointmentTime(apt)} ${apt._queuePosition && apt._queuePosition > 1 ? `<span class="text-xs text-gray-500">#${apt._queuePosition}</span>` : ''}</div>
-        <div class="text-xs text-gray-400">${apt.remarks ? apt.remarks : ''}</div>
+  <div class="border rounded p-3 mb-2 bg-white hover:bg-gray-50 cursor-pointer" data-apt-id="${apt.id}" data-apt-clickable>
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="font-semibold text-gray-800">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Unknown')}</div>
+            <div class="text-xs text-gray-500">${formatAppointmentTime(apt)} ${apt._queuePosition && apt._queuePosition > 1 ? `<span class=\"text-xs text-gray-500\">#${apt._queuePosition}</span>` : ''}</div>
+          </div>
+          <div class="text-right text-xs text-gray-400">${apt.branch_name || ''}</div>
+        </div>
+        ${apt.remarks ? `<div class="text-xs text-gray-500 mt-2">${apt.remarks}</div>` : ''}
       </div>
     `).join('');
+    // Attach explicit click handlers to each generated appointment item as a robust fallback
+    setTimeout(() => {
+      try {
+        const items = list.querySelectorAll('[data-apt-id]');
+        items.forEach(it => {
+          // avoid attaching multiple times
+          if (it._hasClick) return;
+          it.addEventListener('click', function(evt){ evt.stopPropagation(); const id = this.getAttribute('data-apt-id'); if (id) showAppointmentInfoById(id); });
+          it._hasClick = true;
+        });
+      } catch(e) { console.error('attach day appointment click handlers error', e); }
+    }, 20);
   }
   modal.classList.remove('hidden');
   modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
     modal.classList.add('hidden');
   };
 }
+
+// Show a single appointment's information in the right-side slide panel (read-only view)
+function showAppointmentInfoById(appointmentId) {
+  // Enable debug mode temporarily
+  window.__psm_debug = true;
+  
+  // Use let so we can replace with server-provided appointment when we fetch it
+  let apt = (window.appointments || []).find(a => String(a.id) === String(appointmentId));
+  if (!apt) {
+    // still try to fetch from server if local copy missing
+    console.warn('Local appointment not found, attempting to fetch from server for id', appointmentId);
+  } else {
+    console.log('Found appointment:', apt);
+    
+    // CLIENT-SIDE OWNERSHIP CHECK: Prevent patients from accessing other patients' appointments
+    if (window.userType === 'patient' && window.currentUserId) {
+      const owner = apt.user_id || apt.patient_id || apt.patient || null;
+      if (!owner || Number(owner) !== Number(window.currentUserId)) {
+        console.warn('[showAppointmentInfoById] Access denied: appointment belongs to user', owner, 'but current user is', window.currentUserId);
+        if (typeof showInvoiceAlert === 'function') {
+          showInvoiceAlert('You do not have permission to view this appointment.', 'warning', 4000);
+        } else {
+          alert('You do not have permission to view this appointment.');
+        }
+        return;
+      }
+    }
+  }
+  // Hide the modal if present
+  const dayModal = document.getElementById('dayAppointmentsModal');
+  if (dayModal) dayModal.classList.add('hidden');
+
+  const panelWrapper = document.getElementById('appointmentInfoPanel');
+  if (!panelWrapper) return alert('Appointment info panel missing');
+  const panel = panelWrapper.querySelector('.relative') || panelWrapper.querySelector('[role="dialog"]') || panelWrapper;
+  const contentDiv = document.getElementById('appointmentInfoContent');
+  if (!contentDiv) return alert('Appointment info content missing');
+
+  // compute start and end times for display
+  function computeStartEnd(apt) {
+    // prefer explicit fields if present
+    let startRaw = '';
+    if (apt.appointment_time) startRaw = apt.appointment_time;
+    else if (apt.appointment_datetime) startRaw = apt.appointment_datetime.substring(11,16);
+    else if (apt.start_time) startRaw = apt.start_time;
+
+    // helper: parse a time string like '10:55', '10:55 AM', or an ISO time into a Date on a dummy day
+    function parseTimeToDate(timeStr) {
+      if (!timeStr) return null;
+      // If it's ISO-like (contains 'T'), try Date
+      if (timeStr.indexOf('T') !== -1) {
+        try {
+          const d = new Date(timeStr);
+          if (!isNaN(d.getTime())) return d;
+        } catch(e){}
+      }
+      // Normalize whitespace
+      let s = String(timeStr).trim();
+      // Handle 'HH:MM AM/PM'
+      const ampmMatch = s.match(/(\d{1,2}:\d{2})\s*([APap][Mm])$/);
+      if (ampmMatch) {
+        s = ampmMatch[1] + ' ' + ampmMatch[2].toUpperCase();
+      }
+      // Split hh:mm and am/pm
+      let hh = 0, mm = 0;
+      const m = s.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+      if (m) {
+        hh = parseInt(m[1],10);
+        mm = parseInt(m[2],10);
+        const ampm = m[3];
+        if (ampm) {
+          const up = ampm.toUpperCase();
+          if (up === 'PM' && hh < 12) hh += 12;
+          if (up === 'AM' && hh === 12) hh = 0;
+        }
+        return new Date(2000,0,1, hh, mm, 0);
+      }
+      // last resort: try Date parse
+      try {
+        const d2 = new Date(s);
+        if (!isNaN(d2.getTime())) return d2;
+      } catch(e){}
+      return null;
+    }
+
+    // end may be provided as appointment_end, end_time or computed from duration_minutes/service_duration/duration
+    let endRaw = apt.end_time || apt.appointment_end || '';
+
+    const startDate = parseTimeToDate(startRaw) || null;
+    if (!endRaw && startDate) {
+      const dur = Number(apt.duration_minutes || apt.service_duration || apt.duration || 0);
+      if (dur > 0) {
+        try {
+          const endDate = new Date(startDate.getTime());
+          endDate.setMinutes(endDate.getMinutes() + dur);
+          const h2 = String(endDate.getHours()).padStart(2,'0');
+          const m2 = String(endDate.getMinutes()).padStart(2,'0');
+          endRaw = `${h2}:${m2}`;
+        } catch(e) { endRaw = ''; }
+      }
+    }
+
+    const startDisplay = startRaw ? ((typeof prettyTimeForDisplay === 'function') ? prettyTimeForDisplay(startRaw) : startRaw) : 'TBD';
+    const endDisplay = endRaw ? ((typeof prettyTimeForDisplay === 'function') ? prettyTimeForDisplay(endRaw) : endRaw) : null;
+    return { startRaw, endRaw, startDisplay, endDisplay };
+  }
+
+  // rendering logic extracted so we can call it initially (fallback) and again when server data arrives
+  function renderAppointment(aptToRender) {
+    if (!aptToRender) return;
+    const times = computeStartEnd(aptToRender);
+
+    // Defensive guards for helper functions
+    const statusClass = (typeof getStatusClass === 'function') ? getStatusClass(aptToRender.status || '') : 'bg-gray-100 text-gray-800';
+    const approvalClass = (typeof getApprovalStatusClass === 'function') ? getApprovalStatusClass(aptToRender.approval_status || 'pending') : 'bg-gray-100 text-gray-800';
+    const typeClass = (typeof getAppointmentTypeClass === 'function') ? getAppointmentTypeClass(aptToRender.appointment_type || 'scheduled') : 'bg-gray-100 text-gray-800';
+
+    // Try to determine service name and duration (minutes).
+    // Prefer explicit appointment fields, then the appointment.services array (if provided by server),
+    // then fall back to DOM option lookup or service fetch.
+    let svcName = aptToRender.service_name || '';
+    let svcDur = Number(aptToRender.duration_minutes || aptToRender.service_duration || aptToRender.duration || 0) || null;
+
+    // If server returned a services array, prefer that: join names and sum durations
+    if ((!svcName || !svcDur) && Array.isArray(aptToRender.services) && aptToRender.services.length > 0) {
+      try {
+        const names = [];
+        let sum = 0;
+        aptToRender.services.forEach(s => {
+          if (s && s.name) names.push(s.name);
+          const d = Number(s && (s.duration_minutes || s.duration) || 0) || 0;
+          sum += d;
+        });
+        if (!svcName) svcName = names.join(', ');
+        if (!svcDur) svcDur = sum || svcDur;
+      } catch(e) {
+        if (window.__psm_debug) console.warn('Error processing appointment.services array', e);
+      }
+    }
+
+    // Debug logging
+    if (window.__psm_debug) {
+      console.log('Service debug:', {
+        service_name: aptToRender.service_name,
+        duration_minutes: aptToRender.duration_minutes,
+        service_duration: aptToRender.service_duration,
+        duration: aptToRender.duration,
+        service_id: aptToRender.service_id,
+        services_array: aptToRender.services,
+        svcName,
+        svcDur
+      });
+    }
+
+    try {
+      // DOM fallback: if still missing and we have a service_id, try to look up option text/data attributes
+      if ((!svcName || !svcDur) && aptToRender.service_id) {
+        const sel = document.querySelector(`select[name="service_id"] option[value="${aptToRender.service_id}"]`) || document.querySelector(`#editServiceId option[value="${aptToRender.service_id}"]`) || document.querySelector(`#service_id option[value="${aptToRender.service_id}"]`);
+        if (sel) {
+          if (!svcName) svcName = (sel.textContent || sel.innerText || '').trim();
+          if (!svcDur) {
+            const d = sel.getAttribute('data-duration') || sel.getAttribute('data-duration-min') || sel.getAttribute('data-duration_minutes');
+            if (d) svcDur = Number(d) || svcDur;
+          }
+          if (window.__psm_debug) {
+            console.log('DOM fallback found:', { svcName, svcDur, optionText: sel.textContent });
+          }
+        }
+      }
+    } catch(e) { 
+      if (window.__psm_debug) console.warn('DOM lookup error:', e);
+    }
+
+    // Compute displayed appointment length (minutes). Prefer service/appointment duration; if absent, try to compute from start/end.
+    let lengthMinutes = svcDur || 0;
+    
+    if (window.__psm_debug) {
+      console.log('Length calculation debug:', {
+        svcDur,
+        lengthMinutes,
+        startRaw: times.startRaw,
+        endRaw: times.endRaw
+      });
+    }
+    
+    try {
+      if (!lengthMinutes && times.startRaw && times.endRaw) {
+        const parseHM = function(s) {
+          if (!s) return null;
+          const m = String(s).trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+          if (!m) return null;
+          let hh = parseInt(m[1],10), mm = parseInt(m[2],10);
+          if (m[3]) { const up = m[3].toUpperCase(); if (up === 'PM' && hh < 12) hh += 12; if (up === 'AM' && hh === 12) hh = 0; }
+          return new Date(2000,0,1, hh, mm, 0);
+        };
+        const sd = parseHM(times.startRaw);
+        const ed = parseHM(times.endRaw);
+        if (sd && ed) {
+          lengthMinutes = Math.round((ed.getTime() - sd.getTime())/60000);
+          if (lengthMinutes < 0) lengthMinutes = 0;
+          if (window.__psm_debug) {
+            console.log('Computed length from times:', lengthMinutes, 'minutes');
+          }
+        }
+      }
+    } catch(e) { 
+      if (window.__psm_debug) console.warn('Length calculation error:', e);
+    }
+
+    const lengthLabel = lengthMinutes ? ` (${lengthMinutes} min)` : (aptToRender.service_id && (!svcName || !svcDur) ? ' (loading...)' : '');
+    // Prefer showing the raw appointment time/datetime stored on the record (user requested real time display)
+    let timeDisplayRaw = '';
+    if (aptToRender.appointment_datetime) timeDisplayRaw = aptToRender.appointment_datetime; // full ISO or stored datetime
+    else if (aptToRender.appointment_time) timeDisplayRaw = aptToRender.appointment_time;
+    else timeDisplayRaw = times.startDisplay || 'TBD';
+
+    contentDiv.innerHTML = `
+      <div class="mb-3">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="text-lg font-semibold text-gray-800">${aptToRender.patient_name || 'Unknown Patient'}</div>
+            <div class="text-sm text-gray-500 mt-1">${aptToRender.dentist_name || ''}${aptToRender.branch_name ? ' • ' + aptToRender.branch_name : ''}</div>
+          </div>
+          <div class="text-right">
+            <div class="px-2 py-1 text-xs rounded-full ${typeClass}">${(aptToRender.appointment_type||'scheduled')}</div>
+            <div class="mt-2 px-2 py-1 text-xs rounded-full ${statusClass}">${aptToRender.status || ''}</div>
+            <div class="mt-2 px-2 py-1 text-xs rounded-full ${approvalClass}">${aptToRender.approval_status || 'pending'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3 text-sm text-gray-700 space-y-2">
+        <div><strong>Date:</strong> ${aptToRender.appointment_date || (aptToRender.appointment_datetime? aptToRender.appointment_datetime.substring(0,10): '')}</div>
+  <div id="aptTimeInfo"><strong>Time:</strong> ${times.startDisplay}</div>
+        <div id="aptServiceInfo"><strong>Service:</strong> ${svcName ? (svcName + (svcDur ? ' • ' + svcDur + ' min' : '')) : (aptToRender.service_id ? 'Loading service details...' : 'N/A')}</div>
+        ${aptToRender.remarks ? `<div class="mt-2"><strong>Remarks:</strong> <div class="text-sm text-gray-600 mt-1">${aptToRender.remarks}</div></div>` : ''}
+      </div>
+      <div class="mt-4 flex gap-2">
+        ${(window.userType === 'admin' || window.userType === 'staff') ? `<button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm" data-edit-apt="${aptToRender.id}">Edit</button>` : ''}
+        ${(window.userType === 'patient') ? `<button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm" id="viewMyAppointmentsBtn">View My Appointments</button>` : ''}
+        <button class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-gray-700" id="closeAppointmentInfoPanelInline">Close</button>
+      </div>
+    `;
+
+    // If service info is missing but we have a service_id, fetch it from the server-side endpoint
+    // Use the public services endpoint (no role prefix) so patient pages can fetch service metadata
+    if ((!svcName || !svcDur) && aptToRender.service_id) {
+      try {
+        const svcUrl = (typeof baseUrl !== 'undefined' ? baseUrl : (window.baseUrl || '')) + `services/${encodeURIComponent(aptToRender.service_id)}`;
+        if (window.__psm_debug) {
+          console.log('Fetching service from:', svcUrl);
+        }
+        fetch(svcUrl, { credentials: 'same-origin' })
+          .then(r => {
+            if (window.__psm_debug) {
+              console.log('Service fetch response status:', r.status);
+            }
+            return r.json();
+          })
+          .then(j => {
+            if (window.__psm_debug) {
+              console.log('Service fetch response:', j);
+            }
+              if (j && j.success && j.service) {
+              const s = j.service;
+              const el = document.getElementById('aptServiceInfo');
+              if (el) {
+                const nm = s.name || ('Service #' + s.id);
+                const dmin = s.duration_minutes || s.duration_min || s.duration || null;
+                el.innerHTML = `<strong>Service:</strong> ${nm}${dmin ? ' • ' + dmin + ' min' : ''}`;
+                if (window.__psm_debug) {
+                  console.log('Updated service info:', { nm, dmin });
+                }
+              }
+              // If duration discovered and length label missing, recompute length display
+              const gotDur = Number(s.duration_minutes || s.duration || 0) || 0;
+              if (gotDur) {
+                  // Keep duration displayed with the Service line only (avoid duplicating it in Time)
+                  const serviceEl = document.getElementById('aptServiceInfo');
+                  if (serviceEl) {
+                    // If service info didn't include duration earlier, append it
+                    if (!serviceEl.innerHTML.includes('min')) {
+                      serviceEl.innerHTML = serviceEl.innerHTML + ` (${gotDur} min)`;
+                    }
+                  }
+              }
+            } else {
+              if (window.__psm_debug) {
+                console.warn('Service fetch failed or returned no service:', j);
+              }
+            }
+          }).catch(err => {
+            if (window.__psm_debug) {
+              console.warn('Service fetch error:', err);
+            }
+          });
+      } catch(e) { 
+        if (window.__psm_debug) {
+          console.warn('Service fetch init error:', e);
+        }
+      }
+    }
+
+    // Show popup modal
+    try {
+      panelWrapper.classList.remove('hidden');
+      panelWrapper.setAttribute('aria-hidden','false');
+      // remember last trigger for focus restore
+      try { panelWrapper._lastTrigger = document.activeElement; } catch(e){}
+      // focus the content for accessibility
+      try { contentDiv.focus(); } catch(e){}
+    } catch(e) { console.error('showAppointmentInfoById show error', e); }
+
+    panel.classList.add('active');
+    panel.style.display = 'block';
+    panel.setAttribute('aria-hidden', 'false');
+
+    // remember the element that had focus so we can restore it on close
+    try { panel._lastTrigger = document.activeElement; } catch(e){}
+
+    // Wire the inline close button for convenience
+    const closeInline = document.getElementById('closeAppointmentInfoPanelInline');
+    if (closeInline) closeInline.onclick = function(e){ e.stopPropagation(); panel.classList.remove('active'); };
+    
+    // Wire the "View My Appointments" button for patient users
+    const viewApptsBtn = document.getElementById('viewMyAppointmentsBtn');
+    if (viewApptsBtn) viewApptsBtn.onclick = function(e){ e.stopPropagation(); window.location.href = (window.baseUrl || '') + 'patient/appointments'; };
+  }
+
+  // Render immediately from local data as a fast fallback (if present)
+  if (apt) renderAppointment(apt);
+
+  // Always attempt to fetch authoritative appointment details from the server and re-render when available
+  // Always attempt to fetch authoritative appointment details from the server and re-render when available.
+  // Keep ownership checks (server enforces them) but do not skip the fetch simply because we had a local copy.
+  try {
+    const detailsUrl = (typeof baseUrl !== 'undefined' ? baseUrl : (window.baseUrl || '')) + (window.calendarApiPrefix || '') + `appointments/details/${encodeURIComponent(appointmentId)}`;
+    if (window.__psm_debug) {
+      console.log('Fetching appointment details from:', detailsUrl);
+    }
+    fetch(detailsUrl, { credentials: 'same-origin' })
+      .then(r => {
+        if (window.__psm_debug) {
+          console.log('Appointment details fetch response status:', r.status);
+        }
+        // Handle common auth/permission statuses specially
+        if (r.status === 401 || r.status === 403) {
+          // Access denied for this appointment (likely patient trying to view another patient's record)
+          try {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'text-center text-red-600 p-4';
+            msgDiv.innerText = 'You do not have permission to view this appointment.';
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(msgDiv);
+          } catch(e) { console.warn('Failed to show access denied message', e); }
+          // Stop further processing
+          throw new Error('access_denied');
+        }
+        if (r.status === 404) {
+          try {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'text-center text-gray-600 p-4';
+            msgDiv.innerText = 'Appointment not found.';
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(msgDiv);
+          } catch(e) { console.warn('Failed to show not found message', e); }
+          throw new Error('not_found');
+        }
+        return r.json();
+      })
+      .then(j => {
+        if (window.__psm_debug) {
+          console.log('Appointment details fetch response:', j);
+        }
+        if (j && j.success && j.appointment) {
+          apt = j.appointment; // replace with server-provided record
+          if (window.__psm_debug) {
+            console.log('Re-rendering with server appointment:', apt);
+          }
+          try { renderAppointment(apt); } catch(e) { console.warn('Failed to render appointment after fetch', e); }
+        } else {
+          if (window.__psm_debug) console.warn('Appointment details fetch returned no appointment', j);
+        }
+      }).catch(err => {
+        if (err && err.message && (err.message === 'access_denied' || err.message === 'not_found')) return;
+        if (window.__psm_debug) console.warn('Error fetching appointment details', err);
+      });
+  } catch(e) { if (window.__psm_debug) console.warn('Error initiating appointment details fetch', e); }
+}
+
+// Expose function on window for any inline usages or other scripts
+try { window.showAppointmentInfoById = showAppointmentInfoById; } catch(e) {}
+
+// Delegated click handler for day appointments modal to avoid inline onclicks
+document.addEventListener('click', function(e){
+  try {
+    const target = e.target.closest('[data-apt-clickable]');
+    if (!target) return;
+    // prevent bubbling to calendar cell
+    e.stopPropagation();
+    const aptId = target.getAttribute('data-apt-id');
+    if (aptId) showAppointmentInfoById(aptId);
+  } catch(err) { /* ignore */ }
+});
+
+// Delegated handler: open add-appointment panel when a calendar cell with data-open-add is clicked
+document.addEventListener('click', function(e){
+  const cell = e.target.closest('[data-open-add]');
+  if (!cell) return;
+  e.stopPropagation();
+  const date = cell.getAttribute('data-date');
+  const time = cell.getAttribute('data-time') || '';
+  if (typeof openAddAppointmentPanelWithTime === 'function') return openAddAppointmentPanelWithTime(date, time);
+});
+
+// Delegated handler: week view appointment items
+document.addEventListener('click', function(e){
+  const w = e.target.closest('[data-week-apt-id]');
+  if (!w) return;
+  e.stopPropagation();
+  const id = w.getAttribute('data-week-apt-id');
+  if (id && typeof window.showWeekAppointmentDetails === 'function') return window.showWeekAppointmentDetails(id);
+});
+
+// Delegated handler: edit buttons using data-edit-apt
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('[data-edit-apt]');
+  if (!btn) return;
+  e.stopPropagation();
+  const id = btn.getAttribute('data-edit-apt');
+  if (id && typeof prefillAndOpenEditPanel === 'function') return prefillAndOpenEditPanel(id);
+});
+
+// Delegated handler: approve/decline/delete actions
+document.addEventListener('click', function(e){
+  const approveBtn = e.target.closest('[data-approve-apt]');
+  if (approveBtn) {
+    e.stopPropagation();
+    const id = approveBtn.getAttribute('data-approve-apt');
+    if (id && typeof approveAppointment === 'function') return approveAppointment(id);
+  }
+  const declineBtn = e.target.closest('[data-decline-apt]');
+  if (declineBtn) {
+    e.stopPropagation();
+    const id = declineBtn.getAttribute('data-decline-apt');
+    if (id && typeof declineAppointment === 'function') return declineAppointment(id);
+  }
+  const deleteBtn = e.target.closest('[data-delete-apt]');
+  if (deleteBtn) {
+    e.stopPropagation();
+    const id = deleteBtn.getAttribute('data-delete-apt');
+    if (id && typeof deleteAppointment === 'function') return deleteAppointment(id);
+  }
+});
+
+// Keyboard accessibility: Escape to close appointment info panel and day modal
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    const info = document.getElementById('appointmentInfoPanel');
+    if (info && info.classList.contains('active')) {
+      info.classList.remove('active');
+      info.style.display = 'none';
+      info.setAttribute('aria-hidden', 'true');
+      // restore focus
+      try { if (info._lastTrigger) info._lastTrigger.focus(); } catch(e){}
+      return;
+    }
+    const dayModal = document.getElementById('dayAppointmentsModal');
+    if (dayModal && !dayModal.classList.contains('hidden')) {
+      dayModal.classList.add('hidden');
+      return;
+    }
+  }
+});
+
+// Simple focus trap for the appointment info panel while active
+function trapFocusInAppointmentInfo() {
+  const panel = document.getElementById('appointmentInfoPanel');
+  if (!panel) return;
+  const focusable = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+  const firstFocusable = panel.querySelectorAll(focusable)[0];
+  const focusables = Array.from(panel.querySelectorAll(focusable));
+  panel.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab') return;
+    if (focusables.length === 0) { e.preventDefault(); return; }
+    const focusedIndex = focusables.indexOf(document.activeElement);
+    if (e.shiftKey) {
+      // shift + tab
+      if (focusedIndex === 0) { e.preventDefault(); focusables[focusables.length - 1].focus(); }
+    } else {
+      if (focusedIndex === focusables.length - 1) { e.preventDefault(); focusables[0].focus(); }
+    }
+  });
+  // When panel is opened, focus first focusable element
+  const obs = new MutationObserver(function(){
+    // panel open state: previously used 'active' for slide-in; centered modal uses absence of 'hidden'
+    if (!panel.classList.contains('hidden')) {
+      setTimeout(()=>{ if (firstFocusable) firstFocusable.focus(); }, 50);
+    }
+  });
+  obs.observe(panel, { attributes: true, attributeFilter: ['class'] });
+}
+trapFocusInAppointmentInfo();
+
+// Wire close button for the appointment info panel
+document.addEventListener('click', function(e){
+  const c = e.target.closest('[data-close-panel]');
+  if (!c) return;
+  // Find the panel wrapper and hide it (supports both slide-in and centered modal)
+  const panelWrapper = document.getElementById('appointmentInfoPanel');
+  if (!panelWrapper) return;
+  e.stopPropagation();
+  try {
+    panelWrapper.classList.add('hidden');
+    panelWrapper.setAttribute('aria-hidden', 'true');
+    // if legacy slide-in panel exists inside, remove 'active' classes too
+    try { const inner = panelWrapper.querySelector('.slide-in-panel'); if (inner) inner.classList.remove('active'); } catch(e){}
+    try { if (panelWrapper._lastTrigger) panelWrapper._lastTrigger.focus(); } catch(e){}
+  } catch(e) { console.error('error closing appointment info panel', e); }
+});
+
+// Wire calendar header navigation buttons by id (non-invasive: works even if inline onclicks remain)
+document.addEventListener('DOMContentLoaded', function(){
+  const prev = document.getElementById('prevBtn');
+  const next = document.getElementById('nextBtn');
+  const today = document.getElementById('todayBtn');
+  if (prev) prev.addEventListener('click', function(){ try { if (typeof handleCalendarNav === 'function') handleCalendarNav(-1); } catch(e){} });
+  if (next) next.addEventListener('click', function(){ try { if (typeof handleCalendarNav === 'function') handleCalendarNav(1); } catch(e){} });
+  if (today) today.addEventListener('click', function(){ try { if (typeof goToToday === 'function') goToToday(); } catch(e){} });
+});
 // Show modal listing availability blocks for a date
 function showAvailabilityListModal(availList, date) {
   let modal = document.getElementById('availabilityListModal');
@@ -1427,10 +2076,10 @@ function updateWeekView() {
         return `<td class="bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
       }
       if (!showPast && isToday) {
-        return `<td class="bg-gray-100 cursor-pointer hover:bg-blue-100" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`;
+  return `<td class="bg-gray-100 cursor-pointer hover:bg-blue-100" data-open-add data-date="${wd.date}"></td>`;
       }
       if (showPast && (isPast || isToday)) {
-        return `<td class="bg-gray-100 cursor-pointer hover:bg-blue-100" onclick="openAddAppointmentPanelWithTime('${wd.date}', '')"></td>`;
+  return `<td class="bg-gray-100 cursor-pointer hover:bg-blue-100" data-open-add data-date="${wd.date}"></td>`;
       }
       // Future days always disabled
       return `<td class="bg-gray-50 text-gray-300 cursor-not-allowed"></td>`;
@@ -1530,10 +2179,10 @@ function updateWeekView() {
             const apt_hour = parseInt(apt_time.split(':')[0]);
             return apt_date === wd.date && apt_hour === h;
           });
-          html += `<td class="border-t cursor-pointer hover:bg-blue-50 min-h-12 p-1 sm:p-2" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')">`;
+          html += `<td class="border-t cursor-pointer hover:bg-blue-50 min-h-12 p-1 sm:p-2" data-open-add data-date="${wd.date}" data-time="${time}">`;
           appointments.forEach(apt => {
             html += `
-              <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" onclick="event.stopPropagation();showWeekAppointmentDetails(${apt.id})">
+              <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" data-week-apt-id="${apt.id}">
                 <span class="font-bold text-blue-900 text-xs sm:text-sm">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Appointment')}</span>
               </div>
             `;
@@ -1550,10 +2199,10 @@ function updateWeekView() {
           const apt_hour = parseInt(apt_time.split(':')[0]);
           return apt_date === wd.date && apt_hour === h;
         });
-        html += `<td class="border-t cursor-pointer hover:bg-blue-50 min-h-12 p-1 sm:p-2" onclick="openAddAppointmentPanelWithTime('${wd.date}', '${time}')">`;
+  html += `<td class="border-t cursor-pointer hover:bg-blue-50 min-h-12 p-1 sm:p-2" data-open-add data-date="${wd.date}" data-time="${time}">`;
         appointments.forEach(apt => {
           html += `
-            <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" onclick="event.stopPropagation();showWeekAppointmentDetails(${apt.id})">
+            <div class="bg-blue-100 rounded p-1 sm:p-2 text-xs text-blue-800 mb-1 hover:bg-opacity-80 transition-colors cursor-pointer" data-week-apt-id="${apt.id}">
               <span class="font-bold text-blue-900 text-xs sm:text-sm">${(window.userType === 'patient') ? 'Appointment' : (apt.patient_name || 'Appointment')}</span>
             </div>
           `;
@@ -1590,7 +2239,7 @@ window.showWeekAppointmentDetails = function(appointmentId) {
     <div class="mb-2"><span class="font-semibold">Date:</span> ${appointment.appointment_date || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(0,10) : '')}</div>
     <div class="mb-2"><span class="font-semibold">Time:</span> ${appointment.appointment_time || (appointment.appointment_datetime ? appointment.appointment_datetime.substring(11,16) : '')}</div>
     <div class="mb-2"><span class="font-semibold">Remarks:</span> ${appointment.remarks || ''}</div>
-    <button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" onclick="editAppointment(${appointment.id})">Edit</button>
+  ${(window.userType === 'admin' || window.userType === 'staff') ? `<button class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm mt-2" data-edit-apt="${appointment.id}">Edit</button>` : ''}
   `;
   modal.classList.remove('hidden');
   modal.querySelector('#closeDayAppointmentsModal').onclick = () => {
@@ -1754,12 +2403,12 @@ document.addEventListener('DOMContentLoaded', function() {
           ${appointment.decline_reason ? `<div class="text-sm text-red-500 italic">Decline reason: ${appointment.decline_reason}</div>` : ''}
           <div class="mt-3 flex gap-2">
             ${appointment.approval_status === 'pending' && (window.userType === 'admin' || window.userType === 'doctor') ? `
-              <button onclick="approveAppointment(${appointment.id})" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded text-sm">Approve</button>
-              <button onclick="declineAppointment(${appointment.id})" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-sm">Decline</button>
+              <button data-approve-apt="${appointment.id}" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded text-sm">Approve</button>
+              <button data-decline-apt="${appointment.id}" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded text-sm">Decline</button>
             ` : ''}
-            ${window.userType === 'admin' ? `
-              <button onclick="editAppointment(${appointment.id})" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm">Edit</button>
-              <button onclick="deleteAppointment(${appointment.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
+            ${(window.userType === 'admin' || window.userType === 'staff') ? `
+              <button data-edit-apt="${appointment.id}" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm">Edit</button>
+              ${window.userType === 'admin' ? `<button data-delete-apt="${appointment.id}" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>` : ''}
             ` : ''}
           </div>
         </div>
@@ -1844,6 +2493,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // mark as approved so rendering logic treats it as occupied
             obj.approval_status = 'approved';
             return obj;
+          }).filter(a => {
+            // For patient views, only include appointments belonging to the current user
+            if (window.userType === 'patient' && window.currentUserId) {
+              const owner = a.user_id || a.patient_id || a.patient || null;
+              return owner && Number(owner) === Number(window.currentUserId);
+            }
+            return true; // Non-patient views get all appointments
           });
 
           // Remove existing appointments for the same date from window.appointments
@@ -1891,11 +2547,112 @@ document.addEventListener('DOMContentLoaded', function() {
 // Global functions for appointment actions
 // Admin handlers are moved to an external script (public/js/calendar-admin.js)
 function editAppointment(appointmentId) {
+  // Prefer the calendarAdmin implementation when present (server-backed flow)
   if (window.calendarAdmin && typeof window.calendarAdmin.editAppointment === 'function') {
     return window.calendarAdmin.editAppointment(appointmentId);
   }
+  // Fallback: prefill and open built-in edit panel (UI-only)
+  if (typeof prefillAndOpenEditPanel === 'function') {
+    return prefillAndOpenEditPanel(appointmentId);
+  }
   alert('Edit function not available');
 }
+
+// UI helper: prefill the `editAppointmentPanel` with appointment data (client-side only)
+function prefillAndOpenEditPanel(appointmentId) {
+  const apt = (window.appointments || []).find(a => String(a.id) === String(appointmentId));
+  if (!apt) { alert('Appointment not found'); return; }
+
+  const panel = document.getElementById('editAppointmentPanel');
+  if (!panel) { alert('Edit panel not found'); return; }
+
+  // Prefill common fields (date, time, status, remarks, patient, branch)
+  try {
+    document.getElementById('editAppointmentId').value = apt.id || '';
+    const dateEl = document.getElementById('editAppointmentDate'); if (dateEl) dateEl.value = apt.appointment_date || (apt.appointment_datetime? apt.appointment_datetime.substring(0,10): '');
+    const timeEl = document.getElementById('editAppointmentTime'); if (timeEl) timeEl.value = apt.appointment_time || (apt.appointment_datetime? apt.appointment_datetime.substring(11,16): '');
+  const statusEl = document.getElementById('editAppointmentStatus'); if (statusEl) statusEl.value = apt.status || 'scheduled';
+  // appointment type
+  const typeEl = document.getElementById('editAppointmentType'); if (typeEl) typeEl.value = apt.appointment_type || 'scheduled';
+    const remarksEl = document.getElementById('editAppointmentRemarks'); if (remarksEl) remarksEl.value = apt.remarks || '';
+    const branchEl = document.getElementById('editBranchSelect'); if (branchEl && apt.branch_id) { try { branchEl.value = apt.branch_id; } catch(e){} }
+  const dentistEl = document.getElementById('editDentistSelect'); if (dentistEl && apt.dentist_id) { try { dentistEl.value = apt.dentist_id; } catch(e){} }
+  const serviceEl = document.getElementById('editServiceId'); if (serviceEl && apt.service_id) { try { serviceEl.value = apt.service_id; } catch(e){} }
+
+    // Populate original values area for context
+    const orig = document.getElementById('originalValues');
+    if (orig) {
+      orig.innerHTML = `
+        <div><strong>Patient:</strong> ${apt.patient_name || 'N/A'}</div>
+        <div><strong>Date:</strong> ${apt.appointment_date || (apt.appointment_datetime? apt.appointment_datetime.substring(0,10): '')}</div>
+        <div><strong>Time:</strong> ${prettyTimeForDisplay(apt.appointment_time || (apt.appointment_datetime? apt.appointment_datetime.substring(11,16):''))}</div>
+        <div><strong>Status:</strong> ${apt.status || ''}</div>
+      `;
+    }
+
+    // Improve panel visual: add a header patient name if available
+    const header = panel.querySelector('h5');
+    if (header) header.innerHTML = `<span style="font-weight:700; color:#333;">Edit Appointment</span> <span class="text-xs text-gray-500"> — ${apt.patient_name || 'Patient'}</span>`;
+
+    // Show the panel (existing CSS uses .slide-in-panel / .active states in other scripts)
+    panel.classList.add('active');
+    panel.style.display = 'block';
+    // update combined display if helper exists
+    if (typeof updateEditCombinedDisplay === 'function') updateEditCombinedDisplay();
+    // Focus the date input for convenience
+    if (dateEl) dateEl.focus();
+  } catch (e) { console.error('prefillAndOpenEditPanel error', e); }
+}
+
+// Wire edit form interactions: prefill time on service/branch change and update combined display
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    const editService = document.getElementById('editServiceId');
+    const editBranch = document.getElementById('editBranchSelect');
+    const editDate = document.getElementById('editAppointmentDate');
+    const editTimeInput = document.getElementById('editAppointmentTime');
+
+    function onEditServiceBranchChange(){
+      try{
+        if(!editDate) return;
+        const selectedDate = editDate.value;
+        if(!selectedDate) return;
+
+        // If populateAvailableTimeSlots exists, use it on a temp select to get first available time
+        if(typeof window.populateAvailableTimeSlots === 'function'){
+          const tmp = document.createElement('select');
+          window.populateAvailableTimeSlots(selectedDate, tmp);
+          // find first non-disabled option with a value
+          const opt = Array.from(tmp.options).find(o => o.value && !o.disabled);
+          if(opt && opt.value){
+            // if edit time is an <input type=time>, set value, else if select set and dispatch
+            if(editTimeInput && editTimeInput.tagName && editTimeInput.tagName.toLowerCase() === 'input'){
+              editTimeInput.value = opt.value;
+              editTimeInput.dispatchEvent(new Event('change',{bubbles:true}));
+            } else {
+              const sel = document.getElementById('timeSelect') || document.querySelector('select[name="appointment_time"]');
+              if(sel){
+                // ensure option exists
+                let existing = sel.querySelector(`option[value="${opt.value}"]`);
+                if(!existing){ existing = document.createElement('option'); existing.value = opt.value; existing.textContent = opt.textContent || opt.value; sel.appendChild(existing); }
+                sel.value = opt.value;
+                sel.dispatchEvent(new Event('change',{bubbles:true}));
+              }
+            }
+
+            // Optionally compute an end time for display-only in other UIs; edit form no longer has end_time input
+          }
+        }
+      }catch(e){ console.error('onEditServiceBranchChange', e); }
+      if(typeof updateEditCombinedDisplay === 'function') updateEditCombinedDisplay();
+    }
+
+  if(editService) editService.addEventListener('change', onEditServiceBranchChange);
+  if(editBranch) editBranch.addEventListener('change', onEditServiceBranchChange);
+  if(editTimeInput) editTimeInput.addEventListener('change', ()=>{ /* time changed; listeners may react elsewhere */ });
+
+  } catch(e){ console.error('edit form wiring error', e); }
+});
 
 function deleteAppointment(appointmentId) {
   if (window.calendarAdmin && typeof window.calendarAdmin.deleteAppointment === 'function') {
@@ -2221,7 +2978,7 @@ document.addEventListener('DOMContentLoaded', function(){
             'X-Requested-With': 'XMLHttpRequest'
           },
           credentials: 'same-origin',
-          body: body.toString()
+          body: safeToString(body)
         });
         const text = await resp.text();
         let json;
@@ -2265,10 +3022,34 @@ document.addEventListener('DOMContentLoaded', function(){
 
           const record = json.record || json.appointment || json.appointment_record || null;
           if(record){
-            window.appointments = window.appointments || [];
-            const idx = window.appointments.findIndex(a => String(a.id) === String(record.id));
-            if(idx >= 0) window.appointments[idx] = record; else window.appointments.push(record);
-            window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: record }));
+            try {
+              // Only append/update appointments belonging to the current user for patient views
+              const owner = record.user_id || record.patient_id || record.patient || null;
+              if (window.userType === 'patient' && window.currentUserId) {
+                if (owner && Number(owner) === Number(window.currentUserId)) {
+                  window.appointments = window.appointments || [];
+                  const idx = window.appointments.findIndex(a => String(a.id) === String(record.id));
+                  if(idx >= 0) window.appointments[idx] = record; else window.appointments.push(record);
+                  window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: record }));
+                } else {
+                  // Don't pollute the patient's calendar with other users' appointments
+                  console.debug('[scripts] Skipped updating appointment not owned by current patient', record);
+                  window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: null }));
+                }
+              } else {
+                // For non-patient contexts, preserve existing behavior
+                window.appointments = window.appointments || [];
+                const idx = window.appointments.findIndex(a => String(a.id) === String(record.id));
+                if(idx >= 0) window.appointments[idx] = record; else window.appointments.push(record);
+                window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: record }));
+              }
+            } catch (e) {
+              console.error('[scripts] Error while handling appointment update', e);
+              window.appointments = window.appointments || [];
+              const idx = window.appointments.findIndex(a => String(a.id) === String(record.id));
+              if(idx >= 0) window.appointments[idx] = record; else window.appointments.push(record);
+              window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: record }));
+            }
           } else {
             window.dispatchEvent(new CustomEvent('appointmentCreated', { detail: null }));
           }
@@ -2310,5 +3091,6 @@ function showFormErrors(form, message, json){
 </script>
 
 <?php if (!isset($user) || ($user['user_type'] ?? '') !== 'patient'): ?>
+  <link rel="stylesheet" href="<?= base_url('css/time-table-modal.css') ?>">
   <script src="<?= base_url('js/calendar-admin.js') ?>"></script>
 <?php endif; ?>

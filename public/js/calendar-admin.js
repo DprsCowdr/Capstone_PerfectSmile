@@ -60,6 +60,17 @@
     return '';
   }
 
+  // Safe toString wrapper to avoid calling toString on undefined/null
+  function safeToString(v) {
+    try {
+      if (v === null || v === undefined) return '';
+      if (typeof v.toString === 'function') return v.toString();
+      return String(v);
+    } catch (e) {
+      return '';
+    }
+  }
+
   // Convert 24-hour time to 12-hour format for display
   function format12Hour(time24) {
     if (!time24) return '';
@@ -102,7 +113,7 @@
       }
     });
     
-  if (window.__psm_debug) console.debug('[admin-calendar] Final body string:', body.toString());
+  if (window.__psm_debug) console.debug('[admin-calendar] Final body string:', safeToString(body));
   if (window.__psm_debug) console.debug('[admin-calendar] Headers:', headers);
     
     // Build a safe absolute URL to avoid admin routing conflicts and double origins
@@ -138,7 +149,7 @@
     return fetch(fullUrl, {
       method: 'POST',
       headers,
-      body: body.toString(),
+      body: safeToString(body),
       credentials: 'same-origin'
     }).then(r => {
   if (window.__psm_debug) console.debug('[admin-calendar] Response status:', r.status);
@@ -188,6 +199,16 @@
     const branchId = branchEl ? branchEl.value : '';
     const dentistId = dentistEl ? dentistEl.value : '';
     let serviceId = serviceEl ? serviceEl.value : '';
+
+    // Defensive safeguard: if the page date is missing or older than today,
+    // override it with today's date so admins see current availability.
+    try {
+      const todayStr = new Date().toISOString().substring(0,10);
+      if (!date || (typeof date === 'string' && date < todayStr)) {
+        if (window.__psm_debug) console.info('[admin-calendar] Overriding stale/missing date in fetchAdminAvailableSlots with today:', todayStr, 'previous:', date);
+        if (dateEl) dateEl.value = todayStr;
+      }
+    } catch (e) { if (window.__psm_debug) console.warn('[admin-calendar] Date override failed in fetchAdminAvailableSlots', e); }
     
     // Fallback: if serviceId is empty but there's a selected option, try to get it
     if (!serviceId && serviceEl && serviceEl.selectedIndex > 0) {
@@ -254,8 +275,19 @@
         branch_id: branchId,
         date: date,
         service_id: serviceId,
-        granularity: 3
+        granularity: 5
       };
+      // If procedure duration is exposed on the select option, prefer sending it so server can consider it
+      try {
+        const sel = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
+        if (sel && sel.options && sel.selectedIndex >= 0) {
+          const opt = sel.options[sel.selectedIndex];
+          const ddMax = opt ? opt.getAttribute('data-duration-max') : null;
+          const dd = opt ? opt.getAttribute('data-duration') : null;
+          const candidate = ddMax ? Number(ddMax) : (dd ? Number(dd) : null);
+          if (Number.isFinite(candidate) && candidate > 0) payload.duration = candidate;
+        }
+      } catch (e) { if (window.__psm_debug) console.warn('[admin-calendar] service duration read failed', e); }
       
       // Add dentist if selected
       if (dentistId) {
@@ -368,22 +400,12 @@
       // Annotate timestamp for nearest searches
       if (info.timestamp) option.dataset.timestamp = String(info.timestamp);
 
+      // Show only the slot start time. Do not append end times because service durations
+      // are dynamic and can vary; showing end times may mislead users.
       let label = info.displayTime || info.timeValue || '';
-      if (slot && typeof slot === 'object') {
-        if (slot.ends_at) label += ' — ends ' + slot.ends_at;
-        else if (slot.end) label += ' — ends ' + slot.end;
-        else if (slot.duration_minutes && info.timeValue) {
-          try {
-            const m = info.timeValue.match(/(\d+):(\d+)/);
-            if (m) {
-              const h = parseInt(m[1],10);
-              const mm = parseInt(m[2],10) + Number(slot.duration_minutes || 0);
-              const dt = new Date(2000,0,1,h,mm);
-              const endTime = String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
-              label += ' — ends ' + endTime;
-            }
-          } catch(e){}
-        }
+      if (slot && typeof slot === 'object' && info.displayTime && info.displayTime !== info.timeValue) {
+        // prefer a human-friendly displayTime when provided, but still avoid adding end times
+        label = info.displayTime;
       }
 
       // Mark unavailable visually and disable selection
@@ -496,6 +518,52 @@
       // Don't return - let's try to initialize anyway for testing
     }
     
+    // Add listener for availability changes to auto-refresh TimeTable and slots
+    window.addEventListener('availability:changed', function(e) {
+      if (window.__psm_debug) console.log('[admin-calendar] Availability changed event received', e && e.detail ? e.detail : null);
+
+      // Clear the entire available slots cache to avoid stale data for any branch/date
+      try {
+        if (window.__available_slots_cache && typeof window.__available_slots_cache === 'object') {
+          Object.keys(window.__available_slots_cache).forEach(k => delete window.__available_slots_cache[k]);
+        }
+      } catch (ex) {
+        if (window.__psm_debug) console.warn('[admin-calendar] Failed to clear available slots cache', ex);
+      }
+
+      // If the event contains a target date/branch, try to pre-select them for the UI refresh
+      try {
+        if (e && e.detail) {
+          const d = e.detail.date || e.detail.appointment_date || e.detail.appointmentDate || null;
+          const b = e.detail.branch_id || e.detail.branchId || null;
+          if (d) {
+            const dateEl = document.querySelector(ADMIN_SELECTORS.dateInput) || document.querySelector('input[name="date"]');
+            if (dateEl) dateEl.value = d;
+          }
+          if (b) {
+            const branchEl = document.querySelector(ADMIN_SELECTORS.branchSelect) || document.querySelector('select[name="branch"]');
+            if (branchEl) branchEl.value = b;
+          }
+        }
+      } catch (ex) { if (window.__psm_debug) console.warn('[admin-calendar] Failed to apply event-supplied date/branch', ex); }
+
+      // Refresh admin time slots (reads the form inputs so it will reflect the branch/date now)
+      try {
+        fetchAdminAvailableSlots();
+      } catch (ex) {
+        console.warn('[admin-calendar] Failed to refresh admin slots after availability change', ex);
+      }
+
+      // Refresh TimeTable modal if it's open
+      try {
+        if (timeTableModalInstance && timeTableModalInstance.isOpen) {
+          timeTableModalInstance.refreshData();
+        }
+      } catch (ex) {
+        console.warn('[admin-calendar] Failed to refresh TimeTable after availability change', ex);
+      }
+    });
+    
     // Get form elements with detailed logging
     const elements = {};
     Object.keys(ADMIN_SELECTORS).forEach(key => {
@@ -536,16 +604,186 @@
       }
     });
     
-    // Setup form submission handler
+    // Setup form submission handler (use capture phase so we run before other listeners)
     const form = document.getElementById('appointmentForm');
     if (form) {
-      console.log('[admin-calendar] Setting up form submission handler');
+      console.log('[admin-calendar] Setting up form submission handler (capture phase)');
+      // Ensure hidden inputs are populated early even if other scripts intercept submit
+      form.addEventListener('submit', function(e){
+        try { populateAppointmentHiddenInputs(form); } catch(ex) { console.warn('[admin-calendar] populate hidden inputs failed', ex); }
+      }, true);
+
+      // Also populate hidden inputs on submit button clicks (covers some AJAX flows)
+      Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]')).forEach(btn => {
+        btn.addEventListener('click', function(evt){
+          try { populateAppointmentHiddenInputs(form); } catch(ex) { console.warn('[admin-calendar] populate hidden inputs on click failed', ex); }
+        });
+      });
+
+      // Attach the legacy submit handling as well (non-capture) for validation/behavior
       form.addEventListener('submit', handleAdminFormSubmit);
+
+      // Add success detection for appointment creation
+      setupAppointmentCreationListener(form);
     } else {
       console.warn('[admin-calendar] appointmentForm not found');
     }
     
     console.log('[admin-calendar] Admin calendar initialization complete');
+  }
+  
+  // Setup listener to detect successful appointment creation and refresh UI
+  function setupAppointmentCreationListener(form) {
+    // Monitor for successful appointment creation responses. Wrap fetch and also support Request objects.
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+      const promise = originalFetch.apply(this, args);
+
+      // derive URL string from args[0]
+      try {
+        let urlStr = null;
+        if (!args || !args[0]) urlStr = '';
+        else if (typeof args[0] === 'string') urlStr = args[0];
+        else if (args[0] instanceof Request && args[0].url) urlStr = args[0].url;
+        else if (args[0] && typeof args[0].toString === 'function') urlStr = String(args[0]);
+
+        if (urlStr && urlStr.indexOf('/appointments/create') !== -1) {
+          // Attempt to snapshot the outgoing request body for debugging purposes
+          try {
+            const reqInit = args[1] || {};
+            const reqBody = reqInit.body;
+            if (reqBody instanceof URLSearchParams) {
+              console.debug('[admin-calendar][DEBUG] Outgoing /appointments/create URLSearchParams body:', reqBody.toString());
+            } else if (typeof FormData !== 'undefined' && reqBody instanceof FormData) {
+              const obj = {};
+              for (const pair of reqBody.entries()) obj[pair[0]] = pair[1];
+              console.debug('[admin-calendar][DEBUG] Outgoing /appointments/create FormData body:', obj);
+            } else if (typeof reqBody === 'string') {
+              console.debug('[admin-calendar][DEBUG] Outgoing /appointments/create raw body string:', reqBody);
+            } else if (reqBody && typeof reqBody === 'object') {
+              console.debug('[admin-calendar][DEBUG] Outgoing /appointments/create body (object):', reqBody);
+            } else {
+              console.debug('[admin-calendar][DEBUG] Outgoing /appointments/create body not captured (possibly Request object or stream)');
+            }
+          } catch (dbgErr) { console.warn('[admin-calendar][DEBUG] Failed to snapshot outgoing create payload', dbgErr); }
+
+          promise.then(response => {
+            if (response && response.ok) {
+              // Try parse JSON, if available
+              response.clone().text().then(txt => {
+                try {
+                  const data = JSON.parse(txt);
+                  if (data && data.success) {
+                    console.log('[admin-calendar] Appointment created successfully, refreshing availability');
+                    // Try to include branch and date context so the UI refreshes the correct TimeTable
+                    const form = document.getElementById('appointmentForm');
+                    const dateVal = (data.appointment_date || data.appointment_datetime) ? (data.appointment_date || (data.appointment_datetime ? data.appointment_datetime.split(' ')[0] : null)) : (form ? (form.querySelector('input[name="appointment_date"]') ? form.querySelector('input[name="appointment_date"]').value : (form.querySelector('input[name="date"]') ? form.querySelector('input[name="date"]').value : null)) : null);
+                    const branchVal = (data.branch_id || data.branch) ? (data.branch_id || data.branch) : (form ? (form.querySelector('input[name="branch_id"]') ? form.querySelector('input[name="branch_id"]').value : (form.querySelector('select[name="branch"]') ? form.querySelector('select[name="branch"]').value : null)) : null);
+                    const timeVal = (data.appointment_time || data.appointment_datetime) ? (data.appointment_time || (data.appointment_datetime ? data.appointment_datetime.split(' ')[1] && data.appointment_datetime.split(' ')[1].slice(0,5) : null)) : null;
+                    window.dispatchEvent(new CustomEvent('availability:changed', { detail: { action: 'created', appointment_id: data.appointment_id || null, source: 'admin-form', appointment_date: dateVal, branch_id: branchVal, appointment_time: timeVal } }));
+                    notifyAdmin('Appointment created successfully! Time slots updated.', 'success', 4000);
+                    if (timeTableModalInstance) try { timeTableModalInstance.clearSelection(); } catch(e){}
+                  } else {
+                    // Not success JSON but still trigger a refresh as a fallback
+                    window.dispatchEvent(new CustomEvent('availability:changed', { detail: { action: 'created', source: 'admin-form' } }));
+                  }
+                } catch (ex) {
+                  // Non-JSON response: still trigger a refresh
+                  window.dispatchEvent(new CustomEvent('availability:changed', { detail: { action: 'created', source: 'admin-form' } }));
+                }
+              }).catch(() => {
+                // couldn't read text; still trigger a refresh
+                window.dispatchEvent(new CustomEvent('availability:changed', { detail: { action: 'created', source: 'admin-form' } }));
+              });
+            }
+          }).catch(() => {});
+        }
+      } catch (ex) {
+        // Defensive: ignore wrapper errors and return original promise
+      }
+
+      return promise;
+    };
+    
+    // Also listen for form success via page reload detection
+    let formSubmitted = false;
+    form.addEventListener('submit', () => {
+      formSubmitted = true;
+    });
+    
+    // If page reloads after form submission, trigger refresh on next load
+    if (formSubmitted && window.performance && window.performance.navigation.type === 1) {
+      // Page was reloaded, likely due to form submission
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('availability:changed', {
+          detail: { action: 'created', source: 'page-reload' }
+        }));
+      }, 100);
+    }
+  }
+
+  // Populate hidden inputs required by the server prior to submission
+  function populateAppointmentHiddenInputs(form) {
+    if (!form) form = document.getElementById('appointmentForm');
+    if (!form) return;
+
+    // appointment_date
+    let ad = form.querySelector('input[name="appointment_date"]') || form.querySelector('input[name="date"]');
+    if (!ad) {
+      ad = document.createElement('input'); ad.type = 'hidden'; ad.name = 'appointment_date'; form.appendChild(ad);
+    }
+    const dateEl = document.querySelector(ADMIN_SELECTORS.dateInput) || document.querySelector('input[name="date"]') || document.getElementById('appointmentDate');
+    ad.value = dateEl ? (dateEl.value || dateEl.getAttribute('value') || '') : '';
+
+    // appointment_time
+    let at = form.querySelector('input[name="appointment_time"]') || form.querySelector('input[name="time"]');
+    if (!at) { at = document.createElement('input'); at.type = 'hidden'; at.name = 'appointment_time'; form.appendChild(at); }
+    const timeEl = document.querySelector(ADMIN_SELECTORS.timeSelect) || document.getElementById('timeSelect') || document.querySelector('select[name="appointment_time"]');
+    let timeValue = timeEl ? timeEl.value : '';
+    if (!timeValue && typeof timeTableModalInstance !== 'undefined' && timeTableModalInstance && timeTableModalInstance.selectedSlot) {
+      timeValue = timeTableModalInstance.selectedSlot.time || timeTableModalInstance.selectedSlot.display || '';
+    }
+    at.value = timeValue ? normalizeTime(timeValue) : '';
+
+    // branch_id
+    let bid = form.querySelector('input[name="branch_id"]');
+    if (!bid) { bid = document.createElement('input'); bid.type = 'hidden'; bid.name = 'branch_id'; form.appendChild(bid); }
+    const branchEl = document.querySelector(ADMIN_SELECTORS.branchSelect) || document.querySelector('select[name="branch_id"]') || document.querySelector('select[name="branch"]');
+    bid.value = branchEl ? branchEl.value : '';
+
+    // service_id
+    let svc = form.querySelector('input[name="service_id"]') || form.querySelector('select[name="service_id"]');
+    if (!svc) { svc = document.createElement('input'); svc.type = 'hidden'; svc.name = 'service_id'; form.appendChild(svc); }
+    const serviceEl = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
+    svc.value = serviceEl ? serviceEl.value : '';
+
+    // procedure_duration
+    let pd = form.querySelector('input[name="procedure_duration"]');
+    if (!pd) { pd = document.createElement('input'); pd.type = 'hidden'; pd.name = 'procedure_duration'; form.appendChild(pd); }
+    const pdEl = document.querySelector(ADMIN_SELECTORS.procedureDuration) || document.getElementById('procedureDuration');
+    pd.value = pdEl ? pdEl.value : '';
+
+    // patient field: if a visible patientSelect exists, ensure hidden select/input is populated
+    const patientSelect = form.querySelector('select[name="patient"]') || document.getElementById('patientSelect');
+    if (patientSelect) {
+      try { patientSelect.value = patientSelect.value || '';} catch(e){}
+    }
+
+    if (window.__psm_debug) console.log('[admin-calendar] populateAppointmentHiddenInputs applied', { appointment_date: ad.value, appointment_time: at.value, branch_id: bid.value, service_id: svc.value });
+
+    // Extra debug: print FormData-like object for easier debugging of missing fields
+    try {
+      const snapshot = {
+        appointment_date: ad.value,
+        appointment_time: at.value,
+        branch_id: bid.value,
+        service_id: svc.value,
+        procedure_duration: pd.value
+      };
+      console.debug('[admin-calendar][DEBUG] Hidden inputs snapshot before submit:', snapshot);
+    } catch (e) {
+      console.warn('[admin-calendar][DEBUG] Failed to snapshot hidden inputs', e);
+    }
   }
   
   // Handle admin form submission
@@ -590,7 +828,7 @@
         const dateEl = document.querySelector(ADMIN_SELECTORS.dateInput) || document.querySelector('input[name="date"]');
         ad.value = dateEl ? dateEl.value : '';
 
-        // appointment_time
+        // appointment_time - ensure this field is always present and populated
         let at = form.querySelector('input[name="appointment_time"]') || form.querySelector('input[name="time"]');
         if (!at) {
           at = document.createElement('input');
@@ -598,8 +836,33 @@
           at.name = 'appointment_time';
           form.appendChild(at);
         }
-        const timeEl = document.querySelector(ADMIN_SELECTORS.timeSelect) || document.querySelector('select[name="appointment_time"]') || document.querySelector('select[name="time"]');
-        at.value = timeEl ? timeEl.value : '';
+        // Look for time in multiple places: time select, appointment_time select, or TimeTable selection
+        const timeEl = document.querySelector(ADMIN_SELECTORS.timeSelect) || 
+                      document.querySelector('select[name="appointment_time"]') || 
+                      document.querySelector('select[name="time"]') ||
+                      document.getElementById('timeSelect');
+        
+        let timeValue = timeEl ? timeEl.value : '';
+        
+        // If no time found in selects, check if TimeTable modal has a selection
+        if (!timeValue && timeTableModalInstance && timeTableModalInstance.selectedSlot) {
+          timeValue = timeTableModalInstance.selectedSlot.time || '';
+          console.log('[admin-calendar] Using TimeTable selected time:', timeValue);
+        }
+        
+        // Ensure time is in HH:MM format
+        if (timeValue) {
+          timeValue = normalizeTime(timeValue);
+        }
+        
+        at.value = timeValue;
+        
+        // Validate that appointment_time is present
+        if (!at.value) {
+          e.preventDefault();
+          showAdminMessage('Please select an appointment time', 'error');
+          return false;
+        }
 
         // branch_id (server resolves branch via branch_id or session)
         let bid = form.querySelector('input[name="branch_id"]');
@@ -734,7 +997,13 @@
               try { if (typeof refreshAppointmentsForDate === 'function') refreshAppointmentsForDate(selDate || new Date().toISOString().slice(0,10)); } catch(e) { console.warn('refreshAppointmentsForDate call failed', e); }
             }
           } catch (e) { console.warn('Failed to refresh appointments after approve', e); }
-          try { window.dispatchEvent(new Event('availability:changed')); } catch(e) {}
+          try {
+            // include possible context so UI refreshes correct branch/date
+            const form = document.getElementById('appointmentForm');
+            const dateVal = form ? (form.querySelector('input[name="appointment_date"]') ? form.querySelector('input[name="appointment_date"]').value : (form.querySelector('input[name="date"]') ? form.querySelector('input[name="date"]').value : null)) : null;
+            const branchVal = form ? (form.querySelector('input[name="branch_id"]') ? form.querySelector('input[name="branch_id"]').value : (form.querySelector('select[name="branch"]') ? form.querySelector('select[name="branch"]').value : null)) : null;
+            window.dispatchEvent(new CustomEvent('availability:changed', { detail: { action: 'approved', appointment_id: appointmentId, branch_id: branchVal, appointment_date: dateVal } }));
+          } catch(e) {}
           // Clear any available slots cache so patient/admin selects re-query the server
           try {
             if (window.__available_slots_cache && selDate) {
@@ -785,7 +1054,12 @@
               try { if (typeof refreshAppointmentsForDate === 'function') refreshAppointmentsForDate(selDateDecline || new Date().toISOString().slice(0,10)); } catch(e) { console.warn('refreshAppointmentsForDate call failed', e); }
             }
           } catch (e) { console.warn('Failed to refresh appointments after decline', e); }
-          try { window.dispatchEvent(new Event('availability:changed')); } catch(e) {}
+          try {
+            const form = document.getElementById('appointmentForm');
+            const dateVal = form ? (form.querySelector('input[name="appointment_date"]') ? form.querySelector('input[name="appointment_date"]').value : (form.querySelector('input[name="date"]') ? form.querySelector('input[name="date"]').value : null)) : null;
+            const branchVal = form ? (form.querySelector('input[name="branch_id"]') ? form.querySelector('input[name="branch_id"]').value : (form.querySelector('select[name="branch"]') ? form.querySelector('select[name="branch"]').value : null)) : null;
+            window.dispatchEvent(new CustomEvent('availability:changed', { detail: { action: 'declined', appointment_id: appointmentId, branch_id: branchVal, appointment_date: dateVal } }));
+          } catch(e) {}
           try {
             if (window.__available_slots_cache && selDateDecline) delete window.__available_slots_cache[selDateDecline];
             if (window.calendarCore && typeof window.calendarCore.refreshAllTimeSlots === 'function') window.calendarCore.refreshAllTimeSlots();
@@ -880,627 +1154,43 @@
     }
   };
   
-  // Admin Available Slots Menu functionality (similar to patient calendar)
+  // Admin Available Slots: simplified initializer
+  // The legacy dropdown/menu implementation was large and duplicated functionality
+  // of the TimeTable modal. Replace with a compact initializer that opens the
+  // TimeTable modal and falls back to a minimal message if the modal is not
+  // available. This keeps behavior but removes the bulky legacy UI code.
   function initAdminAvailableSlotsMenu() {
     const availableBtn = document.querySelector('#availableSlotsBtn');
-    const availableMenu = document.querySelector('#availableSlotsMenu');
-    const availableMenuContent = document.querySelector('#availableSlotsMenuContent');
-    
-    if (!availableBtn || !availableMenu || !availableMenuContent) {
-      console.log('[admin-calendar] Available slots menu elements not found');
+    if (!availableBtn) {
+      console.log('[admin-calendar] Available slots button not found, skipping initializer');
       return;
     }
-    
-    // Hide all menus function
-    function hideAllMenus() {
-      if (availableMenu) availableMenu.classList.add('hidden');
-    }
-    
-    // Available slots preload function
-    async function preloadAdminAvailableSlots(requestedGranularity) {
-      // Ensure these variables exist in the function scope to avoid ReferenceError in any path
-      let allSlots = [];
-      let availableSlots = [];
 
+    availableBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
       try {
-        if (!availableMenuContent) return;
-        console.log('[admin-calendar] preloadAdminAvailableSlots start');
-        availableMenuContent.textContent = 'Loading...';
-        
-        // Get form values from admin form
-        const branchEl = document.querySelector(ADMIN_SELECTORS.branchSelect);
-        const dateEl = document.querySelector(ADMIN_SELECTORS.dateInput);
-        const serviceEl = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
-        const dentistEl = document.querySelector(ADMIN_SELECTORS.dentistSelect);
-        
-        console.log('[admin-calendar] Form elements found:', {
-          branchEl: !!branchEl,
-          dateEl: !!dateEl, 
-          serviceEl: !!serviceEl,
-          dentistEl: !!dentistEl
-        });
-        
-        let branch = branchEl ? branchEl.value : '';
-        let date = dateEl ? dateEl.value : '';
-        let serviceId = serviceEl ? serviceEl.value : '';
-        let dentist = dentistEl ? dentistEl.value : '';
-        
-        console.log('[admin-calendar] Form values:', {
-          branch,
-          date,
-          serviceId,
-          dentist
-        });
-        
-        if (!date || !branch || !serviceId) {
-          // Try to fall back to sensible defaults so admins/staff can still inspect slots
-          console.log('[admin-calendar] Missing required fields, attempting defaults', { date, branch, serviceId });
-          if (!date) {
-            // try to use today's date or date input default
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth()+1).padStart(2,'0');
-            const dd = String(today.getDate()).padStart(2,'0');
-            date = `${yyyy}-${mm}-${dd}`;
-          }
-          if (!branch) {
-            // Try to get from branch select element
-            const branchEl = document.querySelector(ADMIN_SELECTORS.branchSelect) || document.querySelector('select[name="branch_id"]');
-            if (branchEl && branchEl.options.length > 0) {
-              // Skip the first option if it's a placeholder (empty value or "Select...")
-              for (let i = 0; i < branchEl.options.length; i++) {
-                const option = branchEl.options[i];
-                if (option.value && option.value !== '' && !option.text.toLowerCase().includes('select')) {
-                  branch = option.value;
-                  break;
-                }
-              }
-            }
-            // If still no branch, try a default value
-            if (!branch) {
-              branch = '1'; // fallback to branch ID 1
-            }
-          }
-          if (!serviceId) {
-            // Try to get from service select element
-            const serviceEl = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
-            if (serviceEl && serviceEl.options.length > 0) {
-              // Skip the first option if it's a placeholder (empty value or "Select...")
-              for (let i = 0; i < serviceEl.options.length; i++) {
-                const option = serviceEl.options[i];
-                if (option.value && option.value !== '' && !option.text.toLowerCase().includes('select')) {
-                  serviceId = option.value;
-                  break;
-                }
-              }
-            }
-            // If still no service, try a default value
-            if (!serviceId) {
-              serviceId = '1'; // fallback to service ID 1
-            }
-          }
-        }
-        // If still missing service/branch, warn but proceed and let server decide
-        if (!date || !branch || !serviceId) {
-          console.warn('[admin-calendar] Still missing fields after defaults, proceeding with available values', { date, branch, serviceId });
-          availableMenuContent.innerHTML = `
-            <div class="p-4 bg-yellow-50 border border-yellow-200 rounded">
-              <p class="text-yellow-800 text-sm font-medium">Using Available Defaults:</p>
-              <ul class="text-yellow-700 text-xs mt-1">
-                <li>Date: ${date || 'Not set'}</li>
-                <li>Branch: ${branch || 'Not set'}</li>
-                <li>Service: ${serviceId || 'Not set'}</li>
-              </ul>
-              <p class="text-yellow-600 text-xs mt-2">If no slots appear, please select branch and service in the calendar form above.</p>
-            </div>
-          `;
-        } else {
-          availableMenuContent.innerHTML = `
-            <div class="p-4 bg-blue-50 border border-blue-200 rounded">
-              <p class="text-blue-800 text-sm font-medium">Loading slots for:</p>
-              <ul class="text-blue-700 text-xs mt-1">
-                <li>Date: ${date}</li>
-                <li>Branch: ${branch}</li>
-                <li>Service: ${serviceId}</li>
-              </ul>
-              <p class="text-blue-600 text-xs mt-2">Fetching available appointment slots...</p>
-            </div>
-          `;
-        }
-        
-        const payload = {
-          branch_id: branch,
-          date: date,
-          service_id: serviceId,
-          granularity: requestedGranularity || 30  // allow override
-        };
-        
-        if (dentist) {
-          payload.dentist_id = dentist;
-        }
-        
-        const url = `${baseUrl}appointments/available-slots`;
-        console.log('[admin-calendar] Making request to:', url);
-        console.log('[admin-calendar] Payload:', payload);
-        
-        const res = await fetch(url, {
-          method: 'POST',
-          body: new URLSearchParams(payload),
-          headers: { 
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          credentials: 'include'
-        });
-        
-        console.log('[admin-calendar] Response status:', res.status);
-        console.log('[admin-calendar] Response ok:', res.ok);
-        
-        // Handle HTTP error status codes
-        if (!res.ok) {
-          if (res.status === 401) {
-            availableMenuContent.innerHTML = `
-              <div style="padding: 12px; text-align: center; color: #dc2626;">
-                <p>⚠️ Authentication Required</p>
-                <small>Please log in as admin to view available slots</small>
-              </div>
-            `;
-            console.error('[admin-calendar] 401 Unauthorized - user not logged in as admin');
-            return;
-          } else if (res.status === 403) {
-            availableMenuContent.innerHTML = `
-              <div style="padding: 12px; text-align: center; color: #dc2626;">
-                <p>⚠️ Access Denied</p>
-                <small>Admin privileges required</small>
-              </div>
-            `;
-            return;
-          } else {
-            availableMenuContent.innerHTML = `
-              <div style="padding: 12px; text-align: center; color: #dc2626;">
-                <p>⚠️ Server Error (${res.status})</p>
-                <small>Please try again later</small>
-              </div>
-            `;
-            return;
-          }
-        }
-        
-        const responseText = await res.text();
-        console.log('[admin-calendar] Raw response:', responseText);
-        
-        let responseData;
-        try {
-          responseData = JSON.parse(responseText);
-          console.log('[admin-calendar] Parsed response:', responseData);
-        } catch (parseError) {
-          console.error('[admin-calendar] JSON parse error:', parseError);
-            availableMenuContent.textContent = 'Error: Invalid response format';
-            notifyAdmin('Invalid response from available-slots endpoint', 'error');
+        const modalInstance = initTimeTableModal();
+        if (modalInstance) {
+          await modalInstance.openModal();
           return;
         }
-        
-        if (responseData && responseData.success) {
-          // populate function-scoped arrays (do not redeclare)
-          allSlots = responseData.all_slots || responseData.slots || responseData.available_slots || [];
-          
-          console.log('[admin-calendar] All slots found:', allSlots);
-          
-          if (!Array.isArray(allSlots)) {
-            allSlots = [];
-          }
-          
-          // Filter to show only available slots with 30-minute intervals
-          availableSlots = []; // Reset the function-scoped variable
-          if (allSlots.length > 0) {
-            // Check if slots have availability property
-            if (typeof allSlots[0] === 'object' && allSlots[0].hasOwnProperty('available')) {
-              // Filter available slots and space them out every 30 minutes
-              const filteredSlots = allSlots.filter(slot => slot.available === true);
-              
-              // Group by 30-minute intervals for better UX
-              const slotMap = new Map();
-              filteredSlots.forEach(slot => {
-                const timeStr = slot.time || slot.start_time || String(slot);
-                const time24 = normalizeTime(timeStr);
-                if (time24) {
-                  const [hours, minutes] = time24.split(':').map(Number);
-                  // Round to nearest 30-minute interval
-                  const roundedMinutes = Math.floor(minutes / 30) * 30;
-                  const roundedTime = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
-                  
-                  if (!slotMap.has(roundedTime)) {
-                    // Calculate end time for display
-                    const endTime = calculateAppointmentEndTime(time24, slot.duration_minutes || 180, slot.grace_minutes || 20);
-                    slotMap.set(roundedTime, {
-                      startTime: roundedTime,
-                      endTime: endTime,
-                      displayText: `${format12Hour(roundedTime)} - ${format12Hour(endTime)}`
-                    });
-                  }
-                }
-              });
-              
-              availableSlots = Array.from(slotMap.values());
-            } else {
-              // Fallback for simple string array
-              availableSlots = allSlots.slice(0, 10); // Limit to first 10 for better UX
-            }
-          }
-          
-          console.log('[admin-calendar] Available slots after filtering:', availableSlots);
-          
-          // If no available slots, continue and show unavailable slots as well so admin/staff can inspect
-          if (availableSlots.length === 0) {
-            console.log('[admin-calendar] No available slots found; will show unavailable slots for admin inspection');
-          }
-          
-          // Clear and rebuild menu content with richer admin UI
-          availableMenuContent.innerHTML = '';
 
-          // Controls: search, interval selector, show all toggle, refresh
-          const controls = document.createElement('div');
-          controls.style.display = 'flex';
-          controls.style.gap = '8px';
-          controls.style.alignItems = 'center';
-          controls.style.marginBottom = '8px';
-
-          const search = document.createElement('input');
-          search.type = 'search';
-          search.placeholder = 'Search time (e.g. 2:00)';
-          search.style.flex = '1';
-          search.className = 'px-2 py-1 border rounded';
-
-          const intervalSelect = document.createElement('select');
-          intervalSelect.className = 'px-2 py-1 border rounded';
-          [15,30,60].forEach(i => {
-            const o = document.createElement('option'); o.value = String(i); o.textContent = i + 'm';
-            if (i === (responseData.metadata?.requested_granularity || 30)) o.selected = true;
-            intervalSelect.appendChild(o);
-          });
-
-          const filterSelect = document.createElement('select');
-          filterSelect.className = 'px-2 py-1 border rounded';
-          ['available','unavailable','all'].forEach(k => {
-            const o = document.createElement('option'); o.value = k; o.textContent = k.charAt(0).toUpperCase() + k.slice(1);
-            if (k === 'available') o.selected = true;
-            filterSelect.appendChild(o);
-          });
-
-          const refreshBtn = document.createElement('button');
-          refreshBtn.type = 'button';
-          refreshBtn.textContent = 'Refresh';
-          refreshBtn.className = 'px-2 py-1 border rounded bg-gray-100';
-
-          controls.appendChild(search);
-          controls.appendChild(intervalSelect);
-          controls.appendChild(filterSelect);
-          controls.appendChild(refreshBtn);
-
-          // Legend
-          const legend = document.createElement('div');
-          legend.style.display = 'flex';
-          legend.style.gap = '8px';
-          legend.style.alignItems = 'center';
-          legend.style.marginBottom = '6px';
-
-          function legendItem(color, text) {
-            const it = document.createElement('div');
-            it.style.display = 'inline-flex';
-            it.style.alignItems = 'center';
-            it.style.gap = '6px';
-            const sw = document.createElement('span');
-            sw.style.width = '14px';
-            sw.style.height = '14px';
-            sw.style.borderRadius = '3px';
-            sw.style.background = color;
-            it.appendChild(sw);
-            const lbl = document.createElement('small'); lbl.textContent = text; it.appendChild(lbl);
-            return it;
-          }
-
-          legend.appendChild(legendItem('#bbf7d0','Available'));
-          legend.appendChild(legendItem('#fff7e6','Your appointment'));
-          legend.appendChild(legendItem('#fff7f7','Blocked'));
-
-          availableMenuContent.appendChild(legend);
-          availableMenuContent.appendChild(controls);
-
-          // Slots grid container (will contain grouped sections)
-          const slotsContainer = document.createElement('div');
-          slotsContainer.style.display = 'block';
-          slotsContainer.style.gap = '8px';
-          slotsContainer.style.maxHeight = '360px';
-          slotsContainer.style.overflowY = 'auto';
-          slotsContainer.style.paddingBottom = '8px';
-
-          // Timeline container for occupied blocks
-          const timelineContainer = document.createElement('div');
-          timelineContainer.style.marginTop = '8px';
-          timelineContainer.style.padding = '8px';
-          timelineContainer.style.borderTop = '1px solid #eee';
-          timelineContainer.style.fontSize = '12px';
-          timelineContainer.style.color = '#444';
-
-          const timelineTitle = document.createElement('div');
-          timelineTitle.textContent = 'Timeline (occupied blocks)';
-          timelineTitle.style.fontWeight = '600';
-          timelineTitle.style.marginBottom = '6px';
-          timelineContainer.appendChild(timelineTitle);
-
-          const timelineBar = document.createElement('div');
-          timelineBar.style.position = 'relative';
-          timelineBar.style.height = '36px';
-          timelineBar.style.background = '#f8fafc';
-          timelineBar.style.border = '1px solid #e5e7eb';
-          timelineBar.style.borderRadius = '6px';
-          timelineBar.style.overflow = 'hidden';
-          timelineBar.style.marginBottom = '6px';
-          timelineContainer.appendChild(timelineBar);
-
-          // Helper: create group section
-          function createGroupSection(titleText) {
-            const section = document.createElement('div');
-            section.style.marginBottom = '8px';
-            const header = document.createElement('div');
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-            header.style.cursor = 'pointer';
-            header.style.padding = '6px 0';
-            const h = document.createElement('div'); h.textContent = titleText; h.style.fontWeight = '600';
-            const toggle = document.createElement('button'); toggle.type = 'button'; toggle.textContent = 'Collapse'; toggle.className = 'px-2 py-1 border rounded text-sm';
-            const body = document.createElement('div'); body.style.display = 'block'; body.style.marginTop = '6px';
-            header.appendChild(h); header.appendChild(toggle);
-            section.appendChild(header); section.appendChild(body);
-            toggle.addEventListener('click', () => {
-              if (body.style.display === 'none') { body.style.display = 'block'; toggle.textContent = 'Collapse'; }
-              else { body.style.display = 'none'; toggle.textContent = 'Expand'; }
-            });
-            return { section, body };
-          }
-
-          // Helper to render slots list (accepts array of slot objects)
-          function renderSlots(list) {
-            slotsContainer.innerHTML = '';
-            timelineBar.innerHTML = '';
-            if (!list || list.length === 0) {
-              const empty = document.createElement('div');
-              empty.style.padding = '12px';
-              empty.style.color = '#666';
-              empty.style.textAlign = 'center';
-              empty.textContent = 'No slots to display';
-              slotsContainer.appendChild(empty);
-              return;
-            }
-
-            // Group into Morning (00:00-11:59), Afternoon (12:00-16:59), Evening (17:00-23:59)
-            const groups = { morning: [], afternoon: [], evening: [] };
-            list.forEach(slot => {
-              const raw = (typeof slot === 'string') ? slot : (slot.startTime || slot.time || '');
-              const t24 = normalizeTime(raw);
-              if (!t24) { groups.morning.push(slot); return; }
-              const h = parseInt(t24.split(':')[0], 10);
-              if (h < 12) groups.morning.push(slot);
-              else if (h < 17) groups.afternoon.push(slot);
-              else groups.evening.push(slot);
-            });
-
-            const morningSection = createGroupSection('Morning');
-            const afternoonSection = createGroupSection('Afternoon');
-            const eveningSection = createGroupSection('Evening');
-
-            // helper to render cards into a container
-            function appendCards(container, arr) {
-              const grid = document.createElement('div');
-              grid.style.display = 'grid';
-              grid.style.gridTemplateColumns = 'repeat(2,1fr)';
-              grid.style.gap = '8px';
-              arr.forEach(slot => {
-                const start = (typeof slot === 'string') ? slot : (slot.startTime || slot.time || '');
-                const end = (typeof slot === 'object') ? (slot.endTime || slot.end || '') : '';
-                const display = (typeof slot === 'object' && slot.displayText) ? slot.displayText : (format12Hour(start) + (end ? (' - ' + format12Hour(end)) : ''));
-
-                const card = document.createElement('div');
-                card.className = 'p-2 border rounded bg-white';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-
-                if (slot && typeof slot === 'object' && slot.available === false) {
-                  card.style.opacity = '0.55';
-                  card.style.backgroundColor = '#fff7f7';
-                  card.style.borderColor = '#fca5a5';
-                } else if (slot && typeof slot === 'object' && slot.owned_by_current_user) {
-                  card.style.backgroundColor = '#fff7e6';
-                  card.style.borderColor = '#ffd580';
-                } else {
-                  card.style.backgroundColor = '#f0fdf4';
-                  card.style.borderColor = '#86efac';
-                }
-
-                const title = document.createElement('div'); title.style.fontWeight = '600'; title.style.marginBottom = '6px'; title.textContent = display;
-                const meta = document.createElement('div'); meta.style.fontSize = '12px'; meta.style.color = '#666'; meta.style.marginBottom = '6px'; meta.textContent = `Start: ${format12Hour(start)}` + (end ? ` • End: ${format12Hour(end)}` : '');
-                if (slot && typeof slot === 'object' && slot.available === false) {
-                  const reason = document.createElement('div'); reason.style.fontSize = '12px'; reason.style.color = '#a00000'; reason.textContent = (slot.blocking_info && slot.blocking_info.type === 'appointment') ? `Blocked by appointment #${slot.blocking_info.appointment_id || 'N/A'}` : 'Blocked/unavailable'; meta.appendChild(document.createElement('br')); meta.appendChild(reason);
-                }
-
-                const actions = document.createElement('div'); actions.style.display = 'flex'; actions.style.gap = '6px';
-                const selectBtn = document.createElement('button'); selectBtn.type='button'; selectBtn.className='px-2 py-1 bg-purple-600 text-white rounded text-sm'; selectBtn.textContent='Select';
-                selectBtn.addEventListener('click', ()=>{ const timeInput = document.querySelector(ADMIN_SELECTORS.timeSelect); if (timeInput) { if (timeInput.tagName && timeInput.tagName.toLowerCase() === 'select') { let opt = timeInput.querySelector(`option[value="${start}"]`); if (!opt) { opt = document.createElement('option'); opt.value = start; opt.textContent = start; timeInput.appendChild(opt); } timeInput.value = start; } else { timeInput.value = start; } timeInput.dispatchEvent(new Event('change',{bubbles:true})); } hideAllMenus(); });
-                const copyBtn = document.createElement('button'); copyBtn.type='button'; copyBtn.className='px-2 py-1 border rounded text-sm'; copyBtn.textContent='Copy'; copyBtn.addEventListener('click', async ()=>{ try { await navigator.clipboard.writeText(start); copyBtn.textContent='Copied'; setTimeout(()=>copyBtn.textContent='Copy',1200); } catch(e){ console.error('Clipboard failed',e); } });
-                actions.appendChild(selectBtn); actions.appendChild(copyBtn);
-
-                card.appendChild(title); card.appendChild(meta); card.appendChild(actions);
-                grid.appendChild(card);
-              });
-              container.appendChild(grid);
-            }
-
-            appendCards(morningSection.body, groups.morning);
-            appendCards(afternoonSection.body, groups.afternoon);
-            appendCards(eveningSection.body, groups.evening);
-
-            slotsContainer.appendChild(morningSection.section);
-            slotsContainer.appendChild(afternoonSection.section);
-            slotsContainer.appendChild(eveningSection.section);
-
-            // Build timeline occupied blocks from slots that are unavailable or have blocking_info
-            // Timeline scale based on metadata day_start/day_end if provided
-            const md = responseData.metadata || {};
-            const dayStart = md.day_start ? normalizeTime(md.day_start) : '08:00';
-            const dayEnd = md.day_end ? normalizeTime(md.day_end) : '20:00';
-            const startMinutes = dayStart.split(':').map(Number); const endMinutes = dayEnd.split(':').map(Number);
-            const startTotal = startMinutes[0]*60 + startMinutes[1]; const endTotal = endMinutes[0]*60 + endMinutes[1];
-            const totalSpan = Math.max(1, endTotal - startTotal);
-
-            // For each blocked slot, draw a band
-            (list.filter(s => s && typeof s === 'object' && s.available === false)).forEach(bs => {
-              // blocking_info: try to get start/end
-              let bStart = bs.blocking_info?.start || bs.time || bs.startTime;
-              let bEnd = bs.blocking_info?.end || bs.ends_at || bs.endTime;
-              const t1 = normalizeTime(bStart) || normalizeTime(bs.time) || null;
-              const t2 = normalizeTime(bEnd) || null;
-              if (!t1) return;
-              const t1Parts = t1.split(':').map(Number); const t1Min = t1Parts[0]*60 + t1Parts[1];
-              const t2Min = t2 ? (t2.split(':').map(Number)[0]*60 + t2.split(':').map(Number)[1]) : (t1Min + (bs.duration_minutes || 60));
-              const leftPercent = Math.max(0, ((t1Min - startTotal) / totalSpan) * 100);
-              const widthPercent = Math.max(1, ((t2Min - t1Min) / totalSpan) * 100);
-              const band = document.createElement('div');
-              band.style.position = 'absolute';
-              band.style.left = leftPercent + '%';
-              band.style.width = widthPercent + '%';
-              band.style.top = '4px';
-              band.style.bottom = '4px';
-              band.style.background = 'rgba(248, 113, 113, 0.7)';
-              band.style.borderRadius = '4px';
-              band.title = `Blocked ${bs.time || ''} ${bs.blocking_info?.type ? '('+bs.blocking_info.type+')' : ''}`;
-              timelineBar.appendChild(band);
-            });
-
-            // Add time labels
-            const labels = document.createElement('div'); labels.style.display='flex'; labels.style.justifyContent='space-between'; labels.style.fontSize='11px'; labels.style.color='#666'; labels.style.marginTop='4px'; labels.innerHTML = `<div>${format12Hour(dayStart)}</div><div>${format12Hour(dayEnd)}</div>`;
-            timelineContainer.appendChild(labels);
-
-            availableMenuContent.appendChild(timelineContainer);
-          }
-
-          availableMenuContent.appendChild(slotsContainer);
-
-          // Initial render: by default show filtered available slots, fallback to availableSlots
-          renderSlots(availableSlots);
-
-          // Wiring controls
-          search.addEventListener('input', () => {
-            const q = search.value.trim().toLowerCase();
-            const filter = filterSelect.value; // 'available' | 'unavailable' | 'all'
-            let source = [];
-            if (filter === 'all') source = allSlots;
-            else if (filter === 'available') source = availableSlots;
-            else source = allSlots.filter(s => s.available === false);
-
-            if (!q) {
-              renderSlots(source);
-              return;
-            }
-            const filtered = source.filter(s => {
-              const times = (typeof s === 'string') ? s : (s.startTime || s.time || '');
-              return String(times).toLowerCase().includes(q) || ((s.displayText||'').toLowerCase().includes(q));
-            });
-            renderSlots(filtered);
-          });
-
-          intervalSelect.addEventListener('change', async () => {
-            const g = parseInt(intervalSelect.value, 10) || 30;
-            // Re-fetch with new granularity
-            await preloadAdminAvailableSlots(g);
-          });
-
-          refreshBtn.addEventListener('click', async () => {
-            const g = parseInt(intervalSelect.value, 10) || 30;
-            await preloadAdminAvailableSlots(g);
-          });
-
-          filterSelect.addEventListener('change', () => {
-            // Re-render based on selected filter
-            const filter = filterSelect.value;
-            if (filter === 'all') renderSlots(allSlots);
-            else if (filter === 'available') renderSlots(availableSlots);
-            else renderSlots(allSlots.filter(s => s.available === false));
-          });
-
-          // Show metadata if available (below controls)
-          if (responseData.metadata) {
-            const metaDiv = document.createElement('div');
-            metaDiv.style.fontSize = '12px';
-            metaDiv.style.color = '#666';
-            metaDiv.style.padding = '8px 0 0 0';
-            metaDiv.style.borderTop = '1px solid #eee';
-
-            const duration = responseData.metadata.duration_minutes || 180;
-            const grace = responseData.metadata.grace_minutes || 20;
-            const total = duration + grace;
-
-            metaDiv.innerHTML = `
-              <div>Showing ${availableSlots.length} available slots</div>
-              <div>Service: ${duration} min + Grace: ${grace} min = ${total} min total</div>
-              <div>Checked ${responseData.metadata.total_slots_checked || 0} possible times</div>
-            `;
-            availableMenuContent.appendChild(metaDiv);
-          }
-        } else {
-          console.error('[admin-calendar] API error:', responseData);
-          availableMenuContent.textContent = responseData?.message || 'Error loading slots';
+        // As a final fallback, create a temporary TimeTableModal and open it
+        if (typeof TimeTableModal === 'function') {
+          const tmp = new TimeTableModal();
+          await tmp.openModal();
+          return;
         }
-        console.log('[admin-calendar] preloadAdminAvailableSlots done');
+
+        // If nothing is available, show a concise message so the user isn't left wondering
+        alert('Time Table is not available in this context. Please select branch/service/date in the form above.');
       } catch (err) {
-        console.error('[admin-calendar] preloadAdminAvailableSlots error', err);
-        
-        // More descriptive error handling
-        if (err.name === 'TypeError' && err.message.includes('fetch')) {
-          availableMenuContent.innerHTML = `
-            <div style="padding: 12px; text-align: center; color: #dc2626;">
-              <p>⚠️ Network Error</p>
-              <small>Cannot connect to server. Please check your connection.</small>
-            </div>
-          `;
-        } else if (err.name === 'AbortError') {
-          availableMenuContent.innerHTML = `
-            <div style="padding: 12px; text-align: center; color: #dc2626;">
-              <p>⚠️ Request Timeout</p>
-              <small>Server took too long to respond. Please try again.</small>
-            </div>
-          `;
-        } else {
-          availableMenuContent.innerHTML = `
-            <div style="padding: 12px; text-align: center; color: #dc2626;">
-              <p>⚠️ Unexpected Error</p>
-              <small>${err.message || 'Please try again or contact support.'}</small>
-            </div>
-          `;
-        }
-      }
-    }
-    
-    // Button click handler
-    availableBtn.addEventListener('click', async () => {
-      hideAllMenus();
-      
-      // If menu is currently hidden, we're about to show it, so load the slots
-      if (availableMenu.classList.contains('hidden')) {
-        await preloadAdminAvailableSlots();
-      }
-      
-      availableMenu.classList.toggle('hidden');
-    });
-    
-    // Click outside to close
-    document.addEventListener('click', (e) => {
-      if (!availableBtn.contains(e.target) && !availableMenu.contains(e.target)) {
-        hideAllMenus();
+        console.error('[admin-calendar] Error opening time table modal:', err);
+        alert('Failed to open Time Table. See console for details.');
       }
     });
-    
-    console.log('[admin-calendar] Available slots menu initialized');
+
+    console.log('[admin-calendar] Available slots shortcut initialized (modal-only)');
   }
   
   // Initialize when DOM is ready
@@ -1512,5 +1202,983 @@
   
   // Debug: Log initialization
   console.log('[admin-calendar] Module loaded, baseUrl:', baseUrl);
+
+  // ===== TIME TABLE MODAL FUNCTIONALITY =====
+  
+  let timeTableModalInstance = null;
+  
+  class TimeTableModal {
+    constructor() {
+      this.isOpen = false;
+      this.currentData = null;
+      this.selectedSlot = null;
+      
+      // Create modal HTML if it doesn't exist
+      this.modal = document.getElementById('timeTableModal');
+      if (!this.modal) {
+        console.log('[TimeTableModal] Creating modal HTML structure...');
+        // insert HTML markup into body
+        document.body.insertAdjacentHTML('beforeend', this._defaultModalHTML());
+        // createModalHTML kept for backward compatibility
+        if (typeof this.createModalHTML === 'function') {
+          try { this.createModalHTML(); } catch(e){}
+        }
+        this.modal = document.getElementById('timeTableModal');
+      }
+      
+      this.initializeElements();
+      this.bindEvents();
+    }
+
+    // Returns the default modal HTML string used to inject into the page
+    _defaultModalHTML() {
+      return `
+      <div id="timeTableModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+        <div id="timeTableModalBackdrop" class="absolute inset-0 bg-black opacity-40"></div>
+        <div class="relative max-w-4xl mx-auto mt-12 bg-white rounded shadow-lg overflow-hidden" style="max-height:85vh;">
+          <div class="p-4 border-b flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <h3 class="text-lg font-semibold">Time Table</h3>
+              <div id="timeTableButtonText" class="text-sm text-gray-600"></div>
+            </div>
+            <div>
+              <button id="closeTimeTableModal" class="px-3 py-1 rounded bg-gray-200">Close</button>
+            </div>
+          </div>
+          <div id="timeTableLoading" class="p-6 text-center">Loading...</div>
+          <div id="timeTableContainer" class="hidden">
+            <div class="p-4">
+              <div class="mb-3"><strong>Branch:</strong> <select id="timeTableBranchSelect"></select></div>
+              <div class="mb-3"><strong>Date:</strong> <span id="selectedDateDisplay"></span></div>
+              <div class="mb-3"><strong>Time:</strong> <span id="selectedTimeDisplay">Not selected</span></div>
+            </div>
+            <div class="p-4 overflow-auto h-72">
+              <div id="timeGrid" class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));"></div>
+            </div>
+          </div>
+          <div id="timeTableError" class="hidden p-6 text-center">Error loading time table</div>
+          <div class="border-t p-3 flex items-center justify-between">
+            <div class="text-sm text-gray-600"><span id="availableSlotsCount">0</span> available</div>
+            <div class="flex items-center space-x-2">
+              <button id="refreshTimeTable" class="px-3 py-1 text-blue-600">Refresh</button>
+              <button id="cancelTimeSelection" class="px-4 py-2 bg-gray-500 text-white">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      `;
+    }
+    
+    initializeElements() {
+      // Modal elements
+      this.openButton = document.getElementById('openTimeTableModal');
+      this.closeButton = document.getElementById('closeTimeTableModal');
+      this.modalBackdrop = document.getElementById('timeTableModalBackdrop');
+      this.cancelButton = document.getElementById('cancelTimeSelection');
+      
+      // Content elements
+      this.loadingState = document.getElementById('timeTableLoading');
+      this.containerState = document.getElementById('timeTableContainer');
+      this.errorState = document.getElementById('timeTableError');
+      
+      // Info elements
+      this.branchSelect = document.getElementById('timeTableBranchSelect');
+      this.selectedDateDisplay = document.getElementById('selectedDateDisplay');
+      this.timeGrid = document.getElementById('timeGrid');
+  // occupied list removed from modal markup; keep references null to avoid DOM errors
+  this.occupiedList = null;
+  this.availableSlotsCount = document.getElementById('availableSlotsCount');
+  this.occupiedSlotsCount = null;
+      
+      // Form elements
+      this.timeSelect = document.getElementById('timeSelect');
+      this.selectedTimeDisplay = document.getElementById('selectedTimeDisplay');
+      this.selectedTimeText = document.getElementById('selectedTimeText');
+      this.selectedTimeDuration = document.getElementById('selectedTimeDuration');
+      this.clearTimeButton = document.getElementById('clearTimeSelection');
+      this.timeTableButtonText = document.getElementById('timeTableButtonText');
+      
+      // Refresh and retry buttons
+      this.refreshButton = document.getElementById('refreshTimeTable');
+      this.retryButton = document.getElementById('retryTimeTable');
+    }
+    
+    bindEvents() {
+      // Modal controls
+      if (this.openButton) {
+        this.openButton.addEventListener('click', () => this.openModal());
+      }
+      
+      if (this.closeButton) {
+        this.closeButton.addEventListener('click', () => this.closeModal());
+      }
+      
+      if (this.modalBackdrop) {
+        this.modalBackdrop.addEventListener('click', () => this.closeModal());
+      }
+      
+      if (this.cancelButton) {
+        this.cancelButton.addEventListener('click', () => this.closeModal());
+      }
+      
+      if (this.clearTimeButton) {
+        this.clearTimeButton.addEventListener('click', () => this.clearSelection());
+      }
+      
+      // Branch selector
+      if (this.branchSelect) {
+        this.branchSelect.addEventListener('change', () => this.onBranchChange());
+      }
+      
+      // Refresh and retry
+      if (this.refreshButton) {
+        this.refreshButton.addEventListener('click', () => this.refreshData());
+      }
+      
+      if (this.retryButton) {
+        this.retryButton.addEventListener('click', () => this.refreshData());
+      }
+      
+      // ESC key to close
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isOpen) {
+          this.closeModal();
+        }
+      });
+    }
+    
+    async openModal() {
+      if (!this.modal) return;
+      
+      this.isOpen = true;
+      this.modal.classList.remove('hidden');
+      this.modal.setAttribute('aria-hidden', 'false');
+      
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+      
+      // Load initial data
+      // Ensure page date input exists and defaults to today when missing so modal is always based on current date
+      try {
+        const pageDateEl = document.querySelector('input[name="date"]') || document.querySelector('input[type="date"]');
+        const today = new Date().toISOString().substring(0,10);
+        // If page date is missing, set it to today. If page date exists but is in the past and no explicit selection is expected,
+        // prefer today's date for the modal so admins see the current availability by default.
+        if (pageDateEl && (!pageDateEl.value || pageDateEl.value !== today)) {
+          pageDateEl.value = today;
+        }
+        // If there's a branch select on the page, prefer that as the modal's default branch
+        const pageBranch = document.querySelector(ADMIN_SELECTORS.branchSelect) || document.querySelector('select[name="branch_id"]') || document.querySelector('select[name="branch"]');
+        if (pageBranch && this.branchSelect) {
+          try { this.branchSelect.value = pageBranch.value; } catch(e) {}
+        }
+        // Set the Today display in the modal header
+        const todayDisplay = document.getElementById('todayDateDisplay');
+        if (todayDisplay) {
+          try {
+            const d = new Date();
+            const formatted = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            todayDisplay.textContent = formatted + ' (Today)';
+          } catch(e) { todayDisplay.textContent = today; }
+        }
+      } catch (err) { if (window.__psm_debug) console.warn('[TimeTableModal] set default date/branch failed', err); }
+
+      await this.loadBranches();
+      await this.loadTimeSlots();
+    }
+    
+    closeModal() {
+      if (!this.modal) return;
+      
+      this.isOpen = false;
+      this.modal.classList.add('hidden');
+      this.modal.setAttribute('aria-hidden', 'true');
+      
+      // Unlock body scroll
+      document.body.style.overflow = '';
+    }
+    
+    async loadBranches() {
+      if (!this.branchSelect) return;
+      
+      try {
+        // Get current branch from form or session
+        const currentBranchSelect = document.querySelector(ADMIN_SELECTORS.branchSelect);
+        const currentBranchId = currentBranchSelect ? currentBranchSelect.value : '';
+        
+        // For now, populate with basic branches - this could be enhanced to fetch from API
+        this.branchSelect.innerHTML = `
+          <option value="1" ${currentBranchId === '1' ? 'selected' : ''}>Branch 1 (Nabua)</option>
+          <option value="2" ${currentBranchId === '2' ? 'selected' : ''}>Branch 2 (Iriga)</option>
+        `;
+        
+        // Set default if no current selection
+        if (!currentBranchId) {
+          this.branchSelect.value = '1';
+        }
+      } catch (error) {
+        console.error('Error loading branches:', error);
+      }
+    }
+    
+    async loadTimeSlots() {
+      if (!this.containerState || !this.loadingState) return;
+      
+      // Show loading state
+      this.showLoading();
+      
+      try {
+        // Get form data
+        const formData = this.getFormData();
+        
+        if (!formData.date) {
+          this.showError('Please select a date first');
+          return;
+        }
+        
+        // Update displays
+        this.updateDisplays(formData);
+        
+        // Fetch available slots
+        const response = await this.fetchAvailableSlots(formData);
+        
+        if (response && response.available_slots) {
+          this.currentData = response;
+          this.renderTimeGrid(response);
+          // Occupied list removed — do not render it anymore
+          this.updateCounts(response);
+          this.showContainer();
+        } else {
+          this.showError('No time slots available');
+        }
+        
+      } catch (error) {
+        console.error('Error loading time slots:', error);
+        this.showError('Failed to load time slots: ' + error.message);
+      }
+    }
+    
+    getFormData() {
+      // Look for form elements in the current page
+      const dateEl = document.querySelector('input[name="date"]') || 
+                    document.querySelector('input[type="date"]') || 
+                    document.querySelector(ADMIN_SELECTORS.dateInput);
+      
+      const serviceEl = document.querySelector('select[name="service_id"]') || 
+                       document.getElementById('service_id') || 
+                       document.querySelector(ADMIN_SELECTORS.serviceSelect);
+      
+      const dentistEl = document.querySelector('select[name="dentist"]') || 
+                       document.querySelector('select[name="dentist_id"]') || 
+                       document.querySelector(ADMIN_SELECTORS.dentistSelect);
+      
+      // Get date from form element or use today as fallback
+      let date = '';
+      const todayStr = new Date().toISOString().substring(0, 10);
+      
+      if (dateEl && dateEl.value) {
+        date = dateEl.value;
+      } else {
+        date = todayStr;
+        if (window.__psm_debug) console.log('[TimeTableModal] Using current date:', date);
+      }
+
+      // If the collected date is missing or appears to be in the past relative to today,
+      // prefer showing/using today's date for the TimeTable modal so admins immediately
+      // see the current availability. This also updates the page input so subsequent
+      // calls read the same value.
+      if (!date || (typeof date === 'string' && date < todayStr)) {
+        if (window.__psm_debug) console.info('[TimeTableModal] Overriding stale/missing date with today:', todayStr, 'previous:', date);
+        date = todayStr;
+        try { if (dateEl) dateEl.value = todayStr; } catch (e) { /* ignore */ }
+        // Also try to set common alternate date input names used elsewhere
+        try { const alt = document.querySelector('input[name="appointment_date"]') || document.getElementById('appointmentDate'); if (alt) alt.value = todayStr; } catch(e){}
+      }      // Get service_id from form element
+      let serviceId = '';
+      if (serviceEl && serviceEl.value) {
+        serviceId = serviceEl.value;
+      } else {
+        serviceId = '1'; // Default service ID
+        if (window.__psm_debug) console.log('[TimeTableModal] Using default service_id:', serviceId);
+      }
+      
+      // Determine duration logic:
+      // - If the selected <option> contains data-duration or data-duration-max use it
+      // - Else if there's a procedure duration input use it
+      // - Else set duration = 0 so backend will resolve authoritative service duration when service_id is provided
+      let duration = 0;
+      try {
+        if (serviceEl) {
+          const selectedOpt = serviceEl.options && serviceEl.selectedIndex >= 0 ? serviceEl.options[serviceEl.selectedIndex] : null;
+          if (selectedOpt) {
+            const ddMax = selectedOpt.getAttribute('data-duration-max');
+            const dd = selectedOpt.getAttribute('data-duration');
+            const cand = ddMax ? Number(ddMax) : (dd ? Number(dd) : NaN);
+            if (Number.isFinite(cand) && cand > 0) duration = cand;
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      // fallback to explicit procedure duration input if present
+      const procDurEl = document.querySelector(ADMIN_SELECTORS.procedureDuration);
+      if ((!duration || duration <= 0) && procDurEl && procDurEl.value) {
+        const parsed = Number(procDurEl.value);
+        if (Number.isFinite(parsed) && parsed > 0) duration = parsed;
+      }
+
+      // If still no duration, prefer sending 0 so the backend (authoritative) resolves
+      // the service duration based on service_id. Avoid client-side hard-defaults.
+      if (!duration || duration <= 0) {
+        duration = 0; // let server pick correct service duration
+        if (window.__psm_debug) console.info('[TimeTableModal] No duration specified on client; sending duration=0 so server will resolve service duration');
+      }
+
+      const formData = {
+        date: date,
+        branch_id: this.branchSelect ? this.branchSelect.value : '1',
+        service_id: serviceId,
+        dentist_id: dentistEl ? dentistEl.value : '',
+        duration: duration
+      };
+      
+      console.log('[TimeTableModal] Form data collected:', formData);
+      console.log('[TimeTableModal] Date debug - dateEl value:', dateEl ? dateEl.value : 'no dateEl', 'final date:', date, 'today:', todayStr);
+      return formData;
+    }
+    
+    updateDisplays(formData) {
+      if (this.selectedDateDisplay) {
+        // Format date nicely
+        try {
+          const dateObj = new Date(formData.date);
+          const formatted = dateObj.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          this.selectedDateDisplay.textContent = formatted;
+        } catch (e) {
+          this.selectedDateDisplay.textContent = formData.date || 'Not selected';
+        }
+      }
+      
+      // Update time display if we have a selected slot
+      const timeDisplay = document.getElementById('selectedTimeDisplay');
+      if (timeDisplay && this.selectedSlot) {
+        timeDisplay.textContent = this.selectedSlot.display || this.selectedSlot.time || 'Not selected';
+      } else if (timeDisplay) {
+        timeDisplay.textContent = 'Not selected';
+      }
+    }
+    
+    async fetchAvailableSlots(formData) {
+      const payload = {
+        date: formData.date,
+        branch_id: formData.branch_id,
+        service_id: formData.service_id,
+        dentist_id: formData.dentist_id,
+        duration: formData.duration
+      };
+      
+      // Send as form-encoded to match server-side POST parsing (getPost/getRawInput)
+      const formBody = new URLSearchParams();
+      Object.keys(payload).forEach(k => { if (payload[k] !== undefined && payload[k] !== null) formBody.append(k, payload[k]); });
+      const response = await fetch(`${baseUrl}appointments/available-slots`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': getCsrfToken()
+        },
+        credentials: 'include',
+    body: safeToString(formBody)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const json = await response.json();
+      console.log('[TimeTableModal] available-slots response:', json);
+      return json;
+    }
+    
+    renderTimeGrid(data) {
+      if (!this.timeGrid) return;
+      
+      const availableSlots = data.available_slots || [];
+      const occupiedMap = data.occupied_map || {};
+      const allSlots = data.all_slots || [];
+      const meta = (data.metadata || {});
+
+      // Build normalized lookup structures to avoid mismatches caused by
+      // differing time formats ("8:00 AM" vs "08:00").
+      // this._availableSet contains normalized 'HH:MM' strings
+      // this._occupiedMapNormalized maps normalized 'HH:MM' -> appointment object
+      try {
+        this._availableSet = new Set((availableSlots || []).map(s => {
+          if (!s) return '';
+          if (typeof s === 'string') return normalizeTime(s);
+          if (s.time) return normalizeTime(s.time);
+          if (s.datetime) {
+            const parts = String(s.datetime).split(' ');
+            return parts[1] ? parts[1].slice(0,5) : '';
+          }
+          return '';
+        }).filter(Boolean));
+
+        this._occupiedMapNormalized = {};
+        if (Array.isArray(occupiedMap)) {
+          occupiedMap.forEach(entry => {
+            try {
+              const key = entry && entry.time ? normalizeTime(entry.time) : (entry && entry.datetime ? (String(entry.datetime).split(' ')[1] || '') : '');
+              if (key) this._occupiedMapNormalized[key] = entry;
+            } catch (e) {}
+          });
+        } else if (occupiedMap && typeof occupiedMap === 'object') {
+          // If server returned an object keyed by time already, normalize keys
+          Object.keys(occupiedMap).forEach(k => {
+            try {
+              const norm = normalizeTime(k) || normalizeTime(occupiedMap[k] && occupiedMap[k].time);
+              if (norm) this._occupiedMapNormalized[norm] = occupiedMap[k];
+            } catch (e) {}
+          });
+        }
+      } catch (e) {
+        this._availableSet = new Set();
+        this._occupiedMapNormalized = {};
+      }
+
+      // Expose metadata visibly for debugging
+      try {
+        if (this.timeTableButtonText) {
+          const ds = meta.day_start ? meta.day_start + ' - ' + (meta.day_end || '') : '';
+          const counts = 'avail: ' + (meta.available_count || availableSlots.length) + ' | total: ' + (meta.total_slots_checked || allSlots.length);
+          this.timeTableButtonText.textContent = ds ? ds + ' | ' + counts : counts;
+        }
+      } catch (e) { console.warn('[TimeTableModal] failed to set metadata display', e); }
+
+      console.log('[TimeTableModal] renderTimeGrid: allSlots.length=', allSlots.length, 'availableSlots=', availableSlots.length, 'metadata=', meta);
+      
+      // Use server-provided slots if available, otherwise generate local ones
+      let slots = [];
+      if (Array.isArray(allSlots) && allSlots.length > 0) {
+        // Use server slots and ensure they have display property
+        slots = allSlots.map(slot => {
+          if (typeof slot === 'string') {
+            return { time: slot, display: slot };
+          } else if (slot && typeof slot === 'object') {
+            return {
+              time: slot.time || slot.slot || '',
+              display: slot.time || slot.display || slot.slot || '',
+              ...slot // preserve other properties like timestamp, available, etc.
+            };
+          }
+          return { time: '', display: '' };
+        });
+        // If server provided metadata.day_end but the last server slot ends earlier
+        // than metadata.day_end, append generated slots to cover the remaining window.
+        try {
+          if (meta && meta.day_end) {
+            // Helper to convert normalized HH:MM to minutes
+            const toMinutes = (hhmm) => {
+              if (!hhmm) return null;
+              const parts = String(hhmm).split(':').map(Number);
+              if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
+              return parts[0] * 60 + parts[1];
+            };
+
+            // Get last slot minute if possible
+            const lastSlot = slots.length ? slots[slots.length - 1] : null;
+            let lastNorm = '';
+            if (lastSlot) {
+              if (lastSlot.time) lastNorm = normalizeTime(lastSlot.time);
+              else if (lastSlot.display) lastNorm = normalizeTime(lastSlot.display);
+              else if (lastSlot.datetime) {
+                const p = String(lastSlot.datetime).split(' ');
+                lastNorm = p[1] ? p[1].slice(0,5) : '';
+              }
+            }
+
+            const lastMinute = toMinutes(lastNorm);
+            const endNorm = normalizeTime(meta.day_end);
+            const endMinute = toMinutes(endNorm);
+
+            const interval = 5;
+            // Only append if we can determine both minutes and lastMinute is before endMinute
+            if (Number.isFinite(lastMinute) && Number.isFinite(endMinute) && lastMinute + interval <= endMinute) {
+              // Generate missing slots starting after lastMinute up to endMinute
+              const extra = this.generateTimeSlots(meta, lastMinute + interval, endMinute, interval);
+              // Avoid duplicates by filtering any times that already exist
+              const existingSet = new Set(slots.map(s => normalizeTime(s.time || s.display || '')));
+              extra.forEach(s => {
+                const n = normalizeTime(s.time || s.display || '');
+                if (n && !existingSet.has(n)) {
+                  slots.push(s);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          // non-fatal; fall back to server slots as-is
+          if (window.__psm_debug) console.warn('[TimeTableModal] extending slots failed', e);
+        }
+      } else {
+        // Fallback to generating time slots using server metadata if available (day_start/day_end),
+        // otherwise default to 8:00 AM - 8:00 PM in 5-minute intervals
+        slots = this.generateTimeSlots(meta);
+      }
+      
+      this.timeGrid.innerHTML = '';
+      
+      slots.forEach(slot => {
+        const slotElement = this.createSlotElement(slot, availableSlots, occupiedMap, allSlots, meta);
+        this.timeGrid.appendChild(slotElement);
+      });
+    }
+    
+    // generateTimeSlots(meta, startMinuteOverride, endMinuteOverride, intervalOverride)
+    // When server-provided all_slots is truncated we call this with explicit start/end minutes
+    generateTimeSlots(meta, startMinuteOverride, endMinuteOverride, intervalOverride) {
+      const slots = [];
+      const interval = Number.isFinite(intervalOverride) ? intervalOverride : 5; // 5 minutes
+
+      // Default start/end minutes
+      let startMinute = 8 * 60; // 8:00
+      let endMinute = 20 * 60; // 20:00
+
+      try {
+        if (meta && meta.day_start) {
+          const s = normalizeTime(meta.day_start); // returns HH:MM
+          if (s) {
+            const parts = s.split(':').map(Number);
+            if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+              startMinute = parts[0] * 60 + parts[1];
+            }
+          }
+        }
+        if (meta && meta.day_end) {
+          const e = normalizeTime(meta.day_end);
+          if (e) {
+            const parts = e.split(':').map(Number);
+            if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+              endMinute = parts[0] * 60 + parts[1];
+            }
+          }
+        }
+
+        // If explicit overrides are provided, use them
+        if (Number.isFinite(startMinuteOverride) && startMinuteOverride > 0) startMinute = startMinuteOverride;
+        if (Number.isFinite(endMinuteOverride) && endMinuteOverride > 0) endMinute = endMinuteOverride;
+
+        // Safety: ensure numeric and reasonable bounds
+        if (!Number.isFinite(startMinute) || startMinute < 0) startMinute = 8 * 60;
+        if (!Number.isFinite(endMinute) || endMinute <= startMinute) endMinute = Math.max(startMinute + 60, 20 * 60);
+      } catch (err) {
+        // fallback to defaults on any parse error
+        startMinute = 8 * 60; endMinute = 20 * 60;
+      }
+
+      for (let minuteCursor = startMinute; minuteCursor < endMinute; minuteCursor += interval) {
+        const hour = Math.floor(minuteCursor / 60);
+        const minute = minuteCursor % 60;
+        const hh = String(hour).padStart(2, '0');
+        const mm = String(minute).padStart(2, '0');
+        const timeStr = `${hh}:${mm}`;
+        const displayTime = this.formatDisplayTime(timeStr);
+        slots.push({ time: timeStr, display: displayTime });
+      }
+
+      return slots;
+    }
+    
+    formatDisplayTime(timeStr) {
+      try {
+        if (timeStr === null || timeStr === undefined) return 'N/A';
+
+        // If it's a number, treat as unix timestamp (seconds)
+        if (typeof timeStr === 'number' && Number.isFinite(timeStr)) {
+          const d = new Date(timeStr * 1000);
+          const hh = d.getHours();
+          const mm = d.getMinutes();
+          const period = hh >= 12 ? 'PM' : 'AM';
+          const displayHour = hh > 12 ? hh - 12 : (hh === 0 ? 12 : hh);
+          return `${displayHour}:${String(mm).padStart(2, '0')} ${period}`;
+        }
+
+        // Try to normalize common string formats (HH:MM, HH:MM:SS, 'YYYY-MM-DD HH:MM:SS', '9:00 AM')
+        const normalized = normalizeTime(String(timeStr));
+        let hhmm = normalized;
+
+        // If normalizeTime couldn't parse, try extracting HH:MM from datetime-like strings
+        if (!hhmm) {
+          const m = String(timeStr).match(/(\d{1,2}:\d{2})(:\d{2})?/);
+          if (m) hhmm = m[1];
+        }
+
+        // If still nothing, try Date.parse
+        if (!hhmm) {
+          const parsed = Date.parse(String(timeStr));
+          if (!Number.isNaN(parsed)) {
+            const d = new Date(parsed);
+            hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          }
+        }
+
+        if (!hhmm) return String(timeStr);
+
+        const parts = hhmm.split(':').map(Number);
+        if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return String(timeStr);
+
+        const hour = parts[0];
+        const minute = parts[1];
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+        return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
+      } catch (e) {
+        // Fallback to raw string if anything unexpected happens
+        try { return String(timeStr); } catch (ex) { return 'N/A'; }
+      }
+    }
+    
+    createSlotElement(slot, availableSlots, occupiedMap, allSlots, meta) {
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'time-slot';
+      
+      // Check availability (defensive: guard against missing slot.time)
+      const slotTime = slot && (slot.time || slot.display) ? normalizeTime(slot.time || slot.display) : '';
+
+      // Prefer server slot's own 'available' property if present
+      let isAvailable = false;
+      if (slot && typeof slot.available === 'boolean') {
+        isAvailable = slot.available;
+      } else {
+        // Fallback to normalized lookup if available
+        isAvailable = (this._availableSet && slotTime) ? this._availableSet.has(slotTime) : (availableSlots || []).some(availSlot => {
+          const availTime = typeof availSlot === 'string' ? availSlot : (availSlot.time || availSlot.slot || '');
+          return slotTime && normalizeTime(availTime) === slotTime;
+        });
+      }
+
+      const isOccupied = slotTime ? (this._occupiedMapNormalized && this._occupiedMapNormalized[slotTime] ? true : false) : false;
+      
+
+      // Determine status and styling
+      // Prefer server-provided metadata.day_start/day_end to determine operating window.
+      let status = 'outside-hours';
+      let bgColor = 'bg-gray-200 text-gray-500';
+      let hoverColor = '';
+      let cursor = 'cursor-not-allowed';
+
+      // Determine if this slot falls within operating hours. Use metadata if available,
+      // otherwise fall back to server allSlots content (if provided) or assume generated range.
+      let isInOperatingWindow = false;
+      try {
+        if (meta && meta.day_start && meta.day_end) {
+          const startNorm = normalizeTime(meta.day_start);
+          const endNorm = normalizeTime(meta.day_end || meta.day_start);
+          const toMinutes = (t) => {
+            if (!t) return null;
+            const parts = t.split(':').map(Number);
+            if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
+            return parts[0] * 60 + parts[1];
+          };
+          // Normalize slot time first (handles object slots, display differences, datetimes)
+          const normalizedSlot = normalizeTime(slot.time || slot.display || '');
+          const slotMin = toMinutes(normalizedSlot);
+          const startMin = toMinutes(startNorm);
+          const endMin = toMinutes(endNorm);
+          if (slotMin !== null && startMin !== null && endMin !== null) {
+            if (endMin >= startMin) {
+              isInOperatingWindow = slotMin >= startMin && slotMin <= endMin;
+            } else {
+              // range wraps past midnight
+              isInOperatingWindow = slotMin >= startMin || slotMin <= endMin;
+            }
+          }
+        } else if (Array.isArray(allSlots) && allSlots.length > 0) {
+          // normalize allSlots entries for comparison
+          const normalizedSlotTime = normalizeTime(slot.time || slot.display || '');
+          isInOperatingWindow = allSlots.some(s => {
+            const candidate = (typeof s === 'string') ? s : (s.time || s.slot || '');
+            const normalizedCandidate = normalizeTime(candidate);
+            return normalizedCandidate && normalizedSlotTime && normalizedCandidate === normalizedSlotTime;
+          });
+        } else {
+          // If server did not provide helpful info, assume generateTimeSlots range is operating hours
+          isInOperatingWindow = true;
+        }
+      } catch (e) {
+        isInOperatingWindow = true;
+      }
+
+      if (isAvailable) {
+        status = 'available';
+        bgColor = 'bg-green-100 text-green-800 border-green-300';
+        hoverColor = 'hover:bg-green-200';
+        cursor = 'cursor-pointer';
+      } else if (isOccupied) {
+        status = 'occupied';
+        bgColor = 'bg-red-100 text-red-800 border-red-300';
+        hoverColor = 'hover:bg-red-200';
+        cursor = 'cursor-help';
+      } else if (isInOperatingWindow) {
+        // In operating hours but not available — could be occupied or unavailable
+        // If we have slot.available === false, treat as occupied/unavailable
+        if (slot && slot.available === false) {
+          status = 'occupied';
+          bgColor = 'bg-red-100 text-red-800 border-red-300';
+          hoverColor = 'hover:bg-red-200';
+          cursor = 'cursor-help';
+        } else {
+          status = 'unavailable';
+          bgColor = 'bg-gray-100 text-gray-600 border-gray-200';
+          hoverColor = '';
+          cursor = 'cursor-not-allowed';
+        }
+      } else {
+        // Truly outside operating hours
+        status = 'outside-hours';
+        bgColor = 'bg-gray-200 text-gray-500';
+        hoverColor = '';
+        cursor = 'cursor-not-allowed';
+      }
+      
+      slotDiv.className = `time-slot p-2 border rounded text-center text-sm font-medium transition-colors ${bgColor} ${hoverColor} ${cursor}`;
+      
+      // Safely get display text with fallbacks
+      const displayText = slot && (slot.display || slot.time || slot.slot) ? (slot.display || slot.time || slot.slot) : 'N/A';
+      
+      slotDiv.innerHTML = `
+        <div class="font-medium">${displayText}</div>
+        <div class="text-xs mt-1 capitalize">${status.replace('-', ' ')}</div>
+      `;
+      
+      // Add click handler for available slots
+      if (isAvailable) {
+        slotDiv.addEventListener('click', () => this.selectSlot(slot));
+      } else if (isOccupied) {
+        // Show tooltip or info for occupied slots
+        const occ = (this._occupiedMapNormalized && slotTime) ? this._occupiedMapNormalized[slotTime] : (occupiedMap && occupiedMap[slot.time]) || null;
+        slotDiv.title = `Occupied - ${occ && (occ.patient_name || occ.patient) ? (occ.patient_name || occ.patient) : 'Unknown patient'}`;
+      }
+      
+      return slotDiv;
+    }
+    
+    selectSlot(slot) {
+      this.selectedSlot = slot;
+      
+      // Update form
+      if (this.timeSelect) {
+        this.timeSelect.value = slot.time;
+        
+        // Trigger change event for form validation
+        const changeEvent = new Event('change', { bubbles: true });
+        this.timeSelect.dispatchEvent(changeEvent);
+      }
+      
+      // Update the time display in the modal header
+      const timeDisplay = document.getElementById('selectedTimeDisplay');
+      if (timeDisplay) {
+        timeDisplay.textContent = slot.display || slot.time || 'Selected';
+      }
+      
+      if (this.selectedTimeText) {
+        this.selectedTimeText.textContent = slot.display;
+      }
+      
+      if (this.timeTableButtonText) {
+        this.timeTableButtonText.textContent = `Selected: ${slot.display}`;
+      }
+      
+      // Close modal
+      this.closeModal();
+      
+      // Show success message
+      notifyAdmin(`Time slot ${slot.display} selected`, 'success', 3000);
+    }
+    
+    clearSelection() {
+      this.selectedSlot = null;
+      
+      if (this.timeSelect) {
+        this.timeSelect.value = '';
+      }
+      
+      // Reset time display in modal
+      const timeDisplay = document.getElementById('selectedTimeDisplay');
+      if (timeDisplay) {
+        timeDisplay.textContent = 'Not selected';
+      }
+      
+      if (this.timeTableButtonText) {
+        this.timeTableButtonText.textContent = 'Open Time Table';
+      }
+    }
+    
+    renderOccupiedInfo(data) {
+      if (!this.occupiedList) return;
+
+      // Prefer the normalized occupied map we already built for consistent keys
+      const occupiedMap = (this._occupiedMapNormalized && Object.keys(this._occupiedMapNormalized).length) ? this._occupiedMapNormalized : (data.occupied_map || {});
+      const occupiedSlots = Object.keys(occupiedMap || {});
+
+      if (occupiedSlots.length === 0) {
+        this.occupiedList.innerHTML = '<div class="text-sm text-gray-500 italic">No occupied time slots</div>';
+        return;
+      }
+
+      // Helper to resolve a service name from various possible server fields
+      // Return empty string when unknown so the UI can omit the service column
+      const resolveServiceName = (appt) => {
+        if (!appt) return '';
+        if (appt.service_name) return appt.service_name;
+        if (appt.service) return appt.service;
+        if (appt.services) {
+          if (Array.isArray(appt.services)) return appt.services.map(s => (s.name || s)).join(', ');
+          if (typeof appt.services === 'string') return appt.services;
+        }
+        if (appt.service_id) {
+          // Try to find matching option text in the service select
+          try {
+            const opt = document.querySelector(`select[name="service_id"] option[value="${appt.service_id}"]`) || (document.getElementById('service_id') && document.getElementById('service_id').querySelector(`option[value="${appt.service_id}"]`));
+            if (opt && opt.textContent) return opt.textContent.trim();
+          } catch (e) {}
+        }
+        return '';
+      };
+
+      this.occupiedList.innerHTML = '';
+
+      occupiedSlots.forEach(timeSlotKey => {
+        const appointment = occupiedMap[timeSlotKey] || {};
+
+        // Derive a display time from the key or from appointment fields
+        let displayTime = 'Unknown time';
+        try {
+          // Prefer appointment explicit datetime/time when available
+          let candidate = null;
+          if (appointment && (appointment.datetime || appointment.start_datetime)) {
+            candidate = appointment.datetime || appointment.start_datetime;
+          } else if (appointment && (appointment.time || appointment.start_time)) {
+            candidate = appointment.time || appointment.start_time;
+          } else if (timeSlotKey) {
+            candidate = timeSlotKey;
+          }
+
+          const norm = normalizeTime(candidate);
+          // Treat missing or midnight (00:00) as unknown in this UI context
+          if (!norm || norm === '00:00') {
+            displayTime = 'Unknown time';
+          } else {
+            displayTime = this.formatDisplayTime(norm);
+          }
+        } catch (e) {
+          displayTime = String(timeSlotKey || 'Unknown time');
+        }
+
+  const patientName = appointment.patient_name || appointment.patient || appointment.patient_display || 'Unknown Patient';
+  const serviceName = resolveServiceName(appointment);
+
+        const appointmentDiv = document.createElement('div');
+        appointmentDiv.className = 'flex items-center justify-between p-2 bg-red-50 border border-red-200 rounded text-sm';
+        // Build inner HTML; omit service column if serviceName is empty
+        appointmentDiv.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div>
+              <div class="font-medium text-red-900">${displayTime || ''}</div>
+              <div class="text-red-700">${patientName}</div>
+            </div>
+          </div>
+          ${serviceName ? `<div class="text-red-600 text-xs">${serviceName}</div>` : ''}
+        `;
+
+        // Optionally append remarks or end time if available
+        if (appointment.end_time || appointment.end_datetime) {
+          const endLabel = document.createElement('div');
+          endLabel.className = 'text-xs text-red-500 mt-1';
+          const endDisplay = this.formatDisplayTime(appointment.end_time || appointment.end_datetime);
+          endLabel.textContent = `Ends: ${endDisplay}`;
+          appointmentDiv.querySelector('.flex > div > div:last-child').appendChild(endLabel);
+        }
+
+        this.occupiedList.appendChild(appointmentDiv);
+      });
+    }
+    
+    updateCounts(data) {
+      const availableCount = (data.available_slots || []).length;
+      // occupied_map may be an array of occupied intervals; fall back to unavailable_slots length
+      const occupiedCount = (data.occupied_map && Array.isArray(data.occupied_map)) ? data.occupied_map.length : ((data.unavailable_slots && Array.isArray(data.unavailable_slots)) ? data.unavailable_slots.length : 0);
+
+      if (this.availableSlotsCount) {
+        try {
+          // Show combined info so admins can immediately see server-side counts
+          this.availableSlotsCount.textContent = `${availableCount} available | ${occupiedCount} occupied`;
+        } catch (e) {
+          this.availableSlotsCount.textContent = availableCount;
+        }
+      }
+      // occupied count intentionally not shown since occupied panel is removed
+    }
+    
+    showLoading() {
+      if (this.loadingState) this.loadingState.classList.remove('hidden');
+      if (this.containerState) this.containerState.classList.add('hidden');
+      if (this.errorState) this.errorState.classList.add('hidden');
+    }
+    
+    showContainer() {
+      if (this.loadingState) this.loadingState.classList.add('hidden');
+      if (this.containerState) this.containerState.classList.remove('hidden');
+      if (this.errorState) this.errorState.classList.add('hidden');
+    }
+    
+    showError(message) {
+      if (this.loadingState) this.loadingState.classList.add('hidden');
+      if (this.containerState) this.containerState.classList.add('hidden');
+      if (this.errorState) this.errorState.classList.remove('hidden');
+      
+      const errorMessageEl = document.getElementById('timeTableErrorMessage');
+      if (errorMessageEl) {
+        errorMessageEl.textContent = message;
+      }
+    }
+    
+    async onBranchChange() {
+      await this.loadTimeSlots();
+    }
+    
+    async refreshData() {
+      await this.loadTimeSlots();
+    }
+  }
+  
+  // Initialize time table modal
+  function initTimeTableModal() {
+    if (timeTableModalInstance) return timeTableModalInstance;
+    
+    // Check if the open button exists (indicates we're on a page that needs the modal)
+    const openButton = document.getElementById('openTimeTableModal');
+    if (!openButton) {
+      console.log('[admin-calendar] Time table modal button not found, skipping initialization');
+      return null;
+    }
+    
+    console.log('[admin-calendar] Initializing time table modal...');
+    timeTableModalInstance = new TimeTableModal();
+    console.log('[admin-calendar] Time table modal initialized');
+    
+    return timeTableModalInstance;
+  }
+  
+  // Initialize time table modal when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTimeTableModal);
+  } else {
+    initTimeTableModal();
+  }
   
 })();

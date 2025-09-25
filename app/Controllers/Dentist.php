@@ -791,8 +791,13 @@ class Dentist extends BaseController
     
     public function createAppointment()
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
-            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        // Prefer reading the session directly for AJAX requests (more robust across contexts)
+        $sess = session();
+        $sessUserType = $sess->get('user_type');
+        $sessUserId = $sess->get('user_id');
+        if (!in_array($sessUserType, ['dentist', 'doctor', 'admin'], true)) {
+            log_message('warning', 'Dentist::getAppointmentDetails unauthorized. sess_user_id=' . ($sessUserId ?? 'none') . ' sess_user_type=' . ($sessUserType ?? 'none'));
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
         // Delegate to AppointmentService so we get FCFS/record return behavior
@@ -901,18 +906,67 @@ class Dentist extends BaseController
 
     public function getAppointmentDetails($id)
     {
-        if (!Auth::isAuthenticated() || Auth::getCurrentUser()['user_type'] !== 'doctor') {
-            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+        // Accept both 'dentist' and legacy 'doctor' roles, and allow admin system calls.
+        // For AJAX calls it's more robust to read the session directly.
+        $sess = session();
+        $sessUserType = $sess->get('user_type');
+        $sessUserId = $sess->get('user_id');
+        if (!in_array($sessUserType, ['dentist', 'doctor', 'admin'], true)) {
+            log_message('warning', 'Dentist::getAppointmentDetails unauthorized. sess_user_id=' . ($sessUserId ?? 'none') . ' sess_user_type=' . ($sessUserType ?? 'none'));
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'Unauthorized']);
         }
 
-        $appointmentModel = new \App\Models\AppointmentModel();
-        $appointment = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
-                                      ->join('user', 'user.id = appointments.user_id')
-                                      ->join('branches', 'branches.id = appointments.branch_id', 'left')
-                                      ->where('appointments.id', $id)
-                                      ->first();
-        
-        return $this->response->setJSON(['success' => true, 'appointment' => $appointment]);
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $appointment = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+                                  ->join('user', 'user.id = appointments.user_id', 'left')
+                                  ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                  ->where('appointments.id', $id)
+                                  ->first();
+
+            if (!$appointment) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found'])->setStatusCode(404);
+            }
+
+            // Fetch services linked via appointment_service pivot (appointments table does not have service_id)
+            $db = \Config\Database::connect();
+            $svcRows = $db->table('appointment_service as aps')
+                          ->select('s.id, s.name, s.duration_minutes, s.duration_max_minutes')
+                          ->join('services s', 's.id = aps.service_id')
+                          ->where('aps.appointment_id', (int)$id)
+                          ->get()
+                          ->getResultArray();
+
+            $services = [];
+            $totalServiceMinutes = 0;
+            foreach ($svcRows as $s) {
+                $dur = $s['duration_max_minutes'] ?? $s['duration_minutes'] ?? null;
+                if ($dur !== null) $totalServiceMinutes += (int)$dur;
+                $services[] = [
+                    'id' => $s['id'],
+                    'name' => $s['name'],
+                    'duration_minutes' => $s['duration_minutes'] ?? null,
+                    'duration_max_minutes' => $s['duration_max_minutes'] ?? null,
+                ];
+            }
+
+            // Attach a friendly summary: service_name (first) and aggregated service_duration
+            $appointment['services'] = $services;
+            if (count($services) === 1) {
+                $appointment['service_name'] = $services[0]['name'];
+            } else if (count($services) > 1) {
+                $appointment['service_name'] = implode(', ', array_column($services, 'name'));
+            } else {
+                $appointment['service_name'] = null;
+            }
+
+            $appointment['service_duration'] = $totalServiceMinutes > 0 ? $totalServiceMinutes : null;
+
+            return $this->response->setJSON(['success' => true, 'appointment' => $appointment]);
+        } catch (\Exception $e) {
+            log_message('error', 'Dentist::getAppointmentDetails exception: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Server error', 'error' => $e->getMessage()])->setStatusCode(500);
+        }
     }
 
     // ============== PATIENT MANAGEMENT METHODS (Admin-like functionality) ==============

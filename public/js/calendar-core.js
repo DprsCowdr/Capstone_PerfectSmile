@@ -17,18 +17,41 @@
     const raw = window.appointments || [];
     const filter = window.currentBranchFilter || 'all';
     if (filter === 'all') return raw;
-    return raw.filter(a => (a.branch_name || a.branch_id || '').toString().toLowerCase().includes(filter.toString().toLowerCase()));
+  const safe = v => { try { if (v === null || v === undefined) return ''; if (typeof v.toString === 'function') return v.toString(); return String(v); } catch(e) { return ''; } };
+  return raw.filter(a => safe(a.branch_name || a.branch_id || '').toLowerCase().includes(safe(filter).toLowerCase()));
   }
 
   function populateAvailableTimeSlots(selectedDate, timeSelect){
     // fallback implementation used by patient JS when legacy renderer isn't loaded
+    // Prefer server-provided availability if available via window.latestAvailability
     timeSelect.innerHTML = '<option value="">Select Time</option>';
+    try{
+      const latest = window.latestAvailability || null;
+      if(latest && Array.isArray(latest.all_slots) && latest.all_slots.length){
+        // Use server canonical slots (each may be object {time, available, ...} or string)
+        latest.all_slots.forEach(s => {
+          const raw = (typeof s === 'string') ? s : (s.time || s);
+          const timeStr = raw && raw.substring ? raw.substring(0,5) : (raw || '');
+          const opt = document.createElement('option');
+          opt.value = timeStr;
+          opt.textContent = formatTime(timeStr);
+          if (s && typeof s === 'object' && Object.prototype.hasOwnProperty.call(s,'available') && s.available === false) {
+            opt.disabled = true;
+            opt.textContent = opt.textContent + ' (Unavailable)';
+          }
+          timeSelect.appendChild(opt);
+        });
+        return;
+      }
+    }catch(e){ console.warn('populateAvailableTimeSlots: error reading window.latestAvailability', e); }
+
     const dateAppointments = (window.appointments || []).filter(apt => {
       const aptDate = apt.appointment_date || (apt.appointment_datetime ? apt.appointment_datetime.substring(0,10) : null);
       return aptDate === selectedDate;
     });
 
-    const startHour = 8, endHour = 18;
+    // default to 8:00 - 20:00 so fallback aligns better with common branch hours
+    const startHour = 8, endHour = 20;
     for(let hour = startHour; hour < endHour; hour++){
       for(let minute=0; minute<60; minute+=30){
         const timeStr = String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0');

@@ -32,13 +32,25 @@ class RoleController extends BaseController
         foreach ($roles as &$r) {
             $r['user_count'] = $this->userRoleModel->where('role_id', $r['id'])->countAllResults();
         }
-
-    return view('roles/index', ['roles' => $roles, 'user' => session('user')]);
+        // render fragment then wrap in admin layout so the global sidebar is present
+        $content = view('roles/index', ['roles' => $roles, 'user' => session('user')]);
+        $content = '<div data-sidebar-offset>' . $content . '</div>';
+        return view('templates/admin_layout', [
+            'title' => 'Roles & Permissions - Perfect Smile',
+            'content' => $content,
+            'user' => session('user')
+        ]);
     }
 
     public function create()
     {
-    return view('roles/create', ['user' => session('user')]);
+        $content = view('roles/create', ['user' => session('user')]);
+        $content = '<div data-sidebar-offset>' . $content . '</div>';
+        return view('templates/admin_layout', [
+            'title' => 'Create Role - Perfect Smile',
+            'content' => $content,
+            'user' => session('user')
+        ]);
     }
 
     public function store()
@@ -93,7 +105,13 @@ class RoleController extends BaseController
         foreach ($perms as $p) {
             $permissions[$p['module']][$p['action']] = true;
         }
-    return view('roles/edit', ['role' => $role, 'permissions' => $permissions, 'user' => session('user')]);
+        $content = view('roles/edit', ['role' => $role, 'permissions' => $permissions, 'user' => session('user')]);
+        $content = '<div data-sidebar-offset>' . $content . '</div>';
+        return view('templates/admin_layout', [
+            'title' => 'Edit Role - ' . (isset($role['name']) ? esc($role['name']) : 'Role'),
+            'content' => $content,
+            'user' => session('user')
+        ]);
     }
 
     public function update($id)
@@ -152,7 +170,13 @@ class RoleController extends BaseController
         }
         // Load audit logs for this role
         $logs = $this->auditModel->where('role_id', $id)->orderBy('created_at', 'DESC')->limit(10)->findAll();
-    return view('roles/show', ['role' => $role, 'permissions' => $permissions, 'assignedUsers' => $users, 'logs' => $logs, 'user' => session('user')]);
+        $content = view('roles/show', ['role' => $role, 'permissions' => $permissions, 'assignedUsers' => $users, 'logs' => $logs, 'user' => session('user')]);
+        $content = '<div data-sidebar-offset>' . $content . '</div>';
+        return view('templates/admin_layout', [
+            'title' => 'Role: ' . (isset($role['name']) ? esc($role['name']) : 'Role'),
+            'content' => $content,
+            'user' => session('user')
+        ]);
     }
 
     public function delete($id)
@@ -169,8 +193,11 @@ class RoleController extends BaseController
 
     public function assign($id)
     {
-        if ($this->request->getMethod() === 'post') {
+        // Normal execution; no persistent request dump logging in production.
+
+    if ($this->request->getMethod(true) === 'POST') {
             $userIds = $this->request->getPost('user_ids');
+            $rawDebugRequested = $this->request->getPost('raw_debug');
             // sanitize posted user ids and only keep positive integers
             $ids = [];
             if (!empty($userIds)) {
@@ -191,12 +218,57 @@ class RoleController extends BaseController
             $db = \Config\Database::connect();
             $db->transStart();
             $this->userRoleModel->where('role_id', $id)->delete();
+            $inserted = [];
+            $dbError = null;
             if (!empty($ids)) {
                 foreach ($ids as $uid) {
-                    $this->userRoleModel->insert(['user_id' => $uid, 'role_id' => $id, 'assigned_at' => date('Y-m-d H:i:s')]);
+                    try {
+                        $res = $this->userRoleModel->insert(['user_id' => $uid, 'role_id' => $id, 'assigned_at' => date('Y-m-d H:i:s')]);
+                        // insert() may return inserted id or boolean depending on model config
+                        $inserted[] = $res;
+                    } catch (\Exception $e) {
+                        // capture DB error for debug output
+                        $dbError = $e->getMessage();
+                    }
                 }
             }
             $db->transComplete();
+
+            // Additional DB diagnostics: simple ping and last error info
+            $dbPing = false;
+            try {
+                // simpleQuery returns result on success (true) or false on failure
+                $dbPing = $db->simpleQuery('SELECT 1');
+            } catch (\Exception $e) {
+                $dbPing = 'ping_error:' . $e->getMessage();
+            }
+
+            // capture DB driver error info if available
+            $dbErrorInfo = null;
+            try {
+                if (method_exists($db, 'error')) {
+                    $dbErrorInfo = $db->error();
+                }
+            } catch (\Exception $e) {
+                $dbErrorInfo = ['exception' => $e->getMessage()];
+            }
+
+            // Attempt to capture the last query executed (if supported) for extra insight
+            $lastQuery = null;
+            try {
+                if (method_exists($db, 'getLastQuery')) {
+                    $q = $db->getLastQuery();
+                    // getLastQuery may return an object or string
+                    $lastQuery = is_object($q) ? (string)$q : $q;
+                } elseif (method_exists($this->userRoleModel, 'getLastQuery')) {
+                    $q = $this->userRoleModel->getLastQuery();
+                    $lastQuery = is_object($q) ? (string)$q : $q;
+                }
+            } catch (\Exception $e) {
+                $lastQuery = 'last_query_error:' . $e->getMessage();
+            }
+
+            // Normal flow: redirect to the role show page after audit logging.
 
             if (!empty($ids)) {
                 // audit assignment
@@ -221,10 +293,18 @@ class RoleController extends BaseController
             if ($u) $assignedUsers[] = $u;
         }
 
+        // No GET-load diagnostic logging in production.
+
         // For initial load, send a small set of users; long lists should use the search endpoint
         $users = $this->userModel->whereNotIn('user_type', ['patient'])->limit(200)->findAll();
 
-    return view('roles/assign', ['role' => $role, 'assignedUsers' => $assignedUsers, 'users' => $users, 'user' => session('user')]);
+        $content = view('roles/assign', ['role' => $role, 'assignedUsers' => $assignedUsers, 'users' => $users, 'user' => session('user')]);
+        $content = '<div data-sidebar-offset>' . $content . '</div>';
+        return view('templates/admin_layout', [
+            'title' => 'Assign Users - ' . (isset($role['name']) ? esc($role['name']) : 'Role'),
+            'content' => $content,
+            'user' => session('user')
+        ]);
     }
 
     public function searchUsers()

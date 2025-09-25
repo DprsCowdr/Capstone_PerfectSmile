@@ -21,7 +21,11 @@ trait AdminAuthTrait
             return redirect()->to('/login');
         }
         
-        log_message('debug', "AdminAuthTrait::checkAdminAuth - User data: " . json_encode($user));
+        if (defined('ENVIRONMENT') && ENVIRONMENT !== 'production') {
+            log_message('debug', "AdminAuthTrait::checkAdminAuth - User data: " . json_encode($user));
+        } else {
+            log_message('debug', "AdminAuthTrait::checkAdminAuth - User id: " . ($user['id'] ?? 'unknown') . ", type: " . ($user['user_type'] ?? 'unknown'));
+        }
         
         // Handle user without user_type (data issue)
         if (!isset($user['user_type'])) {

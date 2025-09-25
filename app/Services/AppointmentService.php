@@ -727,7 +727,49 @@ class AppointmentService
                 $chosenTime = !empty($options['chosen_time']) ? $options['chosen_time'] : null;
 
                 if ($autoReschedule && $chosenTime) {
-                    $candidateDatetime = $date . ' ' . $chosenTime . ':00';
+                    // Prefer chosen_timestamp when supplied (server-provided canonical ts)
+                    // Prefer a server-provided canonical datetime when available
+                    if (!empty($options['chosen_datetime'])) {
+                        // Expecting 'YYYY-MM-DD HH:MM:SS' from server-provided suggestion
+                        $candidateDatetime = $options['chosen_datetime'];
+                    } elseif (!empty($options['chosen_timestamp'])) {
+                        $ts = (int)$options['chosen_timestamp'];
+                        // Normalize: if client sent milliseconds instead of seconds, reduce to seconds
+                        if ($ts > 9999999999) { // larger than 10-digit -> milliseconds
+                            log_message('warning', "approveAppointment: chosen_timestamp looks like ms; normalizing by /1000: {$ts}");
+                            $ts = (int)floor($ts / 1000);
+                        }
+                        // Convert timestamp to server-local datetime string
+                        $candidateDatetime = date('Y-m-d H:i:s', $ts);
+                    } else {
+                            // If caller provided a chosen_date, use it; otherwise use the original appointment date
+                            $candidateDate = !empty($options['chosen_date']) ? $options['chosen_date'] : $date;
+                            $candidateDatetime = $candidateDate . ' ' . $chosenTime . ':00';
+
+                        // Normalize candidate and verify it falls within available slots for the branch/date.
+                        try {
+                            $cdTs = strtotime($candidateDatetime);
+                            $availSvc = new \App\Services\AvailabilityService();
+                            $availParams = ['date' => date('Y-m-d', $cdTs), 'branch_id' => $appointment['branch_id'] ?? null, 'duration' => $requiredDuration ?: 30, 'granularity' => 5, 'max_suggestions' => 20];
+                            $availRes = $availSvc->getAvailableSlots($availParams);
+                            if (!empty($availRes['suggestions'])) {
+                                // Try to find an exact or nearest suggestion to candidateDatetime
+                                $closest = null; $closestDiff = PHP_INT_MAX;
+                                foreach ($availRes['suggestions'] as $sugg) {
+                                    if (empty($sugg['timestamp'])) continue;
+                                    $diff = abs($sugg['timestamp'] - $cdTs);
+                                    if ($diff < $closestDiff) { $closestDiff = $diff; $closest = $sugg; }
+                                }
+                                // If the closest suggestion is reasonably near (<= 2 hours), prefer it
+                                if ($closest && $closestDiff <= 7200 && !empty($closest['available'])) {
+                                    $candidateDatetime = $closest['datetime'];
+                                    log_message('info', "approveAppointment: chosen candidate adjusted to nearest available suggestion {$candidateDatetime} (diff {$closestDiff}s)");
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            // ignore and proceed; we'll still use original candidateDatetime
+                        }
+                    }
                     $candidateConflict = $this->appointmentModel->isTimeConflictingWithGrace($candidateDatetime, $grace, $dentistForCheck, $id, $requiredDuration);
                     if (!$candidateConflict) {
                         // update appointment time and proceed to approve
@@ -845,7 +887,18 @@ class AppointmentService
                 $appointments = $this->appointmentModel->getPatientAppointments($patientId);
             }
             log_message('debug', "AppointmentService: Found " . count($appointments) . " appointments");
-            log_message('debug', "AppointmentService: Raw appointments data: " . json_encode($appointments));
+            // Avoid logging large raw payloads in production. Log a compact summary by default.
+            if (defined('ENVIRONMENT') && ENVIRONMENT !== 'production') {
+                log_message('debug', "AppointmentService: Raw appointments data: " . json_encode($appointments));
+            } else {
+                // Log only a small summary: count and first appointment keys
+                $sample = [];
+                if (!empty($appointments)) {
+                    $first = $appointments[0];
+                    $sample = array_slice(array_keys($first), 0, 10);
+                }
+                log_message('debug', "AppointmentService: Appointments summary: count=" . count($appointments) . ", keys_sample=" . json_encode($sample));
+            }
             
             // Categorize appointments into present (upcoming) and past
             $currentDateTime = date('Y-m-d H:i:s');
@@ -871,7 +924,11 @@ class AppointmentService
                 'total_appointments' => count($appointments)
             ];
             
-            log_message('debug', "AppointmentService: Final result: " . json_encode($result));
+            if (defined('ENVIRONMENT') && ENVIRONMENT !== 'production') {
+                log_message('debug', "AppointmentService: Final result: " . json_encode($result));
+            } else {
+                log_message('debug', "AppointmentService: Final result summary: present=" . count($presentAppointments) . ", past=" . count($pastAppointments) . ", total=" . count($appointments));
+            }
             return $result;
             
         } catch (\Exception $e) {

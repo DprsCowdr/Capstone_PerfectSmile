@@ -37,11 +37,12 @@
         body.append(k, data[k]);
       }
     });
+    const safeToString = (v) => { try { if (v === null || v === undefined) return ''; if (typeof v.toString === 'function') return v.toString(); return String(v); } catch(e) { return ''; } };
     
     return fetch(baseUrl + url, {
       method: 'POST',
       headers,
-      body: body.toString(),
+      body: safeToString(body),
       credentials: 'same-origin'
     }).then(r => r.text().then(t => {
       let parsed;
@@ -106,8 +107,19 @@
         branch_id: branchId,
         date: date,
         service_id: serviceId,
-        granularity: 3
+        granularity: 5
       };
+      // Derive duration from option data attributes if present
+      try {
+        const sel = document.querySelector(ADMIN_SELECTORS.serviceSelect) || document.getElementById('service_id');
+        if (sel && sel.options && sel.selectedIndex >= 0) {
+          const opt = sel.options[sel.selectedIndex];
+          const ddMax = opt ? opt.getAttribute('data-duration-max') : null;
+          const dd = opt ? opt.getAttribute('data-duration') : null;
+          const candidate = ddMax ? Number(ddMax) : (dd ? Number(dd) : null);
+          if (Number.isFinite(candidate) && candidate > 0) payload.duration = candidate;
+        }
+      } catch (e) { console.warn('[admin-calendar] duration read failed', e); }
       
       // Add dentist if selected
       if (dentistId) {
@@ -169,22 +181,10 @@
       
       option.value = timeValue;
       
-      // Create label with end time if available
-      let label = timeValue;
-      if (slot && typeof slot === 'object') {
-        if (slot.ends_at) {
-          label += ' — ends ' + slot.ends_at.slice(0, 5);
-        } else if (slot.end) {
-          label += ' — ends ' + slot.end.slice(0, 5);
-        } else if (slot.duration_minutes) {
-          // Calculate end time from duration
-          const [hours, minutes] = timeValue.split(':').map(Number);
-          const endDate = new Date(2000, 0, 1, hours, minutes + slot.duration_minutes);
-          const endTime = String(endDate.getHours()).padStart(2, '0') + ':' + 
-                         String(endDate.getMinutes()).padStart(2, '0');
-          label += ' — ends ' + endTime;
-        }
-      }
+      // Keep label focused on start time only. End times are not shown because service
+      // durations can vary — calculating an end time here is misleading. Use the
+      // provided human-friendly slot.time if available.
+      let label = (slot && typeof slot === 'object' && slot.time) ? slot.time : timeValue;
       
       option.textContent = label;
       timeElement.appendChild(option);

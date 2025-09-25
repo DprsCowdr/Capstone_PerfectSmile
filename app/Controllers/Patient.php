@@ -120,10 +120,15 @@ class Patient extends BaseController
             // Resolve selected branch (may come from session/query) to scope appointments
             $selectedBranch = method_exists($this, 'resolveBranchId') ? $this->resolveBranchId() : null;
 
-            // Load patient's appointments and branch list for the patient calendar JS
+            // Load patient's appointments with patient name and branch info for the patient calendar JS
             $appointmentModel = new \App\Models\AppointmentModel();
-            $appointments = $appointmentModel->where('user_id', $user['id'])->orderBy('appointment_datetime', 'DESC');
-            if ($selectedBranch) $appointments->where('branch_id', (int)$selectedBranch);
+            $appointments = $appointmentModel->select('appointments.*, user.name as patient_name, branches.name as branch_name, dentists.name as dentist_name')
+                                            ->join('user', 'user.id = appointments.user_id', 'left')
+                                            ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                            ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
+                                            ->where('appointments.user_id', $user['id'])
+                                            ->orderBy('appointments.appointment_datetime', 'DESC');
+            if ($selectedBranch) $appointments->where('appointments.branch_id', (int)$selectedBranch);
             $appointments = $appointments->findAll();
 
             // Load branches (if Branch model exists)
@@ -254,7 +259,11 @@ class Patient extends BaseController
         // If we call Guest from another controller, ensure it has request/response objects
         // Add lightweight logging to confirm this method is hit for patient POSTs
         try {
-            log_message('debug', 'Patient::submitAppointment invoked; headers: ' . json_encode($this->request->getHeaders()));
+            if (defined('ENVIRONMENT') && ENVIRONMENT !== 'production') {
+                log_message('debug', 'Patient::submitAppointment invoked; headers: ' . json_encode($this->request->getHeaders()));
+            } else {
+                log_message('debug', 'Patient::submitAppointment invoked');
+            }
         } catch (\Exception $e) {
             // ignore
         }
@@ -262,10 +271,24 @@ class Patient extends BaseController
         // If client requested a debug echo via X-Debug-Booking header, return the received payload as JSON
         $debugHeader = $this->request->getHeaderLine('X-Debug-Booking');
         if (!empty($debugHeader)) {
-            return $this->response->setJSON([
-                'received' => $this->request->getPost(),
-                'headers' => $this->request->getHeaders()
-            ]);
+            $postData = $this->request->getPost();
+            $debugInfo = [
+                'received' => $postData,
+                'headers' => $this->request->getHeaders(),
+                'server_time' => date('Y-m-d H:i:s'),
+                'server_timezone' => date_default_timezone_get()
+            ];
+            
+            // Try to parse appointment_datetime like the model does
+            if (!empty($postData['appointment_date']) && !empty($postData['appointment_time'])) {
+                $appointment_datetime = $postData['appointment_date'] . ' ' . $postData['appointment_time'];
+                $debugInfo['parsed_appointment_datetime'] = $appointment_datetime;
+                $debugInfo['strtotime_result'] = strtotime($appointment_datetime);
+                $debugInfo['strtotime_readable'] = $debugInfo['strtotime_result'] ? date('Y-m-d H:i:s', $debugInfo['strtotime_result']) : 'FAILED';
+                $debugInfo['is_past'] = $debugInfo['strtotime_result'] ? ($debugInfo['strtotime_result'] < strtotime('today')) : 'UNKNOWN';
+            }
+            
+            return $this->response->setJSON($debugInfo);
         }
 
         $guest = new \App\Controllers\Guest();
@@ -301,30 +324,47 @@ class Patient extends BaseController
      */
     public function viewAppointment($id = null)
     {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
         $id = (int) $id;
-        if (! $id) {
-            return redirect()->to('/appointments');
+        if (!$id) {
+            return redirect()->to('patient/appointments')->with('error', 'Invalid appointment ID');
         }
 
         $appointmentModel = new \App\Models\AppointmentModel();
 
-        // Ensure we only show appointments belonging to the logged-in patient
-        $patientId = session()->get('user_id');
-
-        $appointment = $appointmentModel->select('appointments.*, branches.name as branch_name, users.first_name as dentist_first_name, users.last_name as dentist_last_name')
+        // Get appointment with all related details, ensure it belongs to current patient
+        $appointment = $appointmentModel->select('appointments.*, user.name as patient_name, branches.name as branch_name, dentists.name as dentist_name')
+            ->join('user', 'user.id = appointments.user_id', 'left')
             ->join('branches', 'branches.id = appointments.branch_id', 'left')
-            ->join('users', 'users.id = appointments.dentist_id', 'left')
+            ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
             ->where('appointments.id', $id)
-            ->where('appointments.patient_id', $patientId)
+            ->where('appointments.user_id', $user['id'])
             ->first();
 
-        if (! $appointment) {
-            return redirect()->to('/appointments')->with('error', 'Appointment not found.');
+        if (!$appointment) {
+            return redirect()->to('patient/appointments')->with('error', 'Appointment not found or access denied');
         }
 
+        // Get services for this appointment
+        $db = \Config\Database::connect();
+        $servicesQuery = $db->query(
+            "SELECT s.id, s.name, s.duration_minutes, s.price 
+             FROM appointment_service aps 
+             JOIN services s ON s.id = aps.service_id 
+             WHERE aps.appointment_id = ?", 
+            [$id]
+        );
+        $services = $servicesQuery->getResultArray();
+
         $data = [
+            'user' => $user,
             'appointment' => $appointment,
-            'title' => 'Appointment details',
+            'services' => $services,
+            'title' => 'Appointment Details',
         ];
 
         return view('patient/view_appointment', $data);
@@ -351,53 +391,109 @@ class Patient extends BaseController
             return redirect()->back()->with('error', 'Appointment not found or access denied');
         }
 
-        $reason = $this->request->getPost('reason') ?? null;
-
-        try {
-            // Use model helper which supports a cancel reason
-            if (method_exists($appointmentModel, 'cancelAppointment')) {
-                $appointmentModel->cancelAppointment((int)$id, $reason);
-            } else {
-                $appointmentModel->update((int)$id, ['status' => 'cancelled', 'decline_reason' => $reason]);
-            }
-
-            // Create a branch notification for staff to review the cancellation (best-effort)
-            try {
-                if (class_exists('\App\\Models\\BranchNotificationModel')) {
-                    $bnModel = new \App\Models\BranchNotificationModel();
-                    $payload = json_encode([
-                        'type' => 'appointment_cancellation',
-                        'appointment_id' => (int)$id,
-                        'user_id' => (int)$user['id'],
-                        'reason' => $reason,
-                    ]);
-                    // branch_id may be null; handle gracefully
-                    $bnModel->insert([
-                        'branch_id' => $appointment['branch_id'] ?? null,
-                        'appointment_id' => (int)$id,
-                        'payload' => $payload,
-                        'sent' => 0,
-                    ]);
-                }
-            } catch (\Exception $e) {
-                log_message('error', 'Branch notification error (cancel): ' . $e->getMessage());
-            }
-
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => true, 'message' => 'Appointment cancelled']);
-            }
-
-            return redirect()->back()->with('success', 'Appointment cancelled');
-        } catch (\Exception $e) {
-            log_message('error', 'Error cancelling appointment: ' . $e->getMessage());
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Failed to cancel appointment'])->setStatusCode(500);
-            }
-            return redirect()->back()->with('error', 'Failed to cancel appointment');
+        // Patient-initiated cancellations are disabled via the dashboard. Patients must contact clinic staff to request cancellations.
+        // This prevents accidental or unauthorized immediate cancellations. Keep the endpoint present but refuse patient attempts.
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Online cancellations via the patient dashboard are disabled. Please contact the clinic to request a cancellation.'
+            ])->setStatusCode(403);
         }
+
+        return redirect()->back()->with('error', 'Online cancellations via the patient dashboard are disabled. Please contact the clinic to request a cancellation.');
     }
 
-    // deleteAppointment removed: deletions are not allowed from patient UI; cancellations remain supported
+    /**
+     * Delete a past appointment owned by the current patient.
+     * Only appointments with appointment_datetime in the past may be deleted.
+     * Route: POST /patient/appointments/delete/{id}
+     */
+    public function deleteAppointment($id = null)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return redirect()->to('/login');
+        }
+
+        $id = (int) $id;
+        if (!$id) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Invalid appointment ID'])->setStatusCode(400);
+            }
+            return redirect()->back()->with('error', 'Invalid appointment ID');
+        }
+
+        $appointmentModel = new \App\Models\AppointmentModel();
+        $appointment = $appointmentModel->find($id);
+        if (!$appointment || (int)$appointment['user_id'] !== (int)$user['id']) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found or access denied'])->setStatusCode(404);
+            }
+            return redirect()->back()->with('error', 'Appointment not found or access denied');
+        }
+
+        // Only allow deletion of past appointments OR any appointment already cancelled
+        $apptTime = strtotime($appointment['appointment_datetime']);
+        $status = strtolower($appointment['status'] ?? '');
+        // If appointment is not cancelled and appointment time is in the future (or now), disallow
+        if ($status !== 'cancelled' && $apptTime >= time()) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Only past appointments can be deleted'])->setStatusCode(403);
+            }
+            return redirect()->back()->with('error', 'Only past appointments can be deleted from your account.');
+        }
+
+        try {
+            // Log context for debugging
+            log_message('debug', 'Patient::deleteAppointment invoked for appointment_id=' . $id . ' user_id=' . ($user['id'] ?? 'unknown'));
+
+            // Attempt to clean up linked appointment_service rows to avoid FK constraint errors
+            try {
+                // Prefer using the AppointmentServiceModel where available for a reliable delete
+                if (class_exists('\App\Models\AppointmentServiceModel')) {
+                    $asm = new \App\Models\AppointmentServiceModel();
+                    log_message('debug', 'Deleting linked appointment_service rows via model for appointment_id=' . $id);
+                    $asm->where('appointment_id', $id)->delete();
+                } else {
+                    // Fallback to raw DB table delete (best-effort)
+                    $db = \Config\Database::connect();
+                    log_message('debug', 'Deleting linked appointment_service rows via DB for appointment_id=' . $id);
+                    $db->table('appointment_service')->where('appointment_id', $id)->delete();
+                }
+            } catch (\Throwable $t) {
+                // Log and continue; absence or permission issues on appointment_service shouldn't block deletion
+                log_message('warning', 'Failed to cleanup appointment_service rows for appointment_id=' . $id . ': ' . $t->getMessage());
+            }
+
+            // Prefer the AppointmentService if available for deletion logic
+            if (class_exists('\App\Services\AppointmentService')) {
+                $svc = new \App\Services\AppointmentService();
+                $result = $svc->deleteAppointment($id);
+                // Some services return boolean or array; normalize
+                if ($result === false) {
+                    throw new \RuntimeException('AppointmentService::deleteAppointment returned false');
+                }
+            } else {
+                $res = $appointmentModel->delete($id);
+                if ($res === false) {
+                    throw new \RuntimeException('Model delete returned false');
+                }
+            }
+
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Appointment deleted']);
+            }
+
+            return redirect()->to('/patient/appointments')->with('success', 'Appointment deleted');
+        } catch (\Throwable $e) {
+            // Catch Throwable to avoid uncaught Errors causing a 500 without useful JSON
+            log_message('error', 'Failed to delete appointment (appointment_id=' . $id . '): ' . $e->getMessage() . '\n' . $e->getTraceAsString());
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Failed to delete appointment: ' . $e->getMessage()])->setStatusCode(500);
+            }
+            return redirect()->back()->with('error', 'Failed to delete appointment');
+        }
+    }
 
     /**
      * Handle appointment update (patient editing their own appointment)
@@ -1547,6 +1643,113 @@ class Patient extends BaseController
         } catch (\Exception $e) {
             log_message('error', 'Error loading treatment record for patient: ' . $e->getMessage());
             return redirect()->to('/patient/records')->with('error', 'Failed to load record');
+        }
+    }
+
+    /**
+     * Get appointment details for patient (read-only)
+     * Ensures patients can only access their own appointment details
+     */
+    public function getAppointmentDetails($id)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(401);
+        }
+
+        $id = (int) $id;
+        if (!$id) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid appointment ID'])->setStatusCode(400);
+        }
+
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            
+            // Get appointment with user_id check to ensure patient can only access their own appointments
+            $appointment = $appointmentModel->select('appointments.*, user.name as patient_name, branches.name as branch_name, dentists.name as dentist_name')
+                                          ->join('user', 'user.id = appointments.user_id', 'left')
+                                          ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                          ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
+                                          ->where('appointments.id', $id)
+                                          ->where('appointments.user_id', $user['id']) // Critical: only own appointments
+                                          ->first();
+
+            if (!$appointment) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found or access denied'])->setStatusCode(404);
+            }
+
+            // Get associated services
+            $db = \Config\Database::connect();
+            $serviceRows = $db->table('appointment_service')
+                             ->select('services.id, services.name, services.duration_minutes')
+                             ->join('services', 'services.id = appointment_service.service_id', 'left')
+                             ->where('appointment_service.appointment_id', $id)
+                             ->get()->getResultArray();
+
+            $services = [];
+            $totalDuration = 0;
+            foreach ($serviceRows as $row) {
+                $duration = !empty($row['duration_minutes']) ? (int)$row['duration_minutes'] : 0;
+                $services[] = [
+                    'id' => $row['id'],
+                    'name' => $row['name'],
+                    'duration_minutes' => $duration
+                ];
+                $totalDuration += $duration;
+            }
+
+            $appointment['services'] = $services;
+            $appointment['service_duration'] = $totalDuration;
+
+            return $this->response->setJSON([
+                'success' => true,
+                'appointment' => $appointment
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting patient appointment details: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Server error'
+            ])->setStatusCode(500);
+        }
+    }
+
+    /**
+     * Get service details for patient (read-only)
+     * Patients can view service information but not modify it
+     */
+    public function getService($id)
+    {
+        $user = Auth::getCurrentUser();
+        if (!$user || $user['user_type'] !== 'patient') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(401);
+        }
+
+        $id = (int) $id;
+        if (!$id) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid service ID'])->setStatusCode(400);
+        }
+
+        try {
+            $serviceModel = new \App\Models\ServiceModel();
+            $service = $serviceModel->find($id);
+
+            if (!$service) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Service not found'])->setStatusCode(404);
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'service' => $service
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error getting service details for patient: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Server error'
+            ])->setStatusCode(500);
         }
     }
 } 

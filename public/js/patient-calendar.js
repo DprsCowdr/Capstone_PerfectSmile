@@ -35,9 +35,11 @@
     const csrf = document.querySelector('meta[name="csrf-token"]');
     if(csrf) headers['X-CSRF-TOKEN'] = csrf.getAttribute('content');
   // no debug header in production
-    const body = new URLSearchParams();
-    Object.keys(data || {}).forEach(k => { if (data[k] !== undefined && data[k] !== null) body.append(k, data[k]); });
-    return fetch(baseUrl + url, {method: 'POST', headers, body: body.toString(), credentials: 'same-origin'})
+  const body = new URLSearchParams();
+  Object.keys(data || {}).forEach(k => { if (data[k] !== undefined && data[k] !== null) body.append(k, data[k]); });
+  // Safe toString: avoid calling toString on undefined/null
+  const safeToString = (v) => { try { if (v === null || v === undefined) return ''; if (typeof v.toString === 'function') return v.toString(); return String(v); } catch(e) { return ''; } };
+  return fetch(baseUrl + url, {method: 'POST', headers, body: safeToString(body), credentials: 'same-origin'})
       .then(r => r.text().then(t => {
         let parsed;
         try { parsed = JSON.parse(t); } catch(e) { parsed = t; }
@@ -53,6 +55,54 @@
   function formatTimeHM(t){
     // t = "HH:MM:SS" or "HH:MM"
     return t.slice(0,5);
+  }
+
+  // Normalize various time string formats to 24-hour 'HH:MM'
+  function to24Hour(timeStr){
+    if(!timeStr || typeof timeStr !== 'string') return '';
+    const s = timeStr.trim();
+    // Already in HH:MM or HH:MM:SS (24-hour) -> take first 5 chars
+    if(/^\d{1,2}:\d{2}(:\d{2})?$/.test(s) && !/[aApP][mM]/.test(s)){
+      const parts = s.split(':');
+      const hh = parts[0].padStart(2,'0');
+      const mm = parts[1];
+      return hh + ':' + mm;
+    }
+    // HHMM e.g. 0830
+    if(/^\d{3,4}$/.test(s)){
+      const hh = s.length === 3 ? '0' + s.slice(0,1) : s.slice(0,2);
+      const mm = s.slice(-2);
+      return hh + ':' + mm;
+    }
+    // 12-hour with AM/PM
+    const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])$/);
+    if(m){
+      let h = parseInt(m[1],10);
+      const min = m[2];
+      const ampm = m[3].toUpperCase();
+      if(ampm === 'PM' && h < 12) h += 12;
+      if(ampm === 'AM' && h === 12) h = 0;
+      return String(h).padStart(2,'0') + ':' + min;
+    }
+    const m2 = s.match(/^(\d{1,2}):(\d{2})([AaPp][Mm])$/);
+    if(m2){
+      let h = parseInt(m2[1],10);
+      const min = m2[2];
+      const ampm = m2[3].toUpperCase();
+      if(ampm === 'PM' && h < 12) h += 12;
+      if(ampm === 'AM' && h === 12) h = 0;
+      return String(h).padStart(2,'0') + ':' + min;
+    }
+    // As a last resort, attempt Date parsing for today and extract time
+    try{
+      const d = new Date('1970-01-01 ' + s);
+      if(!isNaN(d.getTime())){
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        return hh + ':' + mm;
+      }
+    }catch(e){}
+    return '';
   }
 
   function populateTimeTaken(selectEl, appointments){
@@ -88,12 +138,13 @@
       btn.type = 'button';
       btn.className = 'slot-btn';
       // support string slots or object {time, dentist_id}
-      const timeStr = (typeof s === 'string') ? s : (s.time || s.time || '');
+      const rawTime = (typeof s === 'string') ? s : (s.time || s.time || '');
+      const timeStr = to24Hour(rawTime) || rawTime;
       btn.textContent = timeStr;
       if (s && typeof s === 'object' && s.dentist_id) btn.dataset.dentist = s.dentist_id;
       btn.addEventListener('click', () => {
         const timeInput = qs('input[name="appointment_time"]') || qs('select[name="appointment_time"]');
-        if(timeInput) timeInput.value = timeStr;
+        if(timeInput) timeInput.value = to24Hour(timeStr) || timeStr;
         // if slot includes dentist, preselect dentist
         const dt = btn.dataset && btn.dataset.dentist ? btn.dataset.dentist : null;
         const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect');
@@ -126,6 +177,13 @@
   }
 
   function showConflicts(containerEl, conflicts){
+    if(!containerEl){
+      containerEl = qs('#timeConflicts') || qs('.time-conflicts') || null;
+    }
+    if(!containerEl){
+      // no conflicts container present in this layout; silently skip rendering
+      return;
+    }
     containerEl.innerHTML = '';
     if(!conflicts || conflicts.length === 0){
       containerEl.textContent = 'No conflicts detected.';
@@ -222,14 +280,37 @@
         else date = new Date().toISOString().slice(0,10);
       }
       let duration = 30;
+      // Prefer explicit procedure_duration field when present
       if (durationEl) {
         const v = (durationEl.value !== undefined) ? durationEl.value : (durationEl.selectedIndex ? durationEl.options[durationEl.selectedIndex].value : null);
         const n = Number(v);
         duration = Number.isFinite(n) && n > 0 ? n : 30;
       }
+
+      // If no explicit duration provided, try to derive from selected service option data attributes
+      const svcSel = document.querySelector('select[name="service"]') || document.querySelector('select[name="service_id"]') || document.querySelector('input[name="service_id"]') || document.querySelector('input[name="service"]');
+      let svcIdForRequest = '';
+      try{
+        if(svcSel){
+          svcIdForRequest = svcSel.value || svcSel.getAttribute('value') || '';
+          // If duration wasn't explicitly set via a duration element, read data-duration/data-duration-max on the selected option
+          if((!durationEl || !durationEl.value) && svcSel.options && svcSel.selectedIndex >= 0){
+            const opt = svcSel.options[svcSel.selectedIndex];
+            const ddMax = opt ? opt.getAttribute('data-duration-max') : null;
+            const dd = opt ? opt.getAttribute('data-duration') : null;
+            const candidate = ddMax ? Number(ddMax) : (dd ? Number(dd) : null);
+            if (Number.isFinite(candidate) && candidate > 0) duration = candidate;
+          }
+        }
+      }catch(e){ console.warn('[patient-calendar] service duration read failed', e); }
+
       const dentist = dentistEl ? dentistEl.value : '';
       if(!date) return;
-      postForm('/appointments/available-slots', {branch_id: branch, date, duration: Number(duration), dentist_id: dentist})
+        // Always include branch_id so server can apply branch operating hours
+        // Include service_id when available so server can authoritative determine duration if needed
+  const payload = { branch_id: branch || (branchEl ? branchEl.value : ''), date, duration: Number(duration), dentist_id: dentist, granularity: 5 };
+        if (svcIdForRequest) payload.service_id = svcIdForRequest;
+        postForm('/appointments/available-slots', payload)
         .then(res => {
           if(res && res.success){
             const slots = res.slots || [];
@@ -239,7 +320,8 @@
               const timeInput = qs('input[name="appointment_time"]') || qs('select[name="appointment_time"]') || qs('#timeSelect');
               if(slots.length && timeInput && !timeInput.value){
                 const first = slots[0];
-                const firstTime = (typeof first === 'string') ? first : (first.time || first);
+                const firstTimeRaw = (typeof first === 'string') ? first : (first.time || first);
+                const firstTime = to24Hour(firstTimeRaw) || firstTimeRaw;
                 timeInput.value = firstTime;
                 // if slot includes dentist, preselect dentist
                 if(first && typeof first === 'object' && first.dentist_id){
@@ -252,6 +334,24 @@
               }
             }catch(e){ console.error('prefill earliest slot error', e); }
           }
+        
+          // Show enhanced availability message using returned metadata
+          const metadata = (res && res.metadata) ? res.metadata : {};
+          const serviceName = metadata.service ? metadata.service.name : 'selected service';
+          let message = `${(res && res.slots ? res.slots.length : 0)} suggestions for ${serviceName}`;
+          if (metadata.day_start && metadata.day_end) {
+            message += ` (Branch hours: ${metadata.day_start} - ${metadata.day_end})`;
+          }
+          showAvailabilityMessage(true, message);
+
+          // Update a dedicated branch hours display element if present
+          try{
+            const bh = document.getElementById('branchHoursDisplay');
+            if(bh){
+              if(metadata.day_start && metadata.day_end) bh.textContent = `Branch hours: ${metadata.day_start} - ${metadata.day_end}`;
+              else bh.textContent = '';
+            }
+          }catch(e){/* ignore */}
         }).catch(console.error);
     }
 
@@ -261,7 +361,8 @@
       const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
       const dentist = dentistEl ? dentistEl.value : '';
       if(!date || !timeValue) return;
-  postForm('/appointments/check-conflicts', {branch_id: branch, date, time: timeValue, duration, dentist_id: dentist})
+      const nv = to24Hour(timeValue) || timeValue;
+  postForm('/appointments/check-conflicts', {branch_id: branch, date, time: nv, duration, dentist_id: dentist})
         .then(res => {
           if(res && res.success){
             showConflicts(conflictsContainer, res.conflicts || []);
@@ -291,8 +392,9 @@
         const val = e.target.value;
         if(val){
           const timeInputLocal = qs('input[name="appointment_time"]');
-          if(timeInputLocal) timeInputLocal.value = val;
-          checkConflictFor(val);
+          const nv = to24Hour(val) || val;
+          if(timeInputLocal) timeInputLocal.value = nv;
+          checkConflictFor(nv);
         }
       });
     }
@@ -344,15 +446,44 @@
         }catch(e){ console.warn('[patient-calendar] dentist payload normalization failed', e); }
 
         try{
-          // Always target patient booking endpoint when on a patient page (robust detection)
+          // Determine booking endpoint strictly: patient pages must use patient endpoint; other pages use guest endpoint
           const isPatientPage = (window.userType === 'patient') || (window.CURRENT_USER_TYPE === 'patient') || window.location.pathname.startsWith('/patient');
           const bookingEndpoint = isPatientPage ? '/patient/book-appointment' : '/guest/book-appointment';
+
           // Ensure branch_id present
           if(!payload.branch_id && branchEl) payload.branch_id = branchEl.value || '';
-          // Make the request
+
+          // normalize appointment_time to HH:MM before posting
+          if(payload.appointment_time){
+            payload.appointment_time = to24Hour(payload.appointment_time) || payload.appointment_time;
+          }
+
+          // Debug: log the exact payload being sent
+          console.log('[patient-calendar] Sending booking payload:', JSON.stringify(payload, null, 2));
+
+          // Make the request to the appropriate endpoint
           const res = await postForm(bookingEndpoint, payload);
           if(res && res.success){
-            if(res.appointment){ window.appointments = window.appointments || []; window.appointments.push(res.appointment); }
+            if(res.appointment){
+              try {
+                // Only append to the global appointments array if the appointment belongs to the current user (defensive)
+                const owner = res.appointment.user_id || res.appointment.patient_id || res.appointment.patient || null;
+                if (window.userType === 'patient' && window.currentUserId) {
+                  if (owner && Number(owner) === Number(window.currentUserId)) {
+                    window.appointments = window.appointments || []; window.appointments.push(res.appointment);
+                  } else {
+                    // Don't pollute the patient's calendar with other users' appointments
+                    console.debug('[patient-calendar] Skipped pushing appointment not owned by current patient', res.appointment);
+                  }
+                } else {
+                  // For non-patient contexts, preserve existing behavior
+                  window.appointments = window.appointments || []; window.appointments.push(res.appointment);
+                }
+              } catch (e) {
+                console.error('[patient-calendar] Error while handling appointment push', e);
+                window.appointments = window.appointments || []; window.appointments.push(res.appointment);
+              }
+            }
             const msgEl = document.getElementById('appointmentSuccessMessage');
             const main = document.getElementById('appointmentSuccessMain');
             if(main) main.textContent = res.message || 'Appointment booked successfully!';
@@ -369,6 +500,13 @@
             // err.body may be parsed JSON or a plain object
             const b = err.body;
             const errors = b && b.errors ? b.errors : (b && b.message ? b.message : b);
+            
+            // If this is a date/time format error, show it to the user and instruct how to collect debug info.
+            if(typeof errors === 'string' && (errors.includes('Invalid appointment date/time format') || errors.includes('date/time format'))) {
+              console.warn('[patient-calendar] Date/time format error returned by server:', errors);
+              console.info('To collect server parsing details, re-submit the form using the X-Debug-Booking header or use the guest debug endpoint.');
+            }
+            
             showFormValidationErrors(appointmentForm, errors);
             return;
           }
@@ -376,6 +514,14 @@
             if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Session expired or unauthorized. Please log in again.', 'warning', 6000); else alert('Session expired or unauthorized. Please log in again.');
             return;
           }
+          
+          // No automatic guest fallback. If patient endpoint fails due to auth, surface a clear message so user can re-authenticate.
+          if(err && err.status === 422 && typeof errors === 'string' && errors.toLowerCase().includes('unauthorized')){
+            if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Booking failed due to authentication. Please log in and try again.', 'warning', 7000);
+            else alert('Booking failed due to authentication. Please log in and try again.');
+            return;
+          }
+          
           if (typeof showInvoiceAlert === 'function') showInvoiceAlert('Error submitting appointment', 'error', 5000); else alert('Error submitting appointment');
         }
       });
@@ -400,57 +546,41 @@
       if(timeTakenMenu) timeTakenMenu.classList.add('hidden');
     }
 
+    // Simplified preload for patient available slots: delegate to TimeTable modal when possible
     async function preloadAvailableSlots(){
+      if (!availableMenuContent) return;
+      availableMenuContent.textContent = 'Opening Time Table...';
       try {
-        if(!availableMenuContent) return;
-        console.log('[patient-calendar] preloadAvailableSlots start');
+        if (typeof initTimeTableModal === 'function') {
+          const modalInstance = initTimeTableModal();
+          if (modalInstance) {
+            await modalInstance.openModal();
+            // hide small menu if modal opened
+            if (availableMenu) availableMenu.classList.add('hidden');
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('[patient-calendar] preloadAvailableSlots: TimeTable modal open failed, falling back', err);
+      }
+
+      // Fallback: show a brief list by calling the existing API but keep it minimal
+      try {
         availableMenuContent.textContent = 'Loading...';
         const branch = branchEl ? branchEl.value : '';
         const date = dateEl ? dateEl.value : '';
-        const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
-        const dentist = dentistEl ? dentistEl.value : '';
-        const res = await postForm('/appointments/available-slots', {branch_id: branch, date, duration, dentist_id: dentist});
-        if(res && res.success){
+        let duration = durationEl ? (Number(durationEl.value) || 30) : 30;
+        const payload = { branch_id: branch, date, duration };
+        const res = await postForm('/appointments/available-slots', payload);
+        if (res && res.success) {
           const slots = res.slots || [];
-          if(slots.length === 0){
-            availableMenuContent.textContent = 'No available slots';
-          } else {
-            // render full list in a small scrollable panel
-            availableMenuContent.innerHTML = '';
-            const ul = document.createElement('ul');
-            ul.style.listStyle = 'none';
-            ul.style.margin = '0';
-            ul.style.padding = '0';
-            ul.style.maxHeight = '220px';
-            ul.style.overflowY = 'auto';
-            slots.forEach(s => {
-              const li = document.createElement('li');
-              const btn = document.createElement('button');
-              btn.type = 'button';
-              btn.className = 'w-full text-left px-2 py-1 hover:bg-gray-100';
-              const timeStr = (typeof s === 'string') ? s : (s.time || s);
-              btn.textContent = timeStr;
-              if(s && typeof s === 'object' && s.dentist_id) btn.dataset.dentist = s.dentist_id;
-              btn.addEventListener('click', () => {
-                const timeInput = qs('input[name="appointment_time"]') || qs('#timeSelect') || qs('select[name="appointment_time"]');
-                if(timeInput) timeInput.value = timeStr;
-                // if slot contains dentist, select it
-                if(btn.dataset && btn.dataset.dentist){ const dentistSelect = qs('select[name="dentist_id"]') || qs('#dentistSelect'); if(dentistSelect) dentistSelect.value = btn.dataset.dentist; }
-                hideAllMenus();
-                checkConflictFor(timeStr);
-              });
-              li.appendChild(btn);
-              ul.appendChild(li);
-            });
-            availableMenuContent.appendChild(ul);
-          }
+          showSlots(availableMenuContent, slots);
         } else {
           availableMenuContent.textContent = 'No available slots';
         }
-        console.log('[patient-calendar] preloadAvailableSlots done');
-      } catch(err) {
+      } catch (err) {
         availableMenuContent.textContent = 'Error loading slots';
-        console.error('[patient-calendar] preloadAvailableSlots error', err);
+        console.error('[patient-calendar] preloadAvailableSlots fallback error', err);
       }
     }
 
@@ -482,12 +612,14 @@
               const datePart = a.date || '';
               const branch = a.branch_name || '';
               const duration = a.procedure_duration || '30';
-              btn.textContent = `${a.start} - ${a.end} (${duration}m) ${branch ? '• ' + branch : ''}`;
+              const start24 = to24Hour(a.start) || a.start;
+              const end24 = to24Hour(a.end) || a.end;
+              btn.textContent = `${start24} - ${end24} (${duration}m) ${branch ? '• ' + branch : ''}`;
               btn.addEventListener('click', () => {
                 const timeInput = qs('input[name="appointment_time"]') || qs('#timeSelect') || qs('select[name="appointment_time"]');
-                if(timeInput) timeInput.value = a.start;
+                if(timeInput) timeInput.value = start24;
                 hideAllMenus();
-                checkConflictFor(a.start);
+                checkConflictFor(start24);
               });
               li.appendChild(btn);
               ul.appendChild(li);
@@ -505,6 +637,20 @@
     if(availableBtn){
       availableBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        // Try to open the full Time Table modal if available
+        try {
+          if (typeof initTimeTableModal === 'function') {
+            const modalInstance = initTimeTableModal();
+            if (modalInstance) {
+              await modalInstance.openModal();
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('[patient-calendar] Failed to open TimeTableModal, falling back to small menu', err);
+        }
+
+        // Fallback: toggle small menu as before
         if(availableMenu) availableMenu.classList.toggle('hidden');
         if(timeTakenMenu) timeTakenMenu.classList.add('hidden');
         if(!availableMenu.classList.contains('hidden')) await preloadAvailableSlots();

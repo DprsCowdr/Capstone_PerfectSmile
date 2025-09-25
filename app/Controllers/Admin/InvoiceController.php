@@ -106,8 +106,15 @@ class InvoiceController extends BaseAdminController
             return $user;
         }
 
+        // Accept either patient_id (preferred) or user_id (legacy forms)
+        $patientId = $this->request->getPost('patient_id');
+        if (empty($patientId)) {
+            // legacy: some places post user_id instead of patient_id
+            $patientId = $this->request->getPost('user_id');
+        }
+
         $data = [
-            'patient_id' => $this->request->getPost('patient_id'),
+            'patient_id' => $patientId,
             'service_id' => $this->request->getPost('service_id'),
             'appointment_id' => $this->request->getPost('appointment_id'),
             'due_date' => $this->request->getPost('due_date'),
@@ -117,6 +124,17 @@ class InvoiceController extends BaseAdminController
             'items' => $this->request->getPost('items') ?? [],
             'created_by' => $user['id']
         ];
+
+        // Validate patient_id presence and numeric
+        if (empty($data['patient_id']) || !is_numeric($data['patient_id'])) {
+            $msg = 'The patient_id field is required and must be numeric.';
+            log_message('error', 'InvoiceController::store - validation failed: ' . $msg . ' Raw post: ' . json_encode($this->request->getPost()));
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'message' => $msg]);
+            }
+            session()->setFlashdata('error', $msg);
+            return redirect()->back()->withInput();
+        }
 
         // Debug: Log the form data
         log_message('debug', 'InvoiceController::store - form data: ' . json_encode($data));

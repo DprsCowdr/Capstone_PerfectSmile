@@ -64,6 +64,36 @@ class ProcedureModel extends Model
     }
 
     /**
+     * Get all procedures with patient display fields (name, email) joined
+     */
+    public function getAllWithPatientNames($orderBy = 'procedure_name', $direction = 'ASC')
+    {
+        $db = \Config\Database::connect();
+
+        return $db->table('procedures p')
+                  ->select('p.*, u.name AS patient_name, u.email AS patient_email')
+                  ->join('user u', 'u.id = p.user_id', 'left')
+                  ->orderBy('p.' . $orderBy, $direction)
+                  ->get()
+                  ->getResultArray();
+    }
+
+    /**
+     * Get single procedure with patient fields
+     */
+    public function getByIdWithPatient($id)
+    {
+        $db = \Config\Database::connect();
+
+        return $db->table('procedures p')
+                  ->select('p.*, u.name AS patient_name, u.email AS patient_email')
+                  ->join('user u', 'u.id = p.user_id', 'left')
+                  ->where('p.id', $id)
+                  ->get()
+                  ->getRowArray();
+    }
+
+    /**
      * Get procedures with associated services
      */
     public function getProcedureWithServices($procedureId)
