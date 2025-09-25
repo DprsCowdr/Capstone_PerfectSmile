@@ -10,6 +10,52 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
   const baseUrl = window.baseUrl || '';
   const qs = (s) => document.querySelector(s);
 
+  // Normalize many human time formats into 24-hour HH:MM (e.g. "9:25 AM" -> "09:25", "14:00" -> "14:00")
+  // Returns null on obviously empty input.
+  function to24Hour(timeStr){
+    if(!timeStr && timeStr !== '0') return null;
+    let s = String(timeStr).trim();
+    if(!s) return null;
+    // If already in HH:MM 24-hour form
+    const hhmm24 = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if(hhmm24) {
+      const h = hhmm24[1].padStart(2,'0');
+      return `${h}:${hhmm24[2]}`;
+    }
+    // Match 12-hour like 9:25 AM or 9:25AM
+    const m12 = s.match(/^(1[0-2]|0?[1-9]):([0-5]\d)\s*([AaPp][Mm])$/);
+    if(m12){
+      let h = parseInt(m12[1],10);
+      const min = m12[2];
+      const ampm = m12[3].toLowerCase();
+      if(ampm === 'pm' && h !== 12) h += 12;
+      if(ampm === 'am' && h === 12) h = 0;
+      return `${String(h).padStart(2,'0')}:${min}`;
+    }
+    // Match hour only with am/pm e.g. "9am"
+    const h12 = s.match(/^(1[0-2]|0?[1-9])\s*([AaPp][Mm])$/);
+    if(h12){
+      let h = parseInt(h12[1],10);
+      const ampm = h12[2].toLowerCase();
+      if(ampm === 'pm' && h !== 12) h += 12;
+      if(ampm === 'am' && h === 12) h = 0;
+      return `${String(h).padStart(2,'0')}:00`;
+    }
+    // Fallback: try Date parsing (best-effort) by appending to arbitrary date
+    try{
+      const dt = new Date('1970-01-01 ' + s);
+      if(!isNaN(dt.getTime())){
+        const hh = String(dt.getHours()).padStart(2,'0');
+        const mm = String(dt.getMinutes()).padStart(2,'0');
+        return `${hh}:${mm}`;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  // Make available to inline scripts and other modules as a safe global helper
+  try{ if(typeof window !== 'undefined' && !window.to24Hour) window.to24Hour = to24Hour; }catch(e){}
+
   function postJson(url, data){
     const headers = {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'};
     const csrf = document.querySelector('meta[name="csrf-token"]');
@@ -29,9 +75,10 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
     const csrf = document.querySelector('meta[name="csrf-token"]');
     if(csrf) headers['X-CSRF-TOKEN'] = csrf.getAttribute('content');
   // no debug header in production
-    const body = new URLSearchParams();
-    Object.keys(data || {}).forEach(k => { if (data[k] !== undefined && data[k] !== null) body.append(k, data[k]); });
-    return fetch(baseUrl + url, {method:'POST', headers, body: body.toString(), credentials:'same-origin'})
+  const body = new URLSearchParams();
+  Object.keys(data || {}).forEach(k => { if (data[k] !== undefined && data[k] !== null) body.append(k, data[k]); });
+  const safeToString = (v) => { try { if (v === null || v === undefined) return ''; if (typeof v.toString === 'function') return v.toString(); return String(v); } catch(e) { return ''; } };
+  return fetch(baseUrl + url, {method:'POST', headers, body: safeToString(body), credentials:'same-origin'})
       .then(r => r.text().then(t => {
         let parsed;
         try { parsed = JSON.parse(t); } catch(e) { parsed = t; }
@@ -97,7 +144,8 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
               slots.slice(0,50).forEach(s=>{
                 const li = document.createElement('li');
                 const b = document.createElement('button'); b.type='button'; b.className='w-full text-left px-2 py-1 hover:bg-gray-100';
-                const timeStr = (typeof s === 'string') ? s : (s.time || s.slot || '');
+                const rawTimeStr = (typeof s === 'string') ? s : (s.time || s.slot || '');
+                const timeStr = to24Hour(rawTimeStr) || rawTimeStr;
                 b.textContent = timeStr;
                 if (s && typeof s === 'object' && s.dentist_id) b.dataset.dentist = s.dentist_id;
                 b.onclick = ()=>{
@@ -183,11 +231,11 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
   async function checkConflicts(){
       const branch = branchEl ? branchEl.value : '';
       const date = dateEl ? dateEl.value : '';
-      const time = timeField ? (timeField.value || '') : '';
+  const time = timeField ? (to24Hour(timeField.value) || (timeField.value || '')) : '';
       const duration = durationEl ? (Number(durationEl.value) || 30) : 30;
       if(!date || !time) return;
       try{
-        const res = await postJson('/api/patient/check-conflicts', {branch_id:branch, date, time, duration});
+  const res = await postJson('/api/patient/check-conflicts', {branch_id:branch, date, time, duration});
         const c = ensureConflictContainer();
         if(res && res.success && res.hasConflicts && Array.isArray(res.messages) && res.messages.length){
           c.innerHTML = '';
@@ -274,7 +322,7 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
       const timeSelect = document.getElementById('timeSelect') || document.querySelector('select[name="appointment_time"]');
       if(dateInput){ dateInput.value = date; }
       if(selectedDateDisplay){ selectedDateDisplay.value = date; }
-      if(time && timeSelect){ timeSelect.innerHTML = '<option value="'+time+'">'+(window.calendarCore ? window.calendarCore.formatTime(time) : time)+'</option>'; timeSelect.value = time; }
+  if(time && timeSelect){ const normalized = to24Hour(time) || time; timeSelect.innerHTML = '<option value="'+normalized+'">'+(window.calendarCore ? window.calendarCore.formatTime(normalized) : normalized)+'</option>'; timeSelect.value = normalized; }
 
       // show panel
       panel.style.display = 'block';
@@ -310,16 +358,40 @@ window.openAddAppointmentPanelWithTime = window.openAddAppointmentPanelWithTime 
           payload.procedure_duration = (Number.isFinite(pn) && pn > 0) ? pn : 30;
         }
         try{
-          const isPatientPage = (window.userType === 'patient') || (window.CURRENT_USER_TYPE === 'patient') || window.location.pathname.startsWith('/patient');
+            const isPatientPage = (window.userType === 'patient') || (window.CURRENT_USER_TYPE === 'patient') || window.location.pathname.startsWith('/patient');
           const bookingEndpoint = isPatientPage ? '/patient/book-appointment' : '/guest/book-appointment';
           // ensure branch id when present on the page
           if(!payload.branch_id && branchEl) payload.branch_id = branchEl.value || '';
+            // Normalize appointment_time to HH:MM before posting
+            if(payload.appointment_time){
+              const normalized = to24Hour(payload.appointment_time);
+              if(normalized) payload.appointment_time = normalized;
+            }
           const res = await postForm(bookingEndpoint, payload);
           if(res && res.success){
             // update client-side appointments array
             if(res.appointment){
-              window.appointments = window.appointments || [];
-              window.appointments.push(res.appointment);
+              try {
+                // Only append to the global appointments array if the appointment belongs to the current user (defensive)
+                const owner = res.appointment.user_id || res.appointment.patient_id || res.appointment.patient || null;
+                if (window.userType === 'patient' && window.currentUserId) {
+                  if (owner && Number(owner) === Number(window.currentUserId)) {
+                    window.appointments = window.appointments || [];
+                    window.appointments.push(res.appointment);
+                  } else {
+                    // Don't pollute the patient's calendar with other users' appointments
+                    console.debug('[calendar-patient] Skipped pushing appointment not owned by current patient', res.appointment);
+                  }
+                } else {
+                  // For non-patient contexts, preserve existing behavior
+                  window.appointments = window.appointments || [];
+                  window.appointments.push(res.appointment);
+                }
+              } catch (e) {
+                console.error('[calendar-patient] Error while handling appointment push', e);
+                window.appointments = window.appointments || [];
+                window.appointments.push(res.appointment);
+              }
             }
             // show success message in panel
             const msgEl = document.getElementById('appointmentSuccessMessage');

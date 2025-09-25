@@ -258,14 +258,18 @@
 
     <div class="mb-3 sm:mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+      <?php $currentBranch = session('selected_branch_id') ?? (isset($branches) && !empty($branches) ? $branches[0]['id'] : ''); ?>
       <select name="branch" id="branchSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
         <option value="">Select Branch</option>
         <?php if (isset($branches) && is_array($branches)): ?>
           <?php foreach ($branches as $b): ?>
-            <option value="<?= $b['id'] ?>"><?= $b['name'] ?></option>
+            <option value="<?= $b['id'] ?>" <?= ($currentBranch == $b['id']) ? 'selected' : '' ?>><?= $b['name'] ?></option>
           <?php endforeach; ?>
         <?php endif; ?>
       </select>
+      <div class="text-xs text-blue-600 mt-1">
+        <i class="fas fa-info-circle"></i> Current branch: <?= isset($branches) && $currentBranch ? (array_filter($branches, fn($b) => $b['id'] == $currentBranch)[0]['name'] ?? 'Unknown') : 'Default' ?>
+      </div>
     </div>
 
     <div class="mb-3 sm:mb-4">
@@ -298,11 +302,35 @@
     </div>
 
     <div class="mb-3 sm:mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Time</label>
-      <!-- editable selector populated dynamically from available-slots API; shows exact end-time candidates when available -->
-      <select name="appointment_time" id="timeSelect" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors text-sm sm:text-base" required>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Time Selection</label>
+      
+      <!-- Time Table Modal Button -->
+      <button type="button" id="openTimeTableModal" class="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 focus:border-blue-600 focus:outline-none transition-colors text-sm sm:text-base font-medium">
+        <i class="fas fa-table mr-2"></i>
+        <span id="timeTableButtonText">Open Time Table</span>
+      </button>
+      
+      <!-- Hidden time select for form submission -->
+      <select name="appointment_time" id="timeSelect" class="hidden" required>
         <option value="">Select Time</option>
       </select>
+      
+      <!-- Selected time display -->
+      <div id="selectedTimeDisplay" class="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg hidden">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <i class="fas fa-clock text-green-600 mr-2"></i>
+            <div>
+              <span class="text-sm font-medium text-green-900" id="selectedTimeText"></span>
+              <div class="text-xs text-green-700" id="selectedTimeDuration"></div>
+            </div>
+          </div>
+          <button type="button" id="clearTimeSelection" class="text-green-600 hover:text-green-800">
+            <i class="fas fa-times text-sm"></i>
+          </button>
+        </div>
+      </div>
+      
       <div class="text-xs text-green-600 mt-1" id="availabilityMessage" style="display: none;">
         <i class="fas fa-check-circle"></i> <span id="availabilityText"></span>
       </div>
@@ -334,63 +362,64 @@
 </div>
 <?php endif; ?>
 
-<!-- Doctor Availability Panel -->
-<?php if ($user['user_type'] === 'doctor'): ?>
+<!-- Dentist Dashboard Information Panel (Read-only) -->
+<?php if (in_array($user['user_type'], ['doctor', 'dentist'])): ?>
 <div id="doctorAvailabilityPanel" class="slide-in-panel">
   <button class="close-btn" id="closeDoctorAvailabilityPanel" aria-label="Close">&times;</button>
-  <h5 class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold text-gray-600">Set Your Availability</h5>
+  <h5 class="mb-4 sm:mb-6 text-lg sm:text-xl font-bold text-gray-600">📅 Appointment Calendar - Dentist View</h5>
   
-  <form id="availabilityForm" action="<?= base_url('dentist/availability/set') ?>" method="post" novalidate>
-    <?= csrf_field() ?>
-    <input type="hidden" name="date" id="availabilityDate">
+  <div class="space-y-4">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <h6 class="font-semibold text-blue-800 mb-2">👁️ View Mode</h6>
+      <p class="text-blue-700 text-sm">
+        You can view all appointment information by clicking on appointments in the calendar. 
+        This includes patient details, appointment times, and service information.
+      </p>
+    </div>
     
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Selected Date</label>
-      <input type="text" id="selectedAvailabilityDateDisplay" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" readonly>
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <h6 class="font-semibold text-green-800 mb-2">📋 How to Use</h6>
+      <ul class="text-green-700 text-sm space-y-1">
+        <li>• Click any appointment to view detailed information</li>
+        <li>• Use the calendar navigation to browse different dates</li>
+        <li>• Switch between Day, Week, and Month views</li>
+        <li>• View patient contact information and appointment status</li>
+      </ul>
     </div>
-
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-      <select name="status" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" required>
-        <option value="">Select Status</option>
-        <option value="available">✅ Available</option>
-        <option value="unavailable">❌ Unavailable</option>
-      </select>
+    
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <h6 class="font-semibold text-gray-800 mb-2">ℹ️ Information Available</h6>
+      <ul class="text-gray-700 text-sm space-y-1">
+        <li>• Patient name and contact details</li>
+        <li>• Appointment date and time</li>
+        <li>• Service type and duration</li>
+        <li>• Branch location</li>
+        <li>• Appointment status</li>
+      </ul>
     </div>
-
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Start Time (if available)</label>
-      <input type="time" name="start_time" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors">
-    </div>
-
-    <div class="mb-6">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-      <textarea name="notes" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors resize-none" placeholder="Optional notes (e.g., reason for unavailability, special instructions)"></textarea>
-    </div>
-
-    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
-      Set Availability
-    </button>
-  </form>
+  </div>
 </div>
 <?php endif; ?>
 
-<!-- Appointment Information Panel -->
-<div id="appointmentInfoPanel" class="slide-in-panel" style="width: 800px !important; max-width: 90vw !important;">
-  <button class="close-btn" id="closeAppointmentInfoPanel" aria-label="Close">&times;</button>
-  <h5 class="mb-4" style="font-weight:700; color:#888; font-size:1.35rem;">Appointment Information</h5>
-  
-  <div id="appointmentInfoContent">
-    <!-- Content will be loaded here -->
-    <div class="text-center py-8">
-      <div class="text-gray-500 text-lg">Test Panel Content</div>
-      <div class="mt-4 text-gray-600 text-sm">This panel is working! 🎉</div>
-      <div class="mt-2 text-gray-400 text-xs">Click the X to close this panel</div>
+<!-- Appointment Information Modal (centered popup) -->
+<div id="appointmentInfoPanel" class="hidden fixed inset-0 z-60 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="appointmentInfoTitle" aria-hidden="true">
+  <div class="absolute inset-0 bg-black bg-opacity-40" data-close-panel></div>
+  <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-5 z-10 animate-fade-in">
+    <button class="absolute top-3 right-3 text-2xl text-gray-500 hover:text-gray-700" id="closeAppointmentInfoPanel" aria-label="Close" data-close-panel>&times;</button>
+    <h5 id="appointmentInfoTitle" class="mb-3 text-lg font-semibold text-gray-800">Appointment Information</h5>
+    <div id="appointmentInfoShort" class="text-sm text-gray-500 mb-3">&nbsp;</div>
+    <div id="appointmentInfoContent" class="space-y-3 text-sm text-gray-700" tabindex="-1">
+      <!-- Content will be loaded here -->
+      <div class="text-center py-6">
+        <div class="text-gray-500 text-lg">No appointment selected</div>
+        <div class="mt-3 text-gray-600 text-sm">Select an appointment to view details.</div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Edit Appointment Panel -->
+<!-- Edit Appointment Panel (Admin/Staff Only) -->
+<?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
 <div id="editAppointmentPanel" class="slide-in-panel" style="width: 800px !important; max-width: 90vw !important;">
   <button class="close-btn" id="closeEditAppointmentPanel" aria-label="Close">&times;</button>
   <h5 class="mb-4" style="font-weight:700; color:#888; font-size:1.35rem;">Edit Appointment</h5>
@@ -410,19 +439,42 @@
       <input type="time" name="time" id="editAppointmentTime" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" required>
     </div>
 
-    <?php if ($user['user_type'] === 'admin'): ?>
+    <!-- End Time removed per UI request -->
+
     <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Patient</label>
-      <select name="patient" id="editPatientSelect" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" required>
-        <option value="">Select Patient</option>
-        <?php if (isset($patients) && is_array($patients)): ?>
-          <?php foreach ($patients as $p): ?>
-            <option value="<?= $p['id'] ?>"><?= $p['name'] ?></option>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Appointment Type</label>
+      <select name="appointment_type" id="editAppointmentType" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" required>
+        <option value="scheduled">📅 Scheduled Appointment</option>
+        <option value="walkin">🚶 Walk-in Appointment</option>
+      </select>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Dentist</label>
+      <select name="dentist" id="editDentistSelect" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors">
+        <option value="">Select Dentist (Optional)</option>
+        <?php if (isset($dentists) && is_array($dentists)): ?>
+          <?php foreach ($dentists as $d): ?>
+            <?php $dDisplay = $d['name'] ?? trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? '')); ?>
+            <option value="<?= $d['id'] ?>"><?= esc($dDisplay) ?></option>
           <?php endforeach; ?>
         <?php endif; ?>
       </select>
     </div>
 
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Service</label>
+      <?php $serviceModel = new \App\Models\ServiceModel(); $servicesList = $serviceModel->findAll(); ?>
+      <select name="service_id" id="editServiceId" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors">
+        <option value="">Select Service (optional)</option>
+        <?php if (!empty($servicesList) && is_array($servicesList)): foreach ($servicesList as $svc): ?>
+          <?php $dataDur = isset($svc['duration_minutes']) ? 'data-duration="'.(int)$svc['duration_minutes'].'"' : ''; ?>
+          <option value="<?= $svc['id'] ?>" <?= old('service_id') == $svc['id'] ? 'selected' : '' ?> <?= $dataDur ?>><?= esc($svc['name']) ?></option>
+        <?php endforeach; endif; ?>
+      </select>
+    </div>
+
+    <?php if ($user['user_type'] === 'admin'): ?>
     <div class="mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
       <select name="branch" id="editBranchSelect" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors" required>
@@ -452,16 +504,134 @@
       <textarea name="remarks" id="editAppointmentRemarks" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-700 focus:border-purple-500 focus:outline-none transition-colors resize-none" placeholder="Optional remarks"></textarea>
     </div>
 
-    <!-- Show original values -->
-    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-      <h4 class="font-semibold text-gray-700 mb-2">Original Values:</h4>
-      <div id="originalValues" class="text-sm text-gray-600">
-        <!-- Original values will be populated here -->
-      </div>
-    </div>
+    <!-- original values block removed as per UI update -->
 
     <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
       <span id="editSubmitText">Update Appointment</span>
     </button>
   </form>
-</div> 
+</div>
+<?php endif; ?>
+
+<!-- Time Table Modal (Admin/Staff Only) -->
+<?php if (in_array($user['user_type'], ['admin', 'staff'])): ?>
+<div id="timeTableModal" class="hidden fixed inset-0 z-70 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="timeTableModalTitle" aria-hidden="true">
+  <div class="absolute inset-0 bg-black bg-opacity-50" id="timeTableModalBackdrop"></div>
+  <div class="relative bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden z-10 animate-fade-in">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <div class="flex items-center space-x-3">
+        <i class="fas fa-table text-xl"></i>
+        <div>
+          <h5 id="timeTableModalTitle" class="text-lg font-semibold">Available Time Slots</h5>
+          <div class="text-sm opacity-90" id="timeTableDate">Select a time slot for your appointment</div>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <!-- Branch Selector -->
+        <div class="flex items-center space-x-2">
+          <label class="text-sm opacity-90">Branch:</label>
+          <select id="timeTableBranchSelect" class="px-3 py-1 bg-white text-gray-800 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+            <!-- Options populated by JavaScript -->
+          </select>
+        </div>
+        <button id="closeTimeTableModal" class="text-white hover:text-gray-200 text-2xl font-bold" aria-label="Close">&times;</button>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="flex-1 overflow-hidden">
+      <!-- Loading State -->
+      <div id="timeTableLoading" class="flex items-center justify-center h-64">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div class="text-gray-600">Loading time slots...</div>
+        </div>
+      </div>
+
+      <!-- Time Table Container -->
+      <div id="timeTableContainer" class="hidden h-full">
+        <!-- Header: Date + legend (service duration removed) -->
+        <div class="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="text-sm text-gray-700">
+              <span class="font-medium">Date:</span>
+              <span id="selectedDateDisplay" class="text-purple-600 font-medium"></span>
+            </div>
+            <div class="text-sm text-gray-700">
+              <span class="font-medium">Today:</span>
+              <span id="todayDateDisplay" class="text-green-600 font-medium"></span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-4">
+            <!-- Legend -->
+            <div class="flex items-center space-x-3 text-sm">
+              <div class="flex items-center space-x-1">
+                <div class="w-4 h-4 bg-green-500 rounded border"></div>
+                <span class="text-gray-700">Available</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <div class="w-4 h-4 bg-red-500 rounded border"></div>
+                <span class="text-gray-700">Occupied</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <div class="w-4 h-4 bg-gray-300 rounded border"></div>
+                <span class="text-gray-700">Outside Hours</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Grid -->
+        <div class="overflow-auto h-96">
+          <div class="p-4">
+            <div id="timeGrid" class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
+              <!-- Time slots populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Occupied Appointments Info -->
+        <div id="occupiedInfoSection" class="border-t bg-gray-50 p-4 max-h-48 overflow-auto">
+          <h6 class="text-sm font-semibold text-gray-800 mb-2 flex items-center">
+            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+            Occupied Time Slots
+          </h6>
+          <div id="occupiedAppointmentsList" class="space-y-2">
+            <!-- Occupied appointments populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div id="timeTableError" class="hidden flex items-center justify-center h-64">
+        <div class="text-center">
+          <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-4"></i>
+          <div class="text-gray-800 font-medium mb-2">Unable to load time slots</div>
+          <div class="text-gray-600 text-sm mb-4" id="timeTableErrorMessage"></div>
+          <button id="retryTimeTable" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+            <i class="fas fa-redo mr-2"></i>Retry
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="border-t bg-gray-50 px-4 py-3 flex items-center justify-between">
+      <div class="text-sm text-gray-600">
+        <span id="availableSlotsCount">0</span> available slots | 
+        <span id="occupiedSlotsCount">0</span> occupied slots
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="refreshTimeTable" class="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded text-sm transition-colors">
+          <i class="fas fa-sync-alt mr-1"></i>Refresh
+        </button>
+        <button id="cancelTimeSelection" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors text-sm">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?> 

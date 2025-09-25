@@ -82,12 +82,44 @@
                 </div>
             </div>
 
+            <!-- Search and Filter Controls -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex flex-col lg:flex-row gap-4 items-center">
+                    <!-- Search Bar -->
+                    <div class="flex-1 w-full lg:w-auto">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                            <input type="text" id="searchInput" placeholder="Search by patient name, email, or phone..." 
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        </div>
+                    </div>
+                    
+                    <!-- Filter Dropdown -->
+                    <div class="w-full lg:w-auto">
+                        <select id="filterDropdown" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                            <option value="all" data-origin="all">All Appointments</option>
+                            <option value="patient" data-origin="patient">Patient Appointments</option>
+                            <option value="guest" data-origin="guest">Guest Bookings</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Refresh Button -->
+                    <button id="refreshBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
             <!-- Pending Appointments -->
             <div class="bg-white rounded-xl shadow-lg overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-xl font-bold text-gray-800 flex items-center">
                         <i class="fas fa-clock text-orange-500 mr-3"></i>
                         Pending Appointment Requests
+                        <span id="resultCount" class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"></span>
                     </h2>
                     <p class="text-sm text-gray-600 mt-1">Review and approve appointment requests before they become bookings</p>
                 </div>
@@ -106,19 +138,32 @@
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="bg-white divide-y divide-gray-200" id="appointmentsTableBody">
                                 <?php foreach ($pendingAppointments as $appointment): ?>
-                                    <tr class="hover:bg-gray-50" <?= !empty($appointment['dentist_id']) ? 'data-dentist-id="' . esc($appointment['dentist_id']) . '"' : '' ?> >
+                                    <tr class="hover:bg-gray-50 appointment-row" 
+                                        data-origin="<?= !empty($appointment['user_id']) ? 'patient' : 'guest' ?>"
+                                        data-patient-name="<?= strtolower(esc($appointment['patient_name'])) ?>"
+                                        data-patient-email="<?= strtolower(esc($appointment['patient_email'])) ?>"
+                                        data-patient-phone="<?= esc($appointment['patient_phone'] ?? '') ?>"
+                                        <?= !empty($appointment['dentist_id']) ? 'data-dentist-id="' . esc($appointment['dentist_id']) . '"' : '' ?>>
                                         <td class="px-4 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <div class="flex-shrink-0 h-8 w-8">
-                                                    <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                        <i class="fas fa-user text-blue-600 text-xs"></i>
+                                                    <div class="h-8 w-8 rounded-full <?= !empty($appointment['user_id']) ? 'bg-blue-100' : 'bg-green-100' ?> flex items-center justify-center">
+                                                        <i class="fas fa-user <?= !empty($appointment['user_id']) ? 'text-blue-600' : 'text-green-600' ?> text-xs"></i>
                                                     </div>
                                                 </div>
                                                 <div class="ml-3">
-                                                    <div class="text-sm font-medium text-gray-900 truncate max-w-32"><?= $appointment['patient_name'] ?></div>
-                                                    <div class="text-xs text-gray-500 truncate max-w-32"><?= $appointment['patient_email'] ?></div>
+                                                    <div class="text-sm font-medium text-gray-900 truncate max-w-32">
+                                                        <?= esc($appointment['patient_name']) ?>
+                                                        <?php if (empty($appointment['user_id'])): ?>
+                                                            <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Guest</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="text-xs text-gray-500 truncate max-w-32"><?= esc($appointment['patient_email']) ?></div>
+                                                    <?php if (!empty($appointment['patient_phone'])): ?>
+                                                        <div class="text-xs text-gray-400 truncate max-w-32"><?= esc($appointment['patient_phone']) ?></div>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </td>
@@ -155,7 +200,14 @@
                                         <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
                                             <div class="flex flex-col space-y-1 w-44">
                                                 <button onclick="approveAppointment(<?= $appointment['id'] ?>, '<?= $appointment['dentist_name'] ? 'assigned' : 'unassigned' ?>')" 
-                                                        class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate">
+                                                        class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition-colors truncate"
+                                                        data-appointment-id="<?= $appointment['id'] ?>"
+                                                        data-appointment-date="<?= $appointment['appointment_date'] ?>"
+                                                        data-appointment-time="<?= date('H:i', strtotime($appointment['appointment_time'])) ?>"
+                                                        data-branch-id="<?= $appointment['branch_id'] ?>"
+                                                        data-dentist-id="<?= $appointment['dentist_id'] ?? '' ?>"
+                                                        data-duration="<?= $appointment['procedure_duration'] ?? '30' ?>"
+                                                        data-service-id="<?= $appointment['service_id'] ?? '' ?>">
                                                     <i class="fas fa-check mr-1"></i><?= $appointment['dentist_name'] ? 'Approve' : 'Assign & Approve' ?>
                                                 </button>
                                                 <button onclick="declineAppointment(<?= $appointment['id'] ?>)" 
@@ -214,90 +266,324 @@
 </div>
 
 <script>
+// Search and Filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const filterDropdown = document.getElementById('filterDropdown');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const appointmentRows = document.querySelectorAll('.appointment-row');
+    const resultCount = document.getElementById('resultCount');
+    
+    // Initialize result count
+    updateResultCount();
+    
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        filterAppointments();
+    });
+    
+    // Filter dropdown functionality
+    filterDropdown.addEventListener('change', function() {
+        filterAppointments();
+    });
+    
+    // Refresh button functionality
+    refreshBtn.addEventListener('click', function() {
+        const icon = refreshBtn.querySelector('i');
+        icon.classList.add('fa-spin');
+        
+        // Simulate loading and reload the page
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    });
+    
+    function filterAppointments() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const selectedFilter = filterDropdown.value;
+        let visibleCount = 0;
+        
+        appointmentRows.forEach(row => {
+            let showRow = true;
+            
+            // Apply origin filter
+            if (selectedFilter !== 'all') {
+                const rowOrigin = row.getAttribute('data-origin');
+                if (rowOrigin !== selectedFilter) {
+                    showRow = false;
+                }
+            }
+            
+            // Apply search filter
+            if (showRow && searchTerm) {
+                const patientName = row.getAttribute('data-patient-name') || '';
+                const patientEmail = row.getAttribute('data-patient-email') || '';
+                const patientPhone = row.getAttribute('data-patient-phone') || '';
+                
+                const searchableText = `${patientName} ${patientEmail} ${patientPhone}`.toLowerCase();
+                
+                if (!searchableText.includes(searchTerm)) {
+                    showRow = false;
+                }
+            }
+            
+            // Show/hide row
+            if (showRow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        updateResultCount(visibleCount);
+        
+        // Show no results message if needed
+        showNoResultsMessage(visibleCount === 0 && (searchTerm || selectedFilter !== 'all'));
+    }
+    
+    function updateResultCount(count = null) {
+        if (count === null) {
+            count = appointmentRows.length;
+        }
+        resultCount.textContent = `${count} result${count !== 1 ? 's' : ''}`;
+    }
+    
+    function showNoResultsMessage(show) {
+        let noResultsRow = document.getElementById('noResultsRow');
+        
+        if (show && !noResultsRow) {
+            // Create no results row
+            noResultsRow = document.createElement('tr');
+            noResultsRow.id = 'noResultsRow';
+            noResultsRow.innerHTML = `
+                <td colspan="7" class="px-4 py-12 text-center">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                        <h3 class="text-lg font-semibold text-gray-600 mb-2">No appointments found</h3>
+                        <p class="text-gray-500">Try adjusting your search terms or filters.</p>
+                    </div>
+                </td>
+            `;
+            document.getElementById('appointmentsTableBody').appendChild(noResultsRow);
+        } else if (!show && noResultsRow) {
+            noResultsRow.remove();
+        }
+    }
+});
+
+// Auto-refresh functionality with improved UX
+let autoRefreshInterval;
+function startAutoRefresh() {
+    autoRefreshInterval = setInterval(function() {
+        // Only refresh if there are no active modals or user interactions
+        if (!document.querySelector('.fixed.inset-0.bg-gray-600') && !document.activeElement.matches('input, select, textarea')) {
+            location.reload();
+        }
+    }, 30000);
+}
+
+// Start auto-refresh
+startAutoRefresh();
+
+// Pause auto-refresh when user is interacting with search/filters
+document.getElementById('searchInput').addEventListener('focus', () => clearInterval(autoRefreshInterval));
+document.getElementById('searchInput').addEventListener('blur', () => setTimeout(startAutoRefresh, 5000));
+document.getElementById('filterDropdown').addEventListener('focus', () => clearInterval(autoRefreshInterval));
+document.getElementById('filterDropdown').addEventListener('blur', () => setTimeout(startAutoRefresh, 5000));
+
+function showLoading(){
+    const el = document.getElementById('globalLoadingOverlay');
+    if (el) el.classList.remove('hidden');
+}
+
+function hideLoading(){
+    const el = document.getElementById('globalLoadingOverlay');
+    if (el) el.classList.add('hidden');
+}
+</script>
+
+<script>
 function approveAppointment(appointmentId, isAssigned) {
     const confirmMessage = isAssigned === 'assigned'
         ? 'Are you sure you want to approve this appointment? (Dentist is already assigned)'
         : 'Are you sure you want to approve this appointment? You will need to assign a dentist.';
 
     if (confirm(confirmMessage)) {
+        // Get appointment data from the button that was clicked
+        const approveButton = document.querySelector(`button[data-appointment-id="${appointmentId}"]`);
+        if (!approveButton) {
+            alert('Could not find appointment data');
+            return;
+        }
+
+        const appointmentData = {
+            appointment_id: appointmentId,
+            date: approveButton.dataset.appointmentDate,
+            time: approveButton.dataset.appointmentTime,
+            branch_id: approveButton.dataset.branchId,
+            dentist_id: approveButton.dataset.dentistId,
+            duration: approveButton.dataset.duration || '30',
+            service_id: approveButton.dataset.serviceId
+        };
+
         // Before final approval, call server to check conflicts and get suggestions
-            const checkData = new FormData();
-            checkData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+        const checkData = new FormData();
+        checkData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+        checkData.append('appointment_id', appointmentData.appointment_id);
+        checkData.append('date', appointmentData.date);
+        checkData.append('time', appointmentData.time);
+        checkData.append('branch_id', appointmentData.branch_id);
+        checkData.append('dentist_id', appointmentData.dentist_id);
+        checkData.append('duration', appointmentData.duration);
+        if (appointmentData.service_id) {
+            checkData.append('service_id', appointmentData.service_id);
+        }
 
-            showLoading();
+        showLoading();
 
-            fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/check-conflicts`, {
+        fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/check-conflicts`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: checkData
+        })
+        .then(r => r.text())
+        .then(text => {
+            let resp;
+            try { resp = JSON.parse(text); } catch (e) { resp = null; }
+            // If check endpoint returned a conflict payload, show suggestions modal
+            if (resp && resp.success === false && (resp.conflict || resp.hasConflicts)) {
+                hideLoading();
+                // Show conflict modal with suggestions if available
+                showConflictModal(appointmentId, resp.suggestions || [], resp);
+                return;
+            }
+
+            // Otherwise, proceed to approve (server side will still validate strict conflicts)
+            const formData = new FormData();
+            formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+            return fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                body: checkData
-            })
-            .then(r => r.text())
-            .then(text => {
-                let resp;
-                try { resp = JSON.parse(text); } catch (e) { resp = null; }
-                // If check endpoint returned a conflict payload, show suggestions modal
-                if (resp && resp.success === false && resp.conflicts) {
-                    hideLoading();
-                    // Show conflict modal with suggestions if available
-                    showConflictModal(appointmentId, resp.suggestions || []);
-                    return;
-                }
-
-                // Otherwise, proceed to approve (server side will still validate strict conflicts)
-                const formData = new FormData();
-                formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-
-                return fetch(`<?= base_url() ?><?= isset($isStaff) && $isStaff ? 'staff' : 'admin' ?>/appointments/approve/${appointmentId}`, {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    body: formData
-                });
-            })
-            .then(response => {
-                // If previous branch returned early (conflict), response may be undefined
-                if (!response) return;
-                return response.text();
-            })
-            .then(text => {
-                if (!text) return;
-                let data;
-                try { data = JSON.parse(text); } catch (e) { data = null; }
-                hideLoading();
-                if (data && data.success) {
-                    location.reload();
-                } else if (data && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-                    showConflictModal(appointmentId, data.suggestions);
+                body: formData
+            });
+        })
+        .then(response => {
+            // If previous branch returned early (conflict), response may be undefined
+            if (!response) return;
+            return response.text();
+        })
+        .then(text => {
+            if (!text) return;
+            let data;
+            try { data = JSON.parse(text); } catch (e) { data = null; }
+            hideLoading();
+            if (data && data.success) {
+                location.reload();
+            } else if (data && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+                showConflictModal(appointmentId, data.suggestions);
+            } else {
+                if (data && data.message && data.message.includes('No dentists available')) {
+                    alert('No dentists available for auto-assignment. Please manually select a dentist.');
+                    showDentistSelectionModal(appointmentId);
                 } else {
-                    if (data && data.message && data.message.includes('No dentists available')) {
-                        alert('No dentists available for auto-assignment. Please manually select a dentist.');
-                        showDentistSelectionModal(appointmentId);
-                    } else {
-                        alert('Error: ' + (data && data.message ? data.message : 'Unknown error'));
-                    }
+                    alert('Error: ' + (data && data.message ? data.message : 'Unknown error'));
                 }
-            })
-            .catch(error => { hideLoading(); console.error('Error:', error); alert('Failed to check/approve: ' + error.message); });
+            }
+        })
+        .catch(error => { 
+            hideLoading(); 
+            console.error('Error:', error); 
+            alert('Failed to check/approve: ' + error.message); 
+        });
     }
 }
 
-function showConflictModal(appointmentId, suggestions) {
-    // Build modal content
+function showConflictModal(appointmentId, suggestions, conflictData) {
+    // Build modal content with enhanced admin options
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50';
-        // Render suggestions as radio list so user can explicitly pick one
-        const suggestionsHtml = suggestions.length ? suggestions.map((s, idx) => `
-            <li class="py-1 flex items-center"><label class="flex items-center space-x-2"><input type="radio" name="suggestion" value="${s}" ${idx===0? 'checked':''} class="suggestion-radio" /><span>${s}</span></label></li>
-        `).join('') : '<li class="py-1 text-gray-500">No suggestions available</li>';
+    
+    // Build conflict details
+    const conflictDetails = conflictData ? `
+        <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <h4 class="text-sm font-semibold text-red-800 mb-2">Conflict Details:</h4>
+            <p class="text-sm text-red-700">${conflictData.message || 'Scheduling conflict detected'}</p>
+            ${conflictData.metadata ? `
+                <div class="mt-2 text-xs text-red-600">
+                    Requested: ${conflictData.metadata.requested_date} at ${conflictData.metadata.requested_time} 
+                    (${conflictData.metadata.duration_minutes}min)
+                </div>
+            ` : ''}
+        </div>
+    ` : '';
+    
+    // Render suggestions as radio list so user can explicitly pick one
+    const suggestionsHtml = suggestions.length ? suggestions.map((s, idx) => {
+        // Use server-provided timestamp for robust client-side parsing
+        const ts = s.timestamp || (s.datetime ? Math.floor(new Date(s.datetime).getTime()/1000) : null);
+        const timeDisplay = s.time || s;
+        const endTime = s.ends_at ? ` (ends ${s.ends_at})` : '';
+        const aligned = s.aligned ? ` <span class="text-blue-600 text-xs">[${s.aligned}]</span>` : '';
+        return `
+            <li class="py-2 flex items-center border-b border-gray-100 last:border-b-0">
+                <label class="flex items-center space-x-3 w-full cursor-pointer hover:bg-gray-50 p-2 rounded">
+                    <input type="radio" name="suggestion" value="${ts}" data-datetime="${s.datetime || ''}" ${idx===0? 'checked':''} class="suggestion-radio" />
+                    <span class="flex-1">
+                        <strong>${timeDisplay}</strong>${endTime}${aligned}
+                        ${s.available === false ? ' <span class="text-red-500 text-xs">(unavailable)</span>' : ''}
+                    </span>
+                </label>
+            </li>
+        `;
+    }).join('') : '<li class="py-2 text-gray-500 text-center">No alternative suggestions available</li>';
+    
+    const hasValidSuggestions = suggestions.length > 0 && suggestions.some(s => s.available !== false);
+    
     modal.innerHTML = `
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-screen overflow-y-auto">
                 <div class="p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Scheduling Conflict Detected</h3>
-                    <p class="text-sm text-gray-600 mb-4">This appointment conflicts with existing bookings. You can choose a suggested time to auto-reschedule and approve.</p>
-                        <ul id="suggestionList" class="mb-4 list-disc list-inside text-sm text-gray-800">${suggestionsHtml}</ul>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" onclick="closeConflictModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Cancel</button>
-                        <button type="button" onclick="autoRescheduleApprove(${appointmentId})" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">Auto-reschedule & Approve</button>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>
+                        Scheduling Conflict Detected
+                    </h3>
+                    
+                    ${conflictDetails}
+                    
+                    <div class="mb-6">
+                        <p class="text-sm text-gray-600 mb-4">
+                            This appointment conflicts with existing bookings. Choose an option below:
+                        </p>
+                        
+                        ${hasValidSuggestions ? `
+                            <div class="mb-4">
+                                <h4 class="text-sm font-semibold text-gray-800 mb-2">Suggested Alternative Times:</h4>
+                                <ul id="suggestionList" class="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                                    ${suggestionsHtml}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="flex flex-col space-y-3">
+                        ${hasValidSuggestions ? `
+                            <button type="button" onclick="autoRescheduleApprove(${appointmentId})" 
+                                    class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-calendar-check mr-2"></i>Reschedule & Approve
+                            </button>
+                        ` : ''}
+                        
+                        <button type="button" onclick="approveAnyway(${appointmentId})" 
+                                class="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Approve Anyway (Override Conflict)
+                        </button>
+                        
+                        <button type="button" onclick="closeConflictModal()" 
+                                class="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-times mr-2"></i>Cancel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -312,43 +598,107 @@ function closeConflictModal() {
 }
 
 function autoRescheduleApprove(appointmentId) {
-    // Pick first suggestion and post auto_reschedule param
-        // Pick selected suggestion radio value
-        const radio = document.querySelector('.suggestion-radio:checked');
-        const chosen = radio ? radio.value : null;
-        if (!chosen) {
-            alert('No suggested time selected to auto-reschedule');
-            return;
+    // Pick selected suggestion radio value
+    const radio = document.querySelector('.suggestion-radio:checked');
+    const chosenTs = radio ? parseInt(radio.value, 10) : null;
+    if (!chosenTs) {
+        alert('No suggested time selected to auto-reschedule');
+        return;
+    }
+
+    // Prefer server-provided datetime (YYYY-MM-DD HH:MM:SS) to avoid timezone/formatting issues
+    const radioEl = radio;
+    let chosenDate = null;
+    let chosenTime = null;
+    const serverDatetime = radioEl.getAttribute('data-datetime');
+    if (serverDatetime) {
+        // serverDatetime expected as 'YYYY-MM-DD HH:MM:SS'
+        const parts = serverDatetime.split(' ');
+        if (parts.length >= 2) {
+            chosenDate = parts[0];
+            chosenTime = parts[1].slice(0,5);
         }
+    }
 
-        const formData = new FormData();
-        formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-        formData.append('auto_reschedule', '1');
-        formData.append('chosen_time', chosen);
+    if (!chosenDate || !chosenTime) {
+        // fallback to timestamp-derived values
+        const dt = new Date(chosenTs * 1000);
+        chosenDate = dt.toISOString().slice(0,10);
+        chosenTime = dt.toTimeString().slice(0,5); // HH:MM
+    }
 
-        showLoading();
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    formData.append('auto_reschedule', '1');
+    // Send the server-provided datetime (preferred) and timestamp (fallback)
+    const serverDatetimeSend = serverDatetime || '';
+    if (serverDatetimeSend) {
+        formData.append('chosen_datetime', serverDatetimeSend);
+    }
+    formData.append('chosen_timestamp', String(chosenTs));
 
-        fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: formData
-        })
-        .then(r => r.text())
-        .then(text => {
-            let data;
-            try { data = JSON.parse(text); } catch (e) { data = null; }
-            hideLoading();
-            if (data && data.success) {
-                closeConflictModal();
-                location.reload();
-            } else {
-                alert('Auto-reschedule failed: ' + (data && data.message ? data.message : 'Unknown error'));
-            }
-        })
-        .catch(err => { hideLoading(); console.error('Error:', err); alert('Auto-reschedule request failed'); });
+    showLoading();
+    closeConflictModal();
 
-    // Note: the request to approve is sent above; no duplicate request here.
+    fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.text())
+    .then(text => {
+        let data;
+        try { data = JSON.parse(text); } catch (e) { data = null; }
+        hideLoading();
+        if (data && data.success) {
+            alert('Appointment rescheduled and approved successfully!');
+            location.reload();
+        } else {
+            alert('Failed to reschedule appointment: ' + (data ? data.message : 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error:', error);
+        alert('Failed to reschedule appointment: ' + error.message);
+    });
 }
+
+function approveAnyway(appointmentId) {
+    if (!confirm('Are you sure you want to approve this appointment despite the scheduling conflict? This may cause overlapping appointments.')) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+    formData.append('force_approve', '1'); // Flag to override conflicts
+
+    showLoading();
+    closeConflictModal();
+
+    fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => r.text())
+    .then(text => {
+        let data;
+        try { data = JSON.parse(text); } catch (e) { data = null; }
+        hideLoading();
+        if (data && data.success) {
+            alert('Appointment approved successfully (conflict overridden)!');
+            location.reload();
+        } else {
+            alert('Failed to approve appointment: ' + (data ? data.message : 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error:', error);
+        alert('Failed to approve appointment: ' + error.message);
+    });
+    }
 
 function showDentistSelectionModal(appointmentId) {
     // Create modal for dentist selection
@@ -407,7 +757,11 @@ function confirmDentistAssignment(appointmentId) {
     const formData = new FormData();
     formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
     formData.append('dentist_id', dentistId);
-    
+
+    // Improve UX: show global loading overlay while request is in-flight
+    closeDentistModal();
+    showLoading();
+
     fetch(`<?= base_url() ?>admin/appointments/approve/${appointmentId}`, {
         method: 'POST',
         headers: {
@@ -422,17 +776,19 @@ function confirmDentistAssignment(appointmentId) {
             data = JSON.parse(text);
         } catch (e) {
             console.error('Non-JSON response:', text);
+            hideLoading();
             alert('Server returned an unexpected response. Please check the logs.');
             return;
         }
+        hideLoading();
         if (data.success) {
-            closeDentistModal();
             location.reload();
         } else {
             alert('Error: ' + (data.message || 'Unknown error'));
         }
     })
     .catch(error => {
+        hideLoading();
         console.error('Error:', error);
         alert('An error occurred while approving the appointment. Please check the console for details.');
     });
@@ -503,21 +859,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// Auto-refresh every 30 seconds to check for new pending appointments
-setInterval(function() {
-    location.reload();
-}, 30000);
-
-function showLoading(){
-    const el = document.getElementById('globalLoadingOverlay');
-    if (el) el.classList.remove('hidden');
-}
-
-function hideLoading(){
-    const el = document.getElementById('globalLoadingOverlay');
-    if (el) el.classList.add('hidden');
-}
 </script>
 
 <?= view('templates/footer') ?> 

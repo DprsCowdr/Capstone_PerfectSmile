@@ -124,12 +124,20 @@ class InvoiceService
         // Debug: Log the incoming data
         log_message('debug', 'InvoiceService::create - incoming data: ' . json_encode($data));
 
+    // Prepare conservative defaults. Do NOT attach optional fields like discount/final_amount
+        // to the insert payload until we've confirmed the invoices table actually has those columns.
+    $tableFields = [];
+        $hasFinalAmount = false;
+
     try {
-            // Ensure required numeric fields exist so model validation doesn't fail on insert
-            $data['total_amount'] = isset($data['total_amount']) ? $data['total_amount'] : 0;
-            // DB uses `discount` column
-            $data['discount'] = isset($data['discount']) ? $data['discount'] : 0;
-            $data['final_amount'] = isset($data['final_amount']) ? $data['final_amount'] : $data['total_amount'];
+
+        // Ensure required numeric fields exist so model validation doesn't fail on insert
+        $data['total_amount'] = isset($data['total_amount']) ? $data['total_amount'] : 0;
+        // Keep discount locally and remove it from payload to avoid inserting unknown columns.
+        $localDiscount = isset($data['discount']) ? floatval($data['discount']) : 0;
+        if (isset($data['discount'])) unset($data['discount']);
+        // Remove any final_amount from the incoming payload; we'll compute and update it after insert
+        if (isset($data['final_amount'])) unset($data['final_amount']);
 
             // Proactively remove keys that aren't actual columns in the invoices table to avoid DB errors
             try {
@@ -142,21 +150,64 @@ class InvoiceService
                     $tableFields = property_exists($this->invoiceModel, 'allowedFields') ? $this->invoiceModel->allowedFields : [];
                 }
 
-                // Ensure critical fields are always preserved
+                // Warn if critical fields are missing from the invoices table.
                 $criticalFields = ['patient_id', 'service_id', 'total_amount', 'discount', 'final_amount', 'invoice_number'];
+                $missingCritical = [];
                 foreach ($criticalFields as $field) {
                     if (!in_array($field, $tableFields)) {
-                        $tableFields[] = $field;
+                        $missingCritical[] = $field;
                     }
+                }
+                if (!empty($missingCritical)) {
+                    log_message('warning', 'InvoiceService::create - invoices table missing expected columns: ' . implode(', ', $missingCritical));
+                }
+
+                // Detect which patient column the invoices table uses: prefer patient_id, fallback to user_id
+                $patientColumn = in_array('patient_id', $tableFields) ? 'patient_id' : (in_array('user_id', $tableFields) ? 'user_id' : 'patient_id');
+
+                // Remember if final_amount exists so we only attempt to write it later when updating totals
+                $hasFinalAmount = in_array('final_amount', $tableFields);
+
+                // Determine incoming patient/user id from payload
+                $incomingPatient = $data['patient_id'] ?? ($data['user_id'] ?? null);
+
+                // If there's an incoming id, validate the referenced user exists to avoid FK constraint failures
+                if (!empty($incomingPatient)) {
+                    try {
+                        $foundUser = $this->userModel->find($incomingPatient);
+                        if (!$foundUser) {
+                            log_message('error', 'InvoiceService::create - referenced user not found for id: ' . $incomingPatient);
+                            return ['success' => false, 'message' => 'Invalid patient/user id: ' . $incomingPatient];
+                        }
+                        // Ensure the payload uses the correct column name the DB expects
+                        $data[$patientColumn] = $incomingPatient;
+                        // Remove alternate key to avoid inserting both
+                        if ($patientColumn === 'patient_id' && isset($data['user_id'])) unset($data['user_id']);
+                        if ($patientColumn === 'user_id' && isset($data['patient_id'])) unset($data['patient_id']);
+                        log_message('debug', 'InvoiceService::create - using invoices table column "' . $patientColumn . '" for user id ' . $incomingPatient);
+                    } catch (\Throwable $e) {
+                        log_message('error', 'InvoiceService::create - error validating referenced user: ' . $e->getMessage());
+                        return ['success' => false, 'message' => 'Error validating patient/user id'];
+                    }
+                } else {
+                    // No patient/user id in payload: service or controller should have enforced this earlier
+                    log_message('warning', 'InvoiceService::create - no patient_id/user_id provided in payload');
                 }
 
                 $removed = [];
+
+                // If invoice table doesn't have discount, note it (we already removed discount from payload)
+                if (!in_array('discount', $tableFields) && $localDiscount > 0) {
+                    log_message('debug', 'InvoiceService::create - discount column not present in invoices table; will compute totals without storing discount column.');
+                }
+
                 foreach (array_keys($data) as $key) {
                     if (!in_array($key, $tableFields)) {
                         $removed[] = $key;
                         unset($data[$key]);
                     }
                 }
+
                 if (!empty($removed)) {
                     log_message('warning', 'InvoiceService::create - removed non-table fields before insert: ' . implode(', ', $removed));
                 }
@@ -210,12 +261,23 @@ class InvoiceService
                 $this->itemModel->insert($itm);
             }
 
-            // Recalculate totals and update
-            $totals = $this->calculateTotals($items, $data['discount'] ?? 0);
-            $this->invoiceModel->update($id, [
+            // Recalculate totals and update. Only include final_amount if the invoices table supports it.
+            $totals = $this->calculateTotals($items, $localDiscount);
+            $updateData = [
                 'total_amount' => $totals['subtotal'],
-                'final_amount' => $totals['total'],
-            ]);
+            ];
+            if ($hasFinalAmount) {
+                $updateData['final_amount'] = $totals['total'];
+            }
+            try {
+                $this->invoiceModel->update($id, $updateData);
+            } catch (\Throwable $_e) {
+                // Best-effort: if update fails because final_amount doesn't exist, retry without it
+                if ($hasFinalAmount) {
+                    unset($updateData['final_amount']);
+                    try { $this->invoiceModel->update($id, $updateData); } catch (\Throwable $__e) { /* ignore */ }
+                }
+            }
 
             return ['success' => true, 'id' => $id];
         } catch (\Throwable $e) {
@@ -485,6 +547,12 @@ class InvoiceService
         // Generate invoice number if not provided
         if (empty($data['invoice_number'])) {
             $data['invoice_number'] = $this->generateInvoiceNumber();
+        }
+
+        // Map legacy `user_id` to `patient_id` if needed (some clients still post user_id)
+        if (empty($data['patient_id']) && !empty($data['user_id'])) {
+            $data['patient_id'] = $data['user_id'];
+            log_message('debug', 'InvoiceService::createInvoice - mapped user_id to patient_id: ' . $data['patient_id']);
         }
 
         // Log the data for debugging

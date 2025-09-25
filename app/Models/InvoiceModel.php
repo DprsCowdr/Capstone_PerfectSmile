@@ -15,6 +15,7 @@ class InvoiceModel extends Model
 	protected $allowedFields = [
 		'invoice_number',
 		'patient_id',
+		'user_id',
 		'service_id',
 		'total_amount',
 		'discount',
@@ -29,7 +30,10 @@ class InvoiceModel extends Model
 	protected $updatedField = 'updated_at';
 
 	protected $validationRules = [
-		'patient_id' => 'required|integer',
+		// Server-side controller/service will enforce that a patient exists.
+		// Make model tolerant: patient_id may be provided or legacy user_id may be used at DB level.
+		'patient_id' => 'permit_empty|integer',
+		'user_id' => 'permit_empty|integer',
 		'service_id' => 'permit_empty|integer',
 		'total_amount' => 'required|decimal'
 	];

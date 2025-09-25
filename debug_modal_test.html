@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Modal Test</title>
+    <link href="public/css/time-table-modal.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .form-field { margin: 10px 0; }
+        input, select { padding: 8px; margin: 5px; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Debug Modal Test</h1>
+    
+    <div class="test-section">
+        <h2>Form Fields (for modal to read)</h2>
+        <div class="form-field">
+            <label>Date:</label>
+            <input type="date" name="date" value="2025-01-18">
+        </div>
+        <div class="form-field">
+            <label>Service:</label>
+            <select name="service_id">
+                <option value="1">Cleaning</option>
+                <option value="2">Consultation</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label>Dentist:</label>
+            <select name="dentist_id">
+                <option value="1">Dr. Smith</option>
+                <option value="2">Dr. Jones</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label>Selected Time (hidden):</label>
+            <select name="appointment_time" style="display: none;">
+                <option value="">Select time...</option>
+            </select>
+            <div id="selectedTimeDisplay">No time selected</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Modal Controls</h2>
+        <button type="button" id="openTimeTableModal" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            🗓️ Open Time Table
+        </button>
+        <button type="button" id="testModalExists" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+            Test Modal Exists
+        </button>
+        <button type="button" id="testConsole" class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600">
+            Test Console
+        </button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Debug Log</h2>
+        <div id="debugLog" style="background: #f5f5f5; padding: 10px; min-height: 100px; font-family: monospace; white-space: pre-wrap;"></div>
+    </div>
+
+    <!-- Load the calendar admin JavaScript -->
+    <script src="public/js/calendar-admin.js"></script>
+    
+    <script>
+        const debugLog = document.getElementById('debugLog');
+        
+        function addLog(message) {
+            console.log(message);
+            debugLog.textContent += '[' + new Date().toLocaleTimeString() + '] ' + message + '\n';
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+        
+        // Test buttons
+        document.getElementById('testModalExists').addEventListener('click', () => {
+            const modal = document.getElementById('timeTableModal');
+            const button = document.getElementById('openTimeTableModal');
+            
+            addLog('Modal exists: ' + (modal ? 'YES' : 'NO'));
+            addLog('Button exists: ' + (button ? 'YES' : 'NO'));
+            addLog('TimeTableModal class available: ' + (typeof TimeTableModal !== 'undefined' ? 'YES' : 'NO'));
+            addLog('timeTableModalInstance: ' + (typeof timeTableModalInstance !== 'undefined' ? timeTableModalInstance : 'UNDEFINED'));
+        });
+        
+        document.getElementById('testConsole').addEventListener('click', () => {
+            addLog('Testing console output...');
+            
+            // Try to call the modal initialization
+            if (typeof initTimeTableModal === 'function') {
+                addLog('initTimeTableModal function exists');
+                try {
+                    const instance = initTimeTableModal();
+                    addLog('Modal instance created: ' + (instance ? 'YES' : 'NO'));
+                } catch (e) {
+                    addLog('Error initializing modal: ' + e.message);
+                }
+            } else {
+                addLog('initTimeTableModal function NOT FOUND');
+            }
+        });
+        
+        // Log page load
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('DOM Content Loaded');
+            
+            // Check if the modal button click works
+            const button = document.getElementById('openTimeTableModal');
+            if (button) {
+                addLog('Found modal button, checking click handler...');
+                
+                // Add our own click handler to debug
+                button.addEventListener('click', () => {
+                    addLog('Modal button clicked!');
+                });
+            }
+        });
+        
+        // Capture all console messages
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('LOG: ' + args.join(' '));
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('WARN: ' + args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('ERROR: ' + args.join(' '));
+        };
+        
+        addLog('Debug page loaded');
+    </script>
+</body>
+</html>

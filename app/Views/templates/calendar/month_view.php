@@ -67,6 +67,14 @@
             $approvedCount = 0;
             if ($date && isset($appointments) && is_array($appointments)) {
               foreach ($appointments as $apt) {
+                // If current viewer is a patient, only count badges for appointments that belong to them
+                if (isset($user['user_type']) && $user['user_type'] === 'patient') {
+                  // appointment owner may be stored in user_id or patient_id depending on source
+                  $aptOwner = $apt['user_id'] ?? ($apt['patient_id'] ?? null);
+                  if ($aptOwner === null || ($user['id'] ?? null) == null || $aptOwner != ($user['id'] ?? null)) {
+                    continue;
+                  }
+                }
                 $apt_date = $apt['appointment_date'] ?? (isset($apt['appointment_datetime']) ? substr($apt['appointment_datetime'], 0, 10) : null);
                 if ($apt_date === $date) {
                   $hasAppointments = true;
@@ -81,8 +89,8 @@
               echo ' title="Cannot book in the past"';
             }
             if (!$cell['inactive'] && !$isPast) {
-              // Use a safe inline wrapper to avoid ReferenceError if the handler isn't initialized yet
-              echo ' onclick="(typeof window.openAddAppointmentPanelWithTime === \'function\') ? window.openAddAppointmentPanelWithTime(\'' . $date . '\', \'\') : console.warn(\'openAddAppointmentPanelWithTime not ready\', \'' . $date . '\')"';
+              // Mark cell for delegated handler to open the add-appointment panel
+              echo ' data-open-add data-date="' . $date . '"';
             }
             echo '>';
             

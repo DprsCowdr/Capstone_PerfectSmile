@@ -1,0 +1,177 @@
+/* Time Table Modal Styles */
+.time-slot {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.time-slot:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.time-slot.available {
+  border: 2px solid #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.time-slot.available:hover {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: #059669;
+}
+
+.time-slot.occupied {
+  border: 2px solid #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+}
+
+.time-slot.occupied:hover {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  border-color: #dc2626;
+}
+
+.time-slot.outside-hours {
+  border: 2px solid #d1d5db;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  opacity: 0.7;
+}
+
+.time-slot.selected {
+  border: 3px solid #3b82f6;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+#timeGrid {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+/* Modal animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #timeGrid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+  }
+  
+  .time-slot {
+    min-height: 50px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Time slot status indicators */
+.time-slot::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.time-slot.available::after {
+  background-color: #10b981;
+}
+
+.time-slot.occupied::after {
+  background-color: #ef4444;
+}
+
+.time-slot.outside-hours::after {
+  background-color: #6b7280;
+}
+
+/* Loading animation */
+.time-slot-loading {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Occupied appointments list styling */
+.occupied-appointment {
+  border-left: 4px solid #ef4444;
+  transition: all 0.2s ease;
+}
+
+.occupied-appointment:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal backdrop blur effect */
+#timeTableModal .absolute.inset-0 {
+  backdrop-filter: blur(2px);
+}
+
+/* Branch selector styling */
+#timeTableBranchSelect {
+  min-width: 150px;
+}
+
+/* Selected time display enhancement */
+#selectedTimeDisplay {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+/* Button hover effects */
+#openTimeTableModal:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Time table modal z-index fix */
+#timeTableModal {
+  z-index: 9999;
+}
+
+/* Scrollbar styling for modal content */
+#timeTableContainer .overflow-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+#timeTableContainer .overflow-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+#timeTableContainer .overflow-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+#timeTableContainer .overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

@@ -13,6 +13,12 @@ if (!is_array($user)) {
 
 $userType = $user['user_type'] ?? null;
 $currentUrl = current_url();
+
+// Force admin context if we're on an admin route (even if user_type is missing)
+$isAdminRoute = strpos($currentUrl, '/admin/') !== false || strpos($currentUrl, '/admin') !== false;
+if ($isAdminRoute && !$userType) {
+    $userType = 'admin';
+}
 ?>
 
 <!-- Enhanced Sidebar Styles -->
@@ -251,6 +257,8 @@ $currentUrl = current_url();
                 <?= nav_link(base_url('admin/patients'), 'fas fa-users', 'Patients', $currentUrl) ?>
                 <?= nav_link(base_url('admin/appointments'), 'fas fa-calendar-alt', 'Appointments', $currentUrl) ?>
                 <?= nav_link(base_url('admin/services'), 'fas fa-stethoscope', 'Services', $currentUrl) ?>
+                <?= nav_link(base_url('admin/procedures'), 'fas fa-procedures', 'Procedures', $currentUrl) ?>
+                <?= nav_link(base_url('admin/prescriptions'), 'fas fa-file-prescription', 'Prescriptions', $currentUrl) ?>
                 <?= nav_link(base_url('admin/waitlist'), 'fas fa-clipboard-list', 'Waitlist', $currentUrl) ?>
                 <?= nav_link(base_url('admin/records'), 'fas fa-folder-open', 'Records', $currentUrl) ?>
                 <?= nav_link(base_url('admin/invoices'), 'fas fa-file-invoice-dollar', 'Invoices', $currentUrl) ?>

@@ -149,10 +149,22 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->post('roles/update/(:num)', 'RoleController::update/$1');
     $routes->get('roles/show/(:num)', 'RoleController::show/$1');
     $routes->post('roles/delete/(:num)', 'RoleController::delete/$1');
-    $routes->match(['get','post'], 'roles/assign/(:num)', 'RoleController::assign/$1');
+    $routes->match(['GET','POST'], 'roles/assign/(:num)', 'RoleController::assign/$1');
     $routes->post('roles/remove_user/(:num)/(:num)', 'RoleController::remove_user/$1/$2');
     $routes->get('roles/search-users', 'RoleController::searchUsers');
     $routes->get('roles/searchUsers', 'RoleController::searchUsers');
+    // Backwards-compatible admin-prefixed routes (views use admin/roles/* URLs)
+    $routes->get('admin/roles', 'RoleController::index');
+    $routes->get('admin/roles/create', 'RoleController::create');
+    $routes->post('admin/roles/create', 'RoleController::store');
+    $routes->get('admin/roles/edit/(:num)', 'RoleController::edit/$1');
+    $routes->post('admin/roles/update/(:num)', 'RoleController::update/$1');
+    $routes->get('admin/roles/show/(:num)', 'RoleController::show/$1');
+    $routes->post('admin/roles/delete/(:num)', 'RoleController::delete/$1');
+    $routes->match(['GET','POST'], 'admin/roles/assign/(:num)', 'RoleController::assign/$1');
+    $routes->post('admin/roles/remove_user/(:num)/(:num)', 'RoleController::remove_user/$1/$2');
+    $routes->get('admin/roles/search-users', 'RoleController::searchUsers');
+    $routes->get('admin/roles/searchUsers', 'RoleController::searchUsers');
     // Branch management handled by BranchController
     $routes->get('branches', 'BranchController::index');
     $routes->get('branches/create', 'BranchController::create');
@@ -213,7 +225,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
 $routes->post('staff/notifications/handle/(:num)', 'Staff::markNotificationHandled/$1');
 
 // Availability events (calendar-wide) - authenticated check is performed in controller
-$routes->match(['get','post'], 'calendar/availability-events', 'Availability::events');
+$routes->match(['GET','POST'], 'calendar/availability-events', 'Availability::events');
 
 // Checkup routes (accessible by admin and doctor)
 $routes->group('checkup', ['filter' => 'auth'], function($routes) {
@@ -250,13 +262,13 @@ $routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->get('availability', 'DentistAvailability::index');
     $routes->post('availability/set', 'Dentist::setAvailability');
     // Availability endpoints (events can be consumed by any authenticated calendar view)
-    $routes->match(['get','post'], 'calendar/availability-events', 'Availability::events');
+    $routes->match(['GET','POST'], 'calendar/availability-events', 'Availability::events');
     $routes->post('availability/create', 'Availability::create');
     $routes->post('availability/createRecurring', 'Availability::createRecurring');
     $routes->get('availability/list', 'Availability::list');
     $routes->post('availability/update', 'Availability::update');
     // Allow listing availability for a specific user (dentist) within dentist-scoped routes
-    $routes->match(['get','post'], 'availability/listForUser', 'Availability::listForUser');
+    $routes->match(['GET','POST'], 'availability/listForUser', 'Availability::listForUser');
     $routes->post('availability/delete', 'Availability::delete');
     $routes->post('appointments/approve/(:num)', 'Dentist::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'Dentist::declineAppointment/$1');
@@ -311,10 +323,14 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     // Patient appointment management (cancel only - edit/delete removed to avoid accidental changes)
     // $routes->get('appointments/edit/(:num)', 'Patient::editAppointment/$1');
     $routes->post('appointments/cancel/(:num)', 'Patient::cancelAppointment/$1');
-    // $routes->post('appointments/delete/(:num)', 'Patient::deleteAppointment/$1');
+    $routes->post('appointments/delete/(:num)', 'Patient::deleteAppointment/$1');
     // $routes->post('appointments/update/(:num)', 'Patient::updateAppointment/$1');
     // Read-only view for appointment details
     $routes->get('appointments/view/(:num)', 'Patient::viewAppointment/$1');
+    // Patient appointment details endpoint for AJAX (read-only, own appointments only)
+    $routes->get('appointments/details/(:num)', 'Patient::getAppointmentDetails/$1');
+    // Patient services endpoint (for service details lookup)
+    $routes->get('services/(:num)', 'Patient::getService/$1');
     $routes->post('save-profile', 'Patient::saveProfile');
     // New patient modules
     $routes->get('billing', 'Patient::billing');
@@ -398,6 +414,8 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
     // Allow staff to approve or decline appointments (matches admin/dentist endpoints)
     $routes->post('appointments/approve/(:num)', 'StaffController::approveAppointment/$1');
     $routes->post('appointments/decline/(:num)', 'StaffController::declineAppointment/$1');
+    // Get appointment details (for modal display)
+    $routes->get('appointments/details/(:num)', 'StaffController::getAppointmentDetails/$1');
     // Approve/reject patient-submitted change requests
     $routes->post('appointments/approve-change/(:num)', 'Staff::approveChangeRequest/$1');
     $routes->post('appointments/reject-change/(:num)', 'Staff::rejectChangeRequest/$1');
@@ -414,4 +432,5 @@ $routes->group('staff', ['filter' => 'auth'], function($routes) {
 // Public appointments AJAX endpoints (used by patient calendar JS)
 $routes->post('appointments/day-appointments', 'Appointments::dayAppointments');
 $routes->post('appointments/available-slots', 'Appointments::availableSlots');
+$routes->get('appointments/available-slots', 'Appointments::availableSlots'); // Allow GET for debug mode
 $routes->post('appointments/check-conflicts', 'Appointments::checkConflicts');

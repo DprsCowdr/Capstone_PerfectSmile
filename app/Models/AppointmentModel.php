@@ -270,16 +270,17 @@ class AppointmentModel extends Model
     }
 
     /**
-     * Get appointments pending dentist approval
+     * Get appointments pending dentist approval (both patient appointments and guest bookings)
      */
     public function getPendingApprovalAppointments($dentistId = null)
     {
         $query = $this->select('appointments.*, 
-                               user.name as patient_name, 
-                               user.email as patient_email, 
+                               COALESCE(user.name, appointments.patient_name) as patient_name, 
+                               COALESCE(user.email, appointments.patient_email) as patient_email, 
+                               COALESCE(user.phone, appointments.patient_phone) as patient_phone,
                                branches.name as branch_name,
                                dentists.name as dentist_name')
-                      ->join('user', 'user.id = appointments.user_id')
+                      ->join('user', 'user.id = appointments.user_id', 'left') // Left join to include guest bookings
                       ->join('branches', 'branches.id = appointments.branch_id', 'left')
                       ->join('user as dentists', 'dentists.id = appointments.dentist_id', 'left')
                       ->where('appointments.approval_status', 'pending') // Fixed: Use approval_status = 'pending'
@@ -925,6 +926,14 @@ class AppointmentModel extends Model
     {
         $db = \Config\Database::connect();
 
+        // DEBUG: Let's first check what appointments exist for this date
+        $debugBuilder = $db->table('appointments a')
+                           ->select('a.id, a.appointment_datetime, a.approval_status, a.status, a.branch_id')
+                           ->where('DATE(a.appointment_datetime)', $date);
+        if ($branchId) $debugBuilder->where('a.branch_id', $branchId);
+        $debugRows = $debugBuilder->get()->getResultArray();
+        log_message('debug', "getOccupiedIntervals debug for date=$date, branch=$branchId: " . json_encode($debugRows));
+
         // Build subquery that aggregates service durations per appointment
         $sub = "(SELECT aps.appointment_id, SUM(COALESCE(s.duration_max_minutes, s.duration_minutes, 0)) AS total_service_minutes
                   FROM appointment_service aps
@@ -932,7 +941,7 @@ class AppointmentModel extends Model
                   GROUP BY aps.appointment_id) svc";
 
         $builder = $db->table('appointments a')
-                      ->select('a.id, a.appointment_datetime, COALESCE(svc.total_service_minutes, a.procedure_duration, 0) AS duration_minutes, a.user_id')
+                      ->select('a.id, a.appointment_datetime, COALESCE(svc.total_service_minutes, a.procedure_duration, 0) AS duration_minutes, a.user_id, a.approval_status, a.status')
                       ->join($sub, 'svc.appointment_id = a.id', 'left')
                       ->where('DATE(a.appointment_datetime)', $date)
                       ->whereIn('a.approval_status', ['approved','auto_approved'])
@@ -942,6 +951,8 @@ class AppointmentModel extends Model
         if ($dentistId) $builder->where('a.dentist_id', $dentistId);
 
         $rows = $builder->get()->getResultArray();
+        log_message('debug', "getOccupiedIntervals filtered results: " . json_encode($rows));
+        
         $out = [];
         foreach ($rows as $r) {
             $start = strtotime($r['appointment_datetime']);
@@ -949,6 +960,7 @@ class AppointmentModel extends Model
             $end = $start + ($dur * 60);
             $out[] = [$start, $end, $r['id'], $r['user_id'] ?? null];
         }
+        log_message('debug', "getOccupiedIntervals final intervals: " . json_encode($out));
         return $out;
     }
 }

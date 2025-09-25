@@ -94,13 +94,13 @@ $calendarTitle = date('F Y');
     <div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
       <!-- Date Navigation -->
       <div class="flex items-center gap-2 sm:gap-4">
-        <button type="button" class="p-2 rounded hover:bg-gray-100 touch-manipulation min-h-10 min-w-10" id="prevBtn" onclick="handleCalendarNav(-1)">
+  <button type="button" class="p-2 rounded hover:bg-gray-100 touch-manipulation min-h-10 min-w-10" id="prevBtn">
           <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
         <h2 id="calendarTitle" class="text-base sm:text-lg font-semibold text-gray-700 select-none min-w-32 text-center"><?= $calendarTitle ?></h2>
-        <button type="button" class="p-2 rounded hover:bg-gray-100 touch-manipulation min-h-10 min-w-10" id="nextBtn" onclick="handleCalendarNav(1)">
+  <button type="button" class="p-2 rounded hover:bg-gray-100 touch-manipulation min-h-10 min-w-10" id="nextBtn">
           <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>

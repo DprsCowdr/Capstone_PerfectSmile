@@ -42,7 +42,26 @@ class ProcedureController extends BaseAdminController
     $user = $this->checkAdminAuth();
         if (!$user) return redirect()->to('/login');
 
-    $procedures = $this->procedureModel->orderBy('procedure_name', 'ASC')->findAll();
+    // Use model helper that joins patient/user fields so views can display patient_name
+    $procedures = [];
+    try {
+        $procedures = $this->procedureModel->getAllWithPatientNames('procedure_name', 'ASC');
+    } catch (\Throwable $e) {
+        log_message('error', 'ProcedureController::index - failed to fetch procedures with patient names: ' . $e->getMessage());
+        // Fallback to original method
+        $procedures = $this->procedureModel->orderBy('procedure_name', 'ASC')->findAll();
+        // Attach best-effort patient_name
+        foreach ($procedures as &$p) {
+            try {
+                $patient = $this->userModel->find($p['user_id'] ?? 0);
+                $p['patient_name'] = $patient['name'] ?? 'Unknown Patient';
+                $p['patient_email'] = $patient['email'] ?? null;
+            } catch (\Throwable $_e) {
+                $p['patient_name'] = $p['patient_name'] ?? 'Unknown Patient';
+            }
+        }
+        unset($p);
+    }
 
         return view('admin/procedures/index', [
             'user' => $user,
@@ -135,7 +154,21 @@ class ProcedureController extends BaseAdminController
     $user = $this->checkAdminAuth();
         if (!$user) return redirect()->to('/login');
 
-        $proc = $this->procedureModel->find($id);
+        // Fetch procedure including patient fields
+        try {
+            $proc = $this->procedureModel->getByIdWithPatient($id);
+        } catch (\Throwable $e) {
+            log_message('error', 'ProcedureController::show - failed to fetch procedure with patient: ' . $e->getMessage());
+            $proc = $this->procedureModel->find($id);
+            if ($proc) {
+                try {
+                    $patient = $this->userModel->find($proc['user_id'] ?? 0);
+                    $proc['patient_name'] = $patient['name'] ?? 'Unknown Patient';
+                } catch (\Throwable $_e) {
+                    $proc['patient_name'] = $proc['patient_name'] ?? 'Unknown Patient';
+                }
+            }
+        }
         if (!$proc) {
             session()->setFlashdata('error', 'Procedure not found');
             return redirect()->to('/admin/procedures');

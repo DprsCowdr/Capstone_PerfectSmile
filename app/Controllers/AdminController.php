@@ -331,6 +331,9 @@ class AdminController extends BaseAdminController
             // Optional: allow client to request auto-reschedule if conflicts detected
             $autoReschedule = $this->request->getPost('auto_reschedule') ? true : false;
             $chosenTime = $this->request->getPost('chosen_time') ?: null;
+            $chosenDate = $this->request->getPost('chosen_date') ?: null;
+            $chosenTimestamp = $this->request->getPost('chosen_timestamp') ?: null;
+            $chosenDatetime = $this->request->getPost('chosen_datetime') ?: null;
             log_message('info', "Admin approving appointment ID: {$id}, Dentist ID: " . ($dentistId ?: 'null'));
             
             // Get appointment details before approval for logging
@@ -340,7 +343,11 @@ class AdminController extends BaseAdminController
                 log_message('info', "Appointment before approval: " . json_encode($appointment));
             }
             
-            $result = $this->appointmentService->approveAppointment($id, $dentistId, ['auto_reschedule' => $autoReschedule, 'chosen_time' => $chosenTime]);
+            $options = ['auto_reschedule' => $autoReschedule, 'chosen_time' => $chosenTime];
+            if ($chosenDate) $options['chosen_date'] = $chosenDate;
+            if ($chosenTimestamp) $options['chosen_timestamp'] = $chosenTimestamp;
+            if ($chosenDatetime) $options['chosen_datetime'] = $chosenDatetime;
+            $result = $this->appointmentService->approveAppointment($id, $dentistId, $options);
             
             log_message('info', "Appointment approval result: " . json_encode($result));
             
@@ -1372,5 +1379,264 @@ class AdminController extends BaseAdminController
             'success' => true,
             'prescriptions' => $prescriptions
         ]);
+    }
+
+    /**
+     * Get appointment details for admin modal
+     */
+    public function getAppointmentDetails($id)
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
+            return $user;
+        }
+
+        try {
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $appointment = $appointmentModel->select('appointments.*, user.name as patient_name, user.email as patient_email, branches.name as branch_name')
+                                  ->join('user', 'user.id = appointments.user_id', 'left')
+                                  ->join('branches', 'branches.id = appointments.branch_id', 'left')
+                                  ->where('appointments.id', $id)
+                                  ->first();
+
+            if (!$appointment) {
+                return $this->response->setJSON(['success' => false, 'message' => 'Appointment not found'])->setStatusCode(404);
+            }
+
+            // Fetch services linked via appointment_service pivot (appointments table does not have service_id)
+            $db = \Config\Database::connect();
+            $svcRows = $db->table('appointment_service as aps')
+                          ->select('s.id, s.name, s.duration_minutes, s.duration_max_minutes')
+                          ->join('services s', 's.id = aps.service_id')
+                          ->where('aps.appointment_id', (int)$id)
+                          ->get()
+                          ->getResultArray();
+
+            $services = [];
+            $totalServiceMinutes = 0;
+            foreach ($svcRows as $s) {
+                $dur = $s['duration_max_minutes'] ?? $s['duration_minutes'] ?? null;
+                if ($dur !== null) $totalServiceMinutes += (int)$dur;
+                $services[] = [
+                    'id' => $s['id'],
+                    'name' => $s['name'],
+                    'duration_minutes' => $s['duration_minutes'] ?? null,
+                    'duration_max_minutes' => $s['duration_max_minutes'] ?? null,
+                ];
+            }
+
+            // Attach a friendly summary: service_name (first) and aggregated service_duration
+            $appointment['services'] = $services;
+            if (count($services) === 1) {
+                $appointment['service_name'] = $services[0]['name'];
+            } else if (count($services) > 1) {
+                $appointment['service_name'] = implode(', ', array_column($services, 'name'));
+            } else {
+                $appointment['service_name'] = null;
+            }
+
+            $appointment['service_duration'] = $totalServiceMinutes > 0 ? $totalServiceMinutes : null;
+
+            return $this->response->setJSON(['success' => true, 'appointment' => $appointment]);
+        } catch (\Exception $e) {
+            log_message('error', 'getAppointmentDetails exception: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Server error', 'error' => $e->getMessage()])->setStatusCode(500);
+        }
+    }
+
+    /**
+     * Check appointment conflicts for admin waitlist module
+     * Provides retry/approve/reschedule options with clean suggestions
+     * POST params: date, time, duration, branch_id, dentist_id, appointment_id (for updates)
+     */
+    public function checkAppointmentConflicts()
+    {
+        $user = $this->getAuthenticatedUserApi();
+        if ($user instanceof \CodeIgniter\HTTP\ResponseInterface) {
+            return $user;
+        }
+
+        try {
+            // Get parameters from POST request
+            $date = $this->request->getPost('date');
+            $time = $this->request->getPost('time');
+            $duration = (int)($this->request->getPost('duration') ?? 30);
+            $branchId = $this->request->getPost('branch_id') ?? null;
+            $dentistId = $this->request->getPost('dentist_id') ?? null;
+            $appointmentId = $this->request->getPost('appointment_id') ?? null; // For updates/reschedules
+            $serviceId = $this->request->getPost('service_id') ?? null;
+
+            // Validate required parameters
+            if (!$date || !$time) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Missing required parameters: date and time'
+                ])->setStatusCode(400);
+            }
+
+            // Get service duration if service_id is provided
+            if ($serviceId && !$duration) {
+                try {
+                    $serviceModel = new \App\Models\ServiceModel();
+                    $service = $serviceModel->find($serviceId);
+                    if ($service) {
+                        $duration = $service['duration_max_minutes'] ?? $service['duration_minutes'] ?? 30;
+                    }
+                } catch (\Exception $e) {
+                    log_message('warning', 'Could not fetch service duration: ' . $e->getMessage());
+                }
+            }
+
+            // Check for conflicts using appointment model
+            $appointmentModel = new \App\Models\AppointmentModel();
+            $requestedDatetime = $date . ' ' . $time . ':00';
+            
+            // Use grace period for conflict detection
+            $grace = 15; // Default grace period
+            try {
+                $gpPath = WRITEPATH . 'grace_periods.json';
+                if (is_file($gpPath)) {
+                    $gp = json_decode(file_get_contents($gpPath), true);
+                    if (!empty($gp['default'])) $grace = (int)$gp['default'];
+                }
+            } catch (\Exception $e) {
+                // Use default grace
+            }
+
+            // Check for strict conflicts using model's conflict detection
+            $strictConflict = $appointmentModel->isTimeConflictingWithGrace(
+                $requestedDatetime, 
+                $grace, 
+                $dentistId, 
+                $appointmentId, // Exclude current appointment if updating
+                $duration
+            );
+
+            // Check availability blocks for dentist
+            $availabilityConflicts = [];
+            if ($dentistId) {
+                try {
+                    $availModel = new \App\Models\AvailabilityModel();
+                    $blocks = $availModel->getBlocksBetween($date . ' 00:00:00', $date . ' 23:59:59', $dentistId);
+                    foreach ($blocks as $b) {
+                        $s = strtotime($b['start_datetime']);
+                        $e = strtotime($b['end_datetime']);
+                        if (strtotime($requestedDatetime) < $e && (strtotime($requestedDatetime) + ($duration + $grace) * 60) > $s) {
+                            $availabilityConflicts[] = [
+                                'type' => $b['type'], 
+                                'start' => date('g:i A', $s), 
+                                'end' => date('g:i A', $e), 
+                                'notes' => $b['notes'] ?? ''
+                            ];
+                        }
+                    }
+                } catch (\Exception $e) {
+                    log_message('error', 'checkAppointmentConflicts availability error: ' . $e->getMessage());
+                }
+            }
+
+            $hasConflicts = $strictConflict || !empty($availabilityConflicts);
+            $suggestions = [];
+
+            // If there are conflicts, generate reschedule suggestions using AvailabilityService
+            if ($hasConflicts) {
+                try {
+                    $availabilityService = new \App\Services\AvailabilityService();
+                    
+                    $params = [
+                        'date' => $date,
+                        'branch_id' => $branchId,
+                        'dentist_id' => $dentistId,
+                        'duration' => $duration,
+                        'granularity' => 5, // 5-minute increments for flexibility
+                        'max_suggestions' => 15 // More suggestions for admin use
+                    ];
+
+                    $availabilityResult = $availabilityService->getAvailableSlots($params);
+                    
+                    if ($availabilityResult['success'] && !empty($availabilityResult['suggestions'])) {
+                        // Filter suggestions to only include available slots
+                        $suggestions = array_filter($availabilityResult['suggestions'], function($suggestion) {
+                            return $suggestion['available'] === true;
+                        });
+
+                        // Limit suggestions but keep more for admin flexibility
+                        $suggestions = array_slice($suggestions, 0, 15);
+                    }
+
+                    // If AvailabilityService didn't provide enough suggestions, try fallback method
+                    if (count($suggestions) < 5) {
+                        try {
+                            $lookahead = 240; // Look ahead 4 hours
+                            $next = $appointmentModel->findNextAvailableSlot($date, $time, $grace, $lookahead, $dentistId, $duration);
+                            if ($next && !in_array($next['time'], array_column($suggestions, 'time'))) {
+                                $suggestions[] = $next;
+                            }
+                        } catch (\Exception $e) {
+                            log_message('warning', 'checkAppointmentConflicts: fallback suggestion lookup failed: ' . $e->getMessage()); 
+                        }
+                    }
+
+                } catch (\Exception $e) {
+                    log_message('error', 'checkAppointmentConflicts: AvailabilityService failed: ' . $e->getMessage());
+                    
+                    // Fallback to original suggestion method if AvailabilityService fails
+                    try {
+                        $lookahead = 240;
+                        $next = $appointmentModel->findNextAvailableSlot($date, $time, $grace, $lookahead, $dentistId, $duration);
+                        if ($next) $suggestions[] = $next;
+                    } catch (\Exception $e2) {
+                        log_message('warning', 'checkAppointmentConflicts: fallback suggestion lookup failed: ' . $e2->getMessage()); 
+                    }
+                }
+
+                // Return conflict response with admin-specific options
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Scheduling conflict detected',
+                    'conflict' => true,
+                    'conflicts' => $strictConflict ? ['conflict' => true] : [],
+                    'availability_conflicts' => $availabilityConflicts,
+                    'hasConflicts' => $hasConflicts,
+                    'suggestions' => $suggestions,
+                    'admin_options' => [
+                        'can_approve_anyway' => true, // Admin can override conflicts
+                        'can_reschedule' => true,
+                        'can_retry' => true
+                    ],
+                    'metadata' => [
+                        'requested_time' => $time,
+                        'requested_date' => $date,
+                        'duration_minutes' => $duration,
+                        'grace_minutes' => $grace,
+                        'alternative_count' => count($suggestions),
+                        'dentist_id' => $dentistId,
+                        'branch_id' => $branchId
+                    ]
+                ]);
+            }
+
+            // No conflicts found
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'No conflicts detected',
+                'conflict' => false,
+                'conflicts' => [],
+                'availability_conflicts' => $availabilityConflicts,
+                'hasConflicts' => false,
+                'suggestions' => [],
+                'admin_options' => [
+                    'can_approve' => true
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'checkAppointmentConflicts error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Server error while checking conflicts',
+                'error_details' => $e->getMessage()
+            ])->setStatusCode(500);
+        }
     }
 }

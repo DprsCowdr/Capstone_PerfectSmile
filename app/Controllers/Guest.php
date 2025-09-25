@@ -43,6 +43,30 @@ class Guest extends BaseController
 
         // Early detection for AJAX/JSON client so validation errors can be returned as JSON
         $isXhr = $request->isAJAX() || strtolower($request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest' || stripos($request->getHeaderLine('Accept'), 'application/json') !== false;
+        
+        // If client requested a debug echo via X-Debug-Booking header, return the received payload as JSON
+        $debugHeader = $request->getHeaderLine('X-Debug-Booking');
+        if (!empty($debugHeader)) {
+            $postData = $request->getPost();
+            $debugInfo = [
+                'received' => $postData,
+                'headers' => $request->getHeaders(),
+                'server_time' => date('Y-m-d H:i:s'),
+                'server_timezone' => date_default_timezone_get()
+            ];
+            
+            // Try to parse appointment_datetime like the model does
+            if (!empty($postData['appointment_date']) && !empty($postData['appointment_time'])) {
+                $appointment_datetime = $postData['appointment_date'] . ' ' . $postData['appointment_time'];
+                $debugInfo['parsed_appointment_datetime'] = $appointment_datetime;
+                $debugInfo['strtotime_result'] = strtotime($appointment_datetime);
+                $debugInfo['strtotime_readable'] = $debugInfo['strtotime_result'] ? date('Y-m-d H:i:s', $debugInfo['strtotime_result']) : 'FAILED';
+                $debugInfo['is_past'] = $debugInfo['strtotime_result'] ? ($debugInfo['strtotime_result'] < strtotime('today')) : 'UNKNOWN';
+            }
+            
+            return $response->setJSON($debugInfo);
+        }
+        
         // Log incoming payload for diagnostics
         try {
             log_message('debug', 'Guest::submitAppointment payload: ' . json_encode($request->getPost()));
