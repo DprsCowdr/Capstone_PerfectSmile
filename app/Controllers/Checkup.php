@@ -224,7 +224,7 @@ class Checkup extends BaseController
             }
         }
 
-        return view('checkup/patient_checkup', [
+    return view('checkup/AddRecord', [
             'user' => $user,
             'appointment' => $appointment,
             'patient' => $patientWithHistory,

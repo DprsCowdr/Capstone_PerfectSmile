@@ -29,13 +29,6 @@ class AppointmentModel extends Model
         'patient_email',
         'patient_phone',
         'patient_name',
-        // Workflow/queue fields
-        'checked_in_at',
-        'checked_in_by',
-        'self_checkin',
-        'started_at',
-        'called_by',
-        'treatment_status',
         'treatment_notes',
         'payment_status',
         'payment_method',
@@ -57,7 +50,7 @@ class AppointmentModel extends Model
         'branch_id' => 'required|integer',
         'dentist_id' => 'permit_empty|integer',
         'appointment_datetime' => 'required',
-        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,checked_in,ongoing,completed,cancelled,no_show]',
+        'status' => 'permit_empty|in_list[pending_approval,pending,scheduled,confirmed,ongoing,completed,cancelled,no_show]',
         'appointment_type' => 'permit_empty|in_list[scheduled,walkin]',
         'approval_status' => 'permit_empty|in_list[pending,approved,declined,auto_approved]',
         // Guest booking validation - require either user_id OR contact info
@@ -314,7 +307,7 @@ class AppointmentModel extends Model
                       ->join('branches', 'branches.id = appointments.branch_id', 'left')
                       ->where('DATE(appointments.appointment_datetime)', $today)
                       ->where('appointments.approval_status', 'approved')
-                      ->whereIn('appointments.status', ['confirmed', 'scheduled', 'ongoing', 'checked_in']) // Include more statuses
+                      ->whereIn('appointments.status', ['confirmed', 'scheduled', 'ongoing']) // Include more statuses
                       ->orderBy('appointments.appointment_datetime', 'ASC');
         
         if ($dentistId) {
@@ -461,7 +454,7 @@ class AppointmentModel extends Model
                      ->join('user as dentist', 'dentist.id = appointments.dentist_id', 'left')
                      ->where('appointment_datetime >=', $startTime)
                      ->where('appointment_datetime <=', $endTime)
-                     ->whereIn('status', ['confirmed', 'checked_in', 'ongoing'])
+                     ->whereIn('status', ['confirmed', 'ongoing'])
                      ->whereIn('approval_status', ['approved', 'auto_approved']);
         
         // Filter by dentist if specified
@@ -641,52 +634,12 @@ class AppointmentModel extends Model
         $builder->where('appointment_datetime <', $threshold)
                 ->whereIn('status', ['scheduled', 'confirmed'])
                 ->whereIn('approval_status', ['approved', 'auto_approved'])
-                ->where('checked_in_at IS NULL', null, false)
                 ->set(['status' => 'no_show', 'updated_at' => $now]);
 
         return $builder->update();
     }
 
-    /**
-     * Get the next appointment to call for a given dentist.
-     * Priority:
-     *  1) Patients who have checked-in (ordered by checked_in_at ASC)
-     *  2) If none checked-in, return the earliest scheduled/confirmed appointment for today
-     * This supports FCFS behavior because walk-ins that check in will appear in checked-in set
-     * and will be selected based on their arrival time. Overdue scheduled appointments
-     * should be expired first using expireOverdueScheduled().
-     * @param int|null $dentistId
-     * @return array|null appointment row or null
-     */
-    public function getNextAppointmentForDentist($dentistId = null)
-    {
-        $today = date('Y-m-d');
 
-        // 1) Prefer checked-in patients (waiting list)
-        $qb = $this->select('appointments.*')
-                   ->join('patient_checkins', 'patient_checkins.appointment_id = appointments.id')
-                   ->where('DATE(appointments.appointment_datetime)', $today)
-                   ->where('appointments.status', 'checked_in')
-                   ->whereIn('appointments.approval_status', ['approved', 'auto_approved'])
-                   ->orderBy('patient_checkins.checked_in_at', 'ASC')
-                   ->orderBy('appointments.appointment_datetime', 'ASC');
-
-        if ($dentistId) $qb->where('appointments.dentist_id', $dentistId);
-
-        $row = $qb->limit(1)->get()->getRowArray();
-        if ($row) return $row;
-
-        // 2) No one checked-in: return earliest scheduled/confirmed appointment for today
-        $qb2 = $this->select('appointments.*')
-                    ->where('DATE(appointments.appointment_datetime)', $today)
-                    ->whereIn('appointments.status', ['scheduled', 'confirmed'])
-                    ->whereIn('appointments.approval_status', ['approved', 'auto_approved'])
-                    ->orderBy('appointments.appointment_datetime', 'ASC');
-
-        if ($dentistId) $qb2->where('appointments.dentist_id', $dentistId);
-
-        return $qb2->limit(1)->get()->getRowArray();
-    }
 
     /**
      * Find the next available slot (time string H:i) on the given date that does not conflict

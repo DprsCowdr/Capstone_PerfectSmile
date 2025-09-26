@@ -5,12 +5,12 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', to: 'Home::index');
+$routes->get('/', 'Home::index');
 
 // Debug routes for availability testing (development-only)
 if (defined('ENVIRONMENT') && ENVIRONMENT === 'development') {
     $routes->get('debug/availability', 'DebugAvailability::index');
-    $routes->get('debug/availability/test', 'DebugAvailability::testCreate');
+    $routes->get('debug/availability/test', 'DebugAvailability::test');
     $routes->get('debug/availability/manual', 'DebugAvailability::manualTest');
     $routes->get('debug/availability/direct', 'DebugAvailability::directDbTest');
     $routes->get('debug/availability/monday', 'DebugAvailability::mondayDebug');
@@ -217,8 +217,6 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->delete('invoices/delete-item/(:num)', 'Admin\InvoiceController::deleteItem/$1');
     $routes->post('invoices/record-payment/(:num)', 'Admin\InvoiceController::recordPayment/$1');
     $routes->post('invoices/send-email/(:num)', 'Admin\InvoiceController::sendEmail/$1');
-    
-    // Billing routes
 });
 
 // Staff notification handling (mark branch notification handled)
@@ -232,6 +230,8 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
     $routes->get('/', 'Checkup::index');
     $routes->get('start/(:num)', 'Checkup::startCheckup/$1');
     $routes->get('patient/(:num)', 'Checkup::patientCheckup/$1');
+    // Friendly alias for Add Record
+    $routes->get('add-record/(:num)', 'Checkup::patientCheckup/$1');
     $routes->post('save/(:num)', 'Checkup::saveCheckup/$1');
     $routes->get('no-show/(:num)', 'Checkup::markNoShow/$1');
     $routes->post('cancel/(:num)', 'Checkup::cancelAppointment/$1');
@@ -250,9 +250,6 @@ $routes->group('checkup', ['filter' => 'auth'], function($routes) {
     $routes->get('services/all', 'CheckupServices::getAllServices');
 });
 
-// Invoice routes removed
-
-// Dentist routes (protected)
 // Dentist routes (protected)
 $routes->group('dentist', ['filter' => 'auth'], function($routes) {
     $routes->get('dashboard', 'Dentist::dashboard');
@@ -365,30 +362,6 @@ $routes->group('patient', ['filter' => 'auth'], function($routes) {
     $routes->get('test-treatments', 'Patient::testTreatmentsEndpoint'); // Test treatments endpoint
     $routes->get('test-database', 'Patient::testDatabase'); // Test database connection
     $routes->get('debug-records', 'Patient::debugRecords'); // Debug records loading
-});
-
-// API endpoints for patient-scoped appointment data
-$routes->group('api', [], function($routes) {
-    $routes->group('patient', ['filter' => 'auth'], function($routes) {
-        $routes->get('appointments', 'Api\\PatientAppointments::index');
-        $routes->post('check-conflicts', 'Api\\PatientAppointments::checkConflicts');
-    });
-});
-
-// Patient Check-in routes (for staff/reception)
-$routes->group('checkin', ['filter' => 'auth'], function($routes) {
-    $routes->get('/', 'PatientCheckin::index');
-    $routes->post('process/(:num)', 'PatientCheckin::checkinPatient/$1');
-});
-
-// Treatment Queue routes (for dentists)
-$routes->group('queue', ['filter' => 'auth'], function($routes) {
-    $routes->get('/', 'TreatmentQueue::index');
-    $routes->post('call/(:num)', 'TreatmentQueue::callNext/$1');
-        $routes->post('call-auto', 'TreatmentQueue::callNextAuto');
-        $routes->post('reschedule', 'TreatmentQueue::rescheduleAppointment');
-    $routes->post('complete/(:num)', 'TreatmentQueue::completeTreatment/$1');
-    $routes->get('status', 'TreatmentQueue::getQueueStatus'); // AJAX
 });
 
 // Staff routes (protected)

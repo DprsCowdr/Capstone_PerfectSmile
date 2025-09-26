@@ -35,7 +35,7 @@ class Debug extends BaseController
         echo "</table>";
         
         // Check today's appointments with the exact same query
-        echo "<h3>Today's Appointments (using same query as PatientCheckin):</h3>";
+        echo "<h3>Today's Appointments:</h3>";
         $todayAppointments = $appointmentModel
             ->select('appointments.*, user.name as patient_name')
             ->join('user', 'user.id = appointments.user_id')

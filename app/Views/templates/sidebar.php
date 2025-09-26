@@ -267,9 +267,7 @@ if ($isAdminRoute && !$userType) {
             <!-- Patient Flow Section -->
             <div class="nav-section space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Flow</label>
-                <?= nav_link(base_url('checkin'), 'fas fa-sign-in-alt', 'Patient Check-In', $currentUrl) ?>
-                <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
-                <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Checkup Module', $currentUrl) ?>
+                <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Add Record', $currentUrl) ?>
             </div>
 
             <!-- Administration Section -->
@@ -310,9 +308,7 @@ if ($isAdminRoute && !$userType) {
             <!-- Patient Flow Section -->
             <div class="space-y-2 sm:space-y-3">
                 <label class="px-2 sm:px-3 text-xs text-gray-500 uppercase font-semibold">Patient Flow</label>
-                <?= nav_link(base_url('checkin'), 'fas fa-sign-in-alt', 'Patient Check-In', $currentUrl) ?>
-                <?= nav_link(base_url('queue'), 'fas fa-users', 'Treatment Queue', $currentUrl) ?>
-                <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Checkup Module', $currentUrl) ?>
+                <?= nav_link(base_url('checkup'), 'fas fa-stethoscope', 'Add Record', $currentUrl) ?>
             </div>
 
             <?php elseif ($userType === 'patient'): ?>

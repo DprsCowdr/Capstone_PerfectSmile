@@ -26,8 +26,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-6">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Patient Checkup Dashboard</h1>
-                    <p class="mt-1 text-sm text-gray-500">Manage today's appointments and patient checkups</p>
+                    <h1 class="text-3xl font-bold text-gray-900">Add Record</h1>
+                    <p class="mt-1 text-sm text-gray-500">Create or update patient records after treatment</p>
                 </div>
            
             </div>
@@ -74,7 +74,7 @@
                 <div class="bg-yellow-50 border-l-4 border-yellow-400 rounded-xl shadow p-6 flex items-center justify-between">
                     <div>
                         <div class="text-lg font-bold text-yellow-800 mb-1 flex items-center">
-                            <i class="fas fa-stethoscope mr-3"></i>Ongoing Checkup In Progress
+                            <i class="fas fa-stethoscope mr-3"></i>Ongoing Treatment In Progress
                         </div>
                         <div class="text-gray-700 mb-1">
                             <span class="font-semibold">Patient:</span> <?= esc($ongoingCheckup['patient_name'] ?? 'Unknown') ?>
@@ -85,7 +85,7 @@
                     </div>
                     <div class="flex gap-3">
                         <a href="/checkup/patient/<?= $ongoingCheckup['id'] ?>" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors flex items-center">
-                            <i class="fas fa-play mr-2"></i>Resume Checkup
+                            <i class="fas fa-play mr-2"></i>Resume Add Record
                         </a>
                         <a href="/admin/dental-charts/<?= $ongoingCheckup['id'] ?>" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors flex items-center">
                             <i class="fas fa-tooth mr-2"></i>View Chart
@@ -175,7 +175,7 @@
                                 <?php if ($appointment['status'] === 'confirmed'): ?>
                                     <button onclick="startCheckup(<?= $appointment['id'] ?>)" 
                                             class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                                        <i class="fas fa-play mr-2"></i>Start Checkup
+                                            <i class="fas fa-play mr-2"></i>Start Treatment
                                     </button>
                                     <div class="flex space-x-2">
                                         <button onclick="markNoShow(<?= $appointment['id'] ?>)" 
